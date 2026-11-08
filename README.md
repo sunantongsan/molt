@@ -1,0 +1,7 @@
+# MOLT
+
+Runner–army game in the style of Top Lords: drag left/right to pick gates, shoot `+1` blocks to grow your army,
+break barriers, beat red squads and storm the enemy castle. Coins buy permanent upgrades between levels.
+
+- Game: `web/index.html` (plain HTML5 canvas, no build step — open it in any browser)
+- Android: `app/` wraps the game in a WebView. Every push to `main` builds an APK and publishes it under **Releases** (only the 3 newest are kept).

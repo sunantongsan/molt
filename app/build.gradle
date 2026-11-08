@@ -1,0 +1,14 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.sunantongsan.molt'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.sunantongsan.molt'
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+    }
+    // The game itself lives in /web so it can also be played in a browser.
+    sourceSets { main.assets.srcDirs = [rootProject.file('web')] }
+}
