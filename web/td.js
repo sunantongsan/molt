@@ -368,10 +368,11 @@ function tdDraw() {
   ctx.restore();
   drawTdHud();
 }
+let houseTop = 0;
 function drawHouse() {
   const p = dproj(0, 0), s = dk;
   if (ready(IMG.duckhouse)) {
-    drawAt(IMG.duckhouse, p.x, p.y + s * 0.9, s * 3.3);
+    houseTop = p.y + s * 0.9 - drawAt(IMG.duckhouse, p.x, p.y + s * 0.9, s * 3.0);
   } else {
     // cartoon placeholder: round yellow house, orange dome roof, duck on top
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + s * 0.25, s * 1.35, s * 0.55, 0, 0, Math.PI * 2); ctx.fill();
@@ -393,9 +394,9 @@ function drawHouse() {
   // sleeping ducks inside
   const t = performance.now() / 1000;
   ctx.font = `900 ${Math.round(s * 0.5)}px system-ui`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.9)';
-  ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 2); ctx.fillText('z', p.x + s * 1.0, p.y - s * 1.3 - (t * 10 % 12)); ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 2); ctx.fillText('z', p.x + s * 1.15, p.y - s * 0.9 - (t * 10 % 12)); ctx.fillText('z', p.x + s * 1.4, p.y - s * 1.3 - ((t * 10 + 6) % 12)); ctx.globalAlpha = 1;
   // house HP
-  const bw = 90, y = p.y - s * 2.6;
+  const bw = 90, y = (ready(IMG.duckhouse) ? houseTop : p.y - s * 2.3) - 14;
   ctx.fillStyle = 'rgba(0,0,0,.5)'; roundRect(p.x - bw / 2, y, bw, 9, 4.5); ctx.fill();
   ctx.fillStyle = '#5fe06a'; roundRect(p.x - bw / 2 + 2, y + 2, (bw - 4) * Math.max(0, D.houseHp / D.houseMax), 5, 2.5); ctx.fill();
 }
@@ -416,7 +417,8 @@ function drawFence(w) {
     ctx.fillStyle = '#ffb347'; ctx.fillRect(p.x - 18, p.y - wd * 0.62, 36 * w.hp / w.max, 4);
   }
 }
-const PLAT_H = 1.0;   // how high the duck stands (meters, drawn upward)
+const PLAT_H = 1.25;  // how high the duck stands (meters, drawn upward)
+const PLAT_W = 1.55, PLAT_DECK = 0.30;   // platform sprite width (m) and deck centre as a fraction of its height
 function drawPlatform(s) {
   const q = platPos(s), p = dproj(q.x, q.y), pl = platAt(s), k = dk;
   if (!pl) {
@@ -426,8 +428,11 @@ function drawPlatform(s) {
     ctx.fillText('+', p.x, p.y); ctx.textBaseline = 'alphabetic';
     return;
   }
-  const top = p.y - PLAT_H * k;
-  if (ready(IMG.platform)) drawAt(IMG.platform, p.x, p.y + k * 0.15, k * 1.5);
+  let top = p.y - PLAT_H * k;
+  if (ready(IMG.platform)) {
+    const ph = drawAt(IMG.platform, p.x, p.y + k * 0.2, k * PLAT_W);
+    top = p.y + k * 0.2 - ph * (1 - PLAT_DECK);
+  }
   else {
     // wooden scaffold: four legs, cross braces, plank deck
     ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, k * 0.62, k * 0.25, 0, 0, Math.PI * 2); ctx.fill();
