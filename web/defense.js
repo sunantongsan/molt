@@ -6,10 +6,10 @@
 // ---------- weapons ----------
 const WEAPONS = [
   { id: 'bow',    name: 'ธนูไม้',     icon: '🏹', dmg: 1,   rate: 1.3,  range: 6.5, speed: 13, craft: null },
-  { id: 'xbow',   name: 'หน้าไม้',    icon: '🎯', dmg: 3,   rate: 0.8,  range: 8,   speed: 18, craft: { mat: 60,  coins: 0 } },
-  { id: 'fire',   name: 'ธนูไฟ',      icon: '🔥', dmg: 2,   rate: 1.1,  range: 7,   speed: 13, splash: 1.0, craft: { mat: 150, coins: 80 } },
-  { id: 'triple', name: 'ธนูสามดอก', icon: '🔱', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, craft: { mat: 260, coins: 180 } },
-  { id: 'cannon', name: 'ปืนใหญ่ไม้', icon: '💣', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, craft: { mat: 450, coins: 380 } },
+  { id: 'xbow',   name: 'หน้าไม้',    icon: '🎯', dmg: 3,   rate: 0.8,  range: 8,   speed: 18, craft: { mat: 40,  coins: 60 } },
+  { id: 'fire',   name: 'ธนูไฟ',      icon: '🔥', dmg: 2,   rate: 1.1,  range: 7,   speed: 13, splash: 1.0, craft: { mat: 80,  coins: 150 } },
+  { id: 'triple', name: 'ธนูสามดอก', icon: '🔱', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, craft: { mat: 120, coins: 260 } },
+  { id: 'cannon', name: 'ปืนใหญ่ไม้', icon: '💣', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, craft: { mat: 200, coins: 450 } },
 ];
 const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 if (!B.weapons) B.weapons = { bow: 0, xbow: 0, fire: 0, triple: 0, cannon: 0 };
@@ -18,7 +18,7 @@ if (!B.def) B.def = { wall: 1, bomb: 1 };
 if (!B.day) B.day = 1;
 if (!B.nextAttack) B.nextAttack = Date.now() + 150 * 1000;
 function wDmg(id) { return WEAPON[id].dmg * (1 + (B.wlv[id] - 1) * 0.3); }
-function wUpCost(id) { const l = B.wlv[id], base = WEAPON[id].craft ? WEAPON[id].craft.mat : 40; return { mat: Math.round(base * 0.6 * Math.pow(l, 1.4) + 30), coins: 25 * l }; }
+function wUpCost(id) { const l = B.wlv[id], tier = WEAPONS.findIndex(w => w.id === id); return { mat: 0, coins: Math.round(40 * Math.pow(l, 1.5) * (1 + tier * 0.4)) }; }
 function wallMax() { return 30 + (B.def.wall - 1) * 18; }
 function bombDmg() { return 6 + (B.def.bomb - 1) * 4; }
 // give the best weapons to the ducks first; everyone else keeps the wooden bow
@@ -202,7 +202,7 @@ function hurtCat(c, dmg, w) {
   if (c.hp <= 0) {
     SFX.play(Math.random() < 0.3 ? 'meow' : 'hit');
     // loot drops
-    const m = c.boss ? 60 : (Math.random() < 0.35 ? 2 + Math.floor(D.night / 2) : 0), co = c.boss ? 80 : (Math.random() < 0.25 ? 3 : 0);
+    const m = c.boss ? 60 : (Math.random() < 0.35 ? 2 + Math.floor(D.night / 2) : 0), co = c.boss ? 120 : (Math.random() < 0.35 ? 2 + Math.floor(D.night / 2) : 0);
     if (m) { D.loot.mat += m; D.floats.push({ x: c.x, y: c.y - 0.6, t: 0, text: '+' + m + '⚙️', color: '#b8ff8a' }); }
     if (co) { D.loot.coins += co; D.floats.push({ x: c.x + 0.4, y: c.y - 0.9, t: 0, text: '+' + co + '🪙', color: '#ffd84a' }); }
   }
@@ -232,7 +232,7 @@ function endDefense(won) {
   D.lost = lost.length;
   const cap = capOf();
   if (won) {
-    D.loot.mat += 20 + D.night * 8; D.loot.coins += 15 + D.night * 10;
+    D.loot.mat += 20 + D.night * 8; D.loot.coins += 30 + D.night * 15;
     B.day += 1;
     SFX.play('win');
   } else {
@@ -488,7 +488,7 @@ function drawDefHud() {
 // ---------- armory: craft and upgrade weapons ----------
 function armorySheet(body) {
   const head = document.createElement('div'); head.className = 'sinfo';
-  head.textContent = `อาวุธที่สะสม — เป็ดทุกตัวออกป้องกันฐาน อาวุธดีสุดแจกก่อน (ทั้งหมด ${B.ducks.length} ตัว)`;
+  head.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> เหรียญ • ใช้เหรียญสร้างและอัปเกรดอาวุธ<br>เป็ดทุกตัวออกป้องกันบ้าน อาวุธดีสุดแจกก่อน (เป็ด ${B.ducks.length} ตัว)`;
   body.appendChild(head);
   for (const w of WEAPONS) {
     const lv = B.wlv[w.id], owned = w.craft ? B.weapons[w.id] : '∞';
@@ -502,14 +502,14 @@ function armorySheet(body) {
       }));
     }
     const u = wUpCost(w.id);
-    bx.appendChild(btn('อัปเกรด', `⚙️${u.mat} 🪙${u.coins}`, lv < 10 && B.mat >= u.mat && save.coins >= u.coins, () => {
+    bx.appendChild(btn(lv < 10 ? 'อัปเกรด' : 'เต็มแล้ว', lv < 10 ? `→Lv.${lv + 1} 🪙${u.coins}` : '', lv < 10 && B.mat >= u.mat && save.coins >= u.coins, () => {
       B.mat -= u.mat; save.coins -= u.coins; B.wlv[w.id]++; SFX.play('gateGood');
     }));
     row.appendChild(bx); body.appendChild(row);
   }
-  const wc = { mat: 30 * B.def.wall, coins: 20 * B.def.wall }, bc = { mat: 40 * B.def.bomb, coins: 30 * B.def.bomb };
-  body.appendChild(btn(`🪵 เสริมไม้กั้น Lv.${B.def.wall}`, `ทน ${wallMax()} • ⚙️${wc.mat} 🪙${wc.coins}`, B.mat >= wc.mat && save.coins >= wc.coins, () => { B.mat -= wc.mat; save.coins -= wc.coins; B.def.wall++; }));
-  body.appendChild(btn(`💣 ระเบิดมือ Lv.${B.def.bomb}`, `แรง ${bombDmg()} • ⚙️${bc.mat} 🪙${bc.coins}`, B.mat >= bc.mat && save.coins >= bc.coins, () => { B.mat -= bc.mat; save.coins -= bc.coins; B.def.bomb++; }));
+  const wc = { mat: 0, coins: 50 * B.def.wall }, bc = { mat: 0, coins: 60 * B.def.bomb };
+  body.appendChild(btn(`🪵 เสริมไม้กั้น Lv.${B.def.wall}`, `ทน ${wallMax()} • 🪙${wc.coins}`, B.mat >= wc.mat && save.coins >= wc.coins, () => { B.mat -= wc.mat; save.coins -= wc.coins; B.def.wall++; }));
+  body.appendChild(btn(`💣 ระเบิดมือ Lv.${B.def.bomb}`, `แรง ${bombDmg()} • 🪙${bc.coins}`, B.mat >= bc.mat && save.coins >= bc.coins, () => { B.mat -= bc.mat; save.coins -= bc.coins; B.def.bomb++; }));
 }
 
 // ---------- hooks ----------

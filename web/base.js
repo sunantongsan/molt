@@ -262,8 +262,17 @@ function renderBaseHud() {
   $('defSub').textContent = `คืนที่ ${B.day} • แมวบุกใน ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
   $('raidSub').textContent = `บุกปราสาทแมว • ใช้ 🍗${raidFood(save.level)}`;
   if (bsel >= 0 && !$('sheet').classList.contains('hidden')) openSheet(bsel, true);
+  else if (shopOpen) { const st = $('sheet').scrollTop; openShop(); $('sheet').scrollTop = st; }
 }
-function closeSheet() { bsel = -1; $('sheet').classList.add('hidden'); }
+let shopOpen = false;
+function closeSheet() { bsel = -1; shopOpen = false; $('sheet').classList.add('hidden'); }
+function openShop() {
+  bsel = -1; shopOpen = true;
+  const body = $('sheetBody'); body.innerHTML = '';
+  $('sheetTitle').textContent = '🏹 ร้านอาวุธ';
+  armorySheet(body);
+  $('sheet').classList.remove('hidden');
+}
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
   clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.add('hidden'), 1800);
@@ -272,7 +281,7 @@ function btn(label, sub, ok, fn) {
   const b = document.createElement('button');
   b.className = 'sbtn' + (ok ? '' : ' off');
   b.innerHTML = `<b>${label}</b>${sub ? `<small>${sub}</small>` : ''}`;
-  b.onclick = e => { e.stopPropagation(); if (!ok) { SFX.play('gateBad'); return; } SFX.play('click'); fn(); renderBaseHud(); persist(); };
+  b.onclick = e => { e.stopPropagation(); if (!ok) { SFX.play('gateBad'); return; } SFX.play('click'); const st = $('sheet').scrollTop; fn(); renderBaseHud(); persist(); $('sheet').scrollTop = st; };
   return b;
 }
 function freeDuck() {
@@ -341,5 +350,6 @@ function openRaid() {
 $('raidBtn').onclick = openRaid;
 $('homeBtn').onclick = () => { SFX.play('click'); enterBase(); };
 $('sheetClose').onclick = closeSheet;
+$('shopBtn').onclick = () => { SFX.init(); SFX.play('click'); openShop(); };
 
 enterBase();
