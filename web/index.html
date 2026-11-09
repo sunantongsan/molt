@@ -37,12 +37,12 @@
   .lvb.lock{background:#555d6b;box-shadow:0 4px 0 #383e48;opacity:.7}
   .lvb.siege{background:#8a3fb5;box-shadow:0 4px 0 #5a2378}
   .lvname{font-weight:900;font-size:18px;color:#bfe3ff;margin-top:-4px}
-  #baseUi .hud{position:fixed;top:10px;left:58px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;z-index:4}
-  #baseUi .hud span{background:rgba(0,0,0,.5);color:#fff;border-radius:12px;padding:6px 9px;font:800 13px system-ui,sans-serif;white-space:nowrap}
-  #baseUi .hud b{color:#ffd84a}
-  #baseUi .raid{position:fixed;left:0;right:0;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4;pointer-events:none}
-  #baseUi .raid .btn{pointer-events:auto;padding:12px 34px;font-size:22px;background:linear-gradient(#ff7a4a,#d8452a);box-shadow:0 6px 0 #8f2a17,0 10px 20px rgba(0,0,0,.35)}
-  #baseUi .rsub{color:#fff;font:700 12px system-ui,sans-serif;text-shadow:0 1px 3px #000}
+  #tdUi .hud{position:fixed;top:10px;left:58px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;z-index:4}
+  #tdUi .hud span{background:rgba(0,0,0,.5);color:#fff;border-radius:12px;padding:6px 9px;font:800 13px system-ui,sans-serif;white-space:nowrap}
+  #tdUi .hud b{color:#ffd84a}
+  #tdUi .raid{position:fixed;left:0;right:0;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4;pointer-events:none}
+  #tdUi .raid .btn{pointer-events:auto;padding:12px 34px;font-size:22px;background:linear-gradient(#ff7a4a,#d8452a);box-shadow:0 6px 0 #8f2a17,0 10px 20px rgba(0,0,0,.35)}
+  #tdUi .rsub{color:#fff;font:700 12px system-ui,sans-serif;text-shadow:0 1px 3px #000}
   #sheet{position:fixed;left:8px;right:8px;bottom:8px;max-height:58vh;overflow-y:auto;background:#fffaf0;border-radius:20px;padding:12px 12px 14px;z-index:6;box-shadow:0 -6px 24px rgba(0,0,0,.4);color:#2b2216}
   .shead{display:flex;justify-content:space-between;align-items:center;font-size:19px;margin-bottom:8px}
   .shead button{border:0;background:#e9dcc4;border-radius:10px;width:34px;height:34px;font-size:16px;cursor:pointer}
@@ -50,9 +50,11 @@
   .sbtn{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;border-radius:14px;padding:11px 14px;margin:6px 0;background:#4fb35b;color:#fff;font-family:inherit;box-shadow:0 4px 0 #2d7a36;cursor:pointer;text-align:left;gap:8px}
   .sbtn b{font-size:15px}.sbtn small{font-size:12px;opacity:.95;text-align:right}
   .sbtn.off{background:#b8ad9a;box-shadow:0 4px 0 #8c8371}
-  #baseUi .raid .btn.small{padding:8px 20px;font-size:15px;background:linear-gradient(#6d8fc9,#3f62a3);box-shadow:0 4px 0 #26406e}
+  #tdUi .raid .btn.small{padding:8px 20px;font-size:15px;background:linear-gradient(#6d8fc9,#3f62a3);box-shadow:0 4px 0 #26406e}
   .roundbtn{position:fixed;left:12px;bottom:26px;z-index:5;width:66px;height:66px;border-radius:20px;border:0;background:linear-gradient(#ffd84a,#f0a400);box-shadow:0 5px 0 #a86a00,0 8px 16px rgba(0,0,0,.35);font-size:28px;line-height:1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:inherit}
   .roundbtn small{font:800 11px system-ui,sans-serif;color:#5a3a00;margin-top:2px}
+  .roundbtn.raidb{left:12px;bottom:104px;background:linear-gradient(#9fb6e8,#5a78c0);box-shadow:0 5px 0 #34508a,0 8px 16px rgba(0,0,0,.35)}
+  .roundbtn.raidb small{color:#0e2350}
   .roundbtn.help{left:auto;right:12px;background:linear-gradient(#8fd0ff,#4a9be0);box-shadow:0 5px 0 #2b6aa8,0 8px 16px rgba(0,0,0,.35)}
   .roundbtn.help small{color:#0c3560}
   #tut{position:fixed;inset:0;z-index:30}
@@ -86,26 +88,24 @@
   <div class="lvname" id="mName"></div>
   <button class="btn" id="play">เล่นด่าน <span id="mLevel">1</span></button>
   <div class="sub" style="font-size:13px;margin-top:4px">ลากนิ้วซ้าย-ขวาเพื่อบังคับ</div>
-  <button class="btn ghost" id="homeBtn">🏠 กลับฐาน</button>
+  <button class="btn ghost" id="homeBtn">🦆 กลับบ้านเป็ด</button>
 </div>
 
 <button id="mute" aria-label="sound">🔊</button>
-<div id="baseUi" class="hidden">
+<div id="tdUi" class="hidden">
   <div class="hud">
-    <span>🍗 <b id="bFood">0</b></span><span>⚙️ <b id="bMat">0</b></span><span>🪙 <b id="bCoin">0</b></span><span>🐤 <b id="bPop">0</b></span>
+    <span>🌊 คลื่น <b id="tdWave">1</b></span><span>🪙 <b id="tdCoins">0</b></span>
   </div>
   <div class="raid">
-    <button class="btn" id="defBtn">🛡️ ป้องกันฐาน</button>
-    <div id="defSub" class="rsub"></div>
-    <button class="btn small" id="raidBtn">⚔️ บุกปราสาทแมว</button>
-    <div id="raidSub" class="rsub"></div>
+    <button class="btn" id="waveBtn">▶ เริ่มคลื่นที่ 1</button>
   </div>
-  <button id="shopBtn" class="roundbtn">🏹<small>อาวุธ</small></button>
+  <button id="houseBtn" class="roundbtn">🏠<small>บ้าน</small></button>
+  <button id="raidBtn" class="roundbtn raidb">⚔️<small>บุกแมว</small></button>
   <button id="helpBtn" class="roundbtn help">❓<small>วิธีเล่น</small></button>
-  <div id="sheet" class="hidden">
-    <div class="shead"><b id="sheetTitle"></b><button id="sheetClose">✕</button></div>
-    <div id="sheetBody"></div>
-  </div>
+</div>
+<div id="sheet" class="hidden">
+  <div class="shead"><b id="sheetTitle"></b><button id="sheetClose">✕</button></div>
+  <div id="sheetBody"></div>
 </div>
 <div id="toast" class="hidden"></div>
 <div id="tut" class="hidden">
@@ -113,12 +113,11 @@
   <div id="tutHand">👆</div>
   <div id="tutBox"><div id="tutText"></div><div class="tutBtns"><button id="tutSkip">ข้าม</button><button id="tutNext">ต่อไป ▶</button></div><div id="tutDots"></div></div>
 </div>
-<div id="defUi" class="hidden"><div id="defHint">แตะพื้นเพื่อขว้างระเบิด 💣 • แตะไม้กั้นที่พังเพื่อซ่อม 🔧</div></div>
 <div id="result" class="ui hidden">
   <h2 id="rTitle">ชนะ!</h2>
   <div id="rInfo" class="sub"></div>
   <div class="big">+<span id="rCoins">0</span> 🪙</div>
-  <button class="btn" id="next">🏠 กลับฐาน</button>
+  <button class="btn" id="next">🦆 กลับบ้านเป็ด</button>
 </div>
 
 <script>
@@ -227,7 +226,7 @@ function parseGate(t) { return { op: t[0] === 'x' ? 'x' : t[0], v: Number(t.slic
 
 // ---------- Images ----------
 const IMG = {};
-['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_sleep', 'duck_cook', 'duck_hammer', 'duck_idle', 'duck_walk_back', 'duck_walk_front', 'room_kitchen', 'room_bedroom', 'room_workshop', 'room_armory', 'room_storage', 'duck_shoot_front', 'cat_back', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
+['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_shoot_front', 'cat_back', 'duckhouse', 'platform', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
   const i = new Image(); i.src = 'img/' + n + (n === 'floor' ? '.jpg' : '.png'); IMG[n] = i;
 });
 const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6, duck_sleep: 2, duck_cook: 4, duck_hammer: 4, duck_idle: 4, duck_walk_back: 6, duck_walk_front: 6, duck_shoot_front: 4, cat_back: 6 };
@@ -396,9 +395,6 @@ function buildRandom(lvl) {
 
 function startLevel() {
   SFX.init();
-  const need = raidFood(sel);
-  if (save.base && save.base.food < need) { SFX.play('gateBad'); toast(`อาหารไม่พอ ต้องใช้ 🍗${need} — ให้เป็ดทำอาหารก่อน`); return; }
-  if (save.base) save.base.food -= need;
   SFX.play('click');
   level = sel;
   army = 1 + save.army * 2 + (typeof armyBonus === 'function' ? armyBonus() : 0);
@@ -665,13 +661,7 @@ function lose() {
 function showResult() {
   state = 'result';
   save.coins += earned;
-  let loot = '';
-  if (save.base) {
-    const mat = won ? 15 + level * 6 : 4 + Math.round(progress() * level * 2), food = won ? 6 + level * 3 : 0;
-    const cap = capOf();
-    save.base.mat = Math.min(cap, save.base.mat + mat); save.base.food = Math.min(cap, save.base.food + food);
-    loot = ` • ได้ ⚙️${mat}` + (food ? ` 🍗${food}` : '');
-  }
+  const loot = '';
   if (won && level >= save.level) save.level = level + 1;
   if (won) sel = level + 1;
   persist();
@@ -682,6 +672,7 @@ function showResult() {
     : `ไปได้ ${Math.round(progress() * 100)}% • ล้มศัตรู ${killed}`;
   document.getElementById('rInfo').textContent += loot;
   document.getElementById('rCoins').textContent = earned;
+  document.getElementById('next').textContent = '🦆 กลับบ้านเป็ด';
   show('result');
 }
 
@@ -1104,7 +1095,7 @@ document.getElementById('play').onclick = startLevel;
 const muteBtn = document.getElementById('mute');
 muteBtn.textContent = SFX.muted ? '🔇' : '🔊';
 muteBtn.onclick = e => { e.stopPropagation(); SFX.init(); muteBtn.textContent = SFX.toggle() ? '🔇' : '🔊'; };
-document.getElementById('next').onclick = () => { hide('result'); enterBase(); };
+document.getElementById('next').onclick = () => { hide('result'); enterTD(); };
 
 function preview() {
   level = sel; army = 1 + save.army * 2; px = 0; pz = 0; camZ = -CAM_BACK;
@@ -1115,8 +1106,8 @@ function preview() {
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (state === 'base') { baseUpdate(dt); drawBase(); }
-  else if (state === 'defense' || (state === 'result' && D && D.shown)) { if (state === 'defense' && !window.tutPause) defenseUpdate(dt); defenseDraw(); }
+  if (state === 'td' || state === 'tdresult') { if (state === 'td' && !window.tutPause) tdUpdate(dt); tdDraw(); }
+
   else { if (state === 'play' || state === 'ending') update(dt); draw(); }
   requestAnimationFrame(frame);
 }
@@ -1128,8 +1119,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) persi
 // test hook
 window.__molt = { get state() { return state; }, get army() { return army; }, get pz() { return pz; }, get finishZ() { return finishZ; }, get objs() { return objs; }, get px() { return px; }, set px(v) { px = v; }, set sel(v) { sel = v; }, startLevel, save, LEVELS };
 </script>
-<script src="base.js"></script>
-<script src="defense.js"></script>
+<script src="td.js"></script>
 <script src="tutorial.js"></script>
 </body>
 </html>
