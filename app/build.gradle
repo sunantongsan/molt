@@ -1,14 +1,26 @@
 plugins { id 'com.android.application' }
+
+// AdMob IDs. These are Google's public TEST ids — replace them with the MOLT app / rewarded
+// unit from your AdMob account before publishing (or pass -PadmobAppId=... -PadmobRewarded=...).
+def admobAppId = providers.gradleProperty('admobAppId').getOrElse('ca-app-pub-3940256099942544~3347511713')
+def admobRewarded = providers.gradleProperty('admobRewarded').getOrElse('ca-app-pub-3940256099942544/5224354917')
+
 android {
     namespace 'com.sunantongsan.molt'
     compileSdk 36
+    buildFeatures { buildConfig true }
     defaultConfig {
         applicationId 'com.sunantongsan.molt'
         minSdk 24
         targetSdk 36
-        versionCode 1
-        versionName '0.1.0'
+        versionCode 2
+        versionName '0.2.0'
+        manifestPlaceholders = [admobAppId: admobAppId]
+        buildConfigField 'String', 'ADMOB_REWARDED', "\"${admobRewarded}\""
     }
     // The game itself lives in /web so it can also be played in a browser.
     sourceSets { main.assets.srcDirs = [rootProject.file('web')] }
+}
+dependencies {
+    implementation 'com.google.android.gms:play-services-ads:25.5.0'
 }

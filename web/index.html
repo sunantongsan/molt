@@ -71,6 +71,8 @@
   .wrow{background:#f3e8d3;border-radius:14px;padding:8px 10px;margin:8px 0}
   .wname b{font-size:15px}.wname span{font-size:12px;color:#8a6a3a;margin-left:4px}.wname small{display:block;font-size:11px;color:#6b5a40;margin-top:2px}
   .wbtns{display:flex;gap:6px}.wbtns .sbtn{margin:6px 0 0;padding:8px 10px}
+  .btn.ad{background:linear-gradient(#ffcf3a,#f59a00);box-shadow:0 6px 0 #a35f00,0 10px 20px rgba(0,0,0,.35);color:#4a2a00}
+  .btn.ad small{display:block;font-size:13px;font-weight:800;opacity:.85}
   .btn.ghost{background:rgba(255,255,255,.15);box-shadow:none;font-size:16px;padding:10px 22px}
   #toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 16px;border-radius:14px;font:700 14px system-ui,sans-serif;z-index:9;max-width:86vw;text-align:center}
   #mute{position:fixed;left:10px;top:10px;z-index:5;width:40px;height:40px;border-radius:12px;border:0;background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer}
@@ -117,7 +119,14 @@
   <h2 id="rTitle">ชนะ!</h2>
   <div id="rInfo" class="sub"></div>
   <div class="big">+<span id="rCoins">0</span> 🪙</div>
+  <button class="btn ad" id="adBtn">🎬 ดูโฆษณา รับ x3</button>
   <button class="btn" id="next">🦆 กลับบ้านเป็ด</button>
+</div>
+<div id="adFake" class="ui hidden">
+  <div class="sub" style="font-size:13px;opacity:.7">โฆษณา (ตัวอย่าง — ในแอปจะเป็นโฆษณาจริง)</div>
+  <div style="font-size:64px">🦆📺</div>
+  <div class="big" id="adCount">5</div>
+  <button class="btn ghost" id="adClose" disabled>ปิด</button>
 </div>
 
 <script>
@@ -165,6 +174,21 @@ const SFX = (() => {
     const g = ac.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     src.connect(fl); fl.connect(g); g.connect(master); src.start(t); src.stop(t + dur + 0.02);
   }
+  // wobbly "voice" for cat cries: a saw/triangle pair bent by an LFO, through a soft filter
+  function cry(f0, f1, dur, vol, delay, wob) {
+    const t = ac.currentTime + (delay || 0);
+    const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    const lfo = ac.createOscillator(), lg = ac.createGain();
+    o.type = 'sawtooth'; o2.type = 'triangle';
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    o2.frequency.setValueAtTime(f0 * 2.01, t); o2.frequency.exponentialRampToValueAtTime(f1 * 2.01, t + dur);
+    lfo.frequency.value = wob || 9; lg.gain.value = f0 * 0.06;
+    lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+    fl.type = 'bandpass'; fl.frequency.value = 1400; fl.Q.value = 1.2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.04); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(fl); o2.connect(fl); fl.connect(g); g.connect(master);
+    [o, o2, lfo].forEach(x => { x.start(t); x.stop(t + dur + 0.05); });
+  }
   const defs = {
     shoot: () => { noise(0.07, 0.12, 2800, 2); tone('triangle', 950, 420, 0.06, 0.04); },
     hit: () => { noise(0.09, 0.28, 900, 1.5); tone('square', 230, 90, 0.07, 0.05); },
@@ -179,8 +203,23 @@ const SFX = (() => {
     win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone('triangle', f, 0, 0.28, 0.14, i * 0.12)),
     lose: () => [392, 330, 262, 196].forEach((f, i) => tone('triangle', f, 0, 0.32, 0.14, i * 0.18)),
     click: () => tone('sine', 600, 900, 0.06, 0.1),
+    // cat soldier knocked out: "mee-yaaow~" falling off, plus a little armour clatter
+    catDie: () => { const p = 0.85 + Math.random() * 0.35; cry(620 * p, 980 * p, 0.12, 0.09, 0, 7); cry(980 * p, 330 * p, 0.42, 0.08, 0.11, 11); noise(0.12, 0.12, 2400, 3, 0.18); },
+    catHurt: () => { const p = 0.9 + Math.random() * 0.3; cry(900 * p, 1300 * p, 0.09, 0.05, 0, 14); },
+    bossStep: () => { tone('sine', 70, 38, 0.22, 0.32); noise(0.12, 0.12, 180, 1); },
+    slam: () => { tone('sine', 110, 30, 0.55, 0.5); noise(0.5, 0.55, 260, 0.7); noise(0.25, 0.3, 1800, 2, 0.04); },
+    bossRoar: () => { cry(260, 420, 0.25, 0.14, 0, 6); cry(420, 160, 0.7, 0.14, 0.22, 5); noise(0.5, 0.15, 500, 0.8, 0.1); },
+    bossDie: () => { cry(400, 520, 0.2, 0.14, 0, 5); cry(520, 90, 1.1, 0.14, 0.18, 4); tone('sine', 90, 30, 0.6, 0.4, 0.9); noise(0.5, 0.4, 300, 0.8, 0.9); },
+    coin: () => { const p = 1 + Math.random() * 0.15; tone('square', 1320 * p, 0, 0.06, 0.04); tone('square', 1760 * p, 0, 0.12, 0.04, 0.05); },
+    xbow: () => { noise(0.05, 0.25, 1600, 4); tone('square', 300, 120, 0.06, 0.05); },
+    cannon: () => { tone('sine', 140, 40, 0.4, 0.45); noise(0.35, 0.5, 600, 0.8); noise(0.15, 0.25, 3000, 1, 0.02); },
+    fire: () => { noise(0.25, 0.18, 900, 0.6); tone('sawtooth', 200, 90, 0.2, 0.03); },
+    poof: () => noise(0.18, 0.12, 700, 0.9),
+    crack: () => { noise(0.08, 0.4, 1200, 3); noise(0.3, 0.3, 400, 1, 0.05); tone('square', 160, 60, 0.15, 0.06); },
+    horn: () => { tone('sawtooth', 196, 196, 0.5, 0.09); tone('sawtooth', 247, 247, 0.5, 0.07, 0.02); tone('sawtooth', 294, 294, 0.8, 0.09, 0.45); },
+    reward: () => [784, 988, 1175, 1568].forEach((f, i) => { tone('triangle', f, 0, 0.3, 0.13, i * 0.08); tone('square', f * 2, 0, 0.12, 0.03, i * 0.08); }),
   };
-  const gap = { shoot: 0.07, hit: 0.05, meow: 0.25, wood: 0.06, plus: 0.04, clash: 0.08, quack: 0.15 };
+  const gap = { shoot: 0.07, hit: 0.05, meow: 0.25, wood: 0.06, plus: 0.04, clash: 0.08, quack: 0.15, catDie: 0.09, catHurt: 0.12, coin: 0.04, xbow: 0.08, cannon: 0.1, fire: 0.1, poof: 0.06, bossStep: 0.2 };
   function play(n) {
     if (muted || !ac) return;
     const now = ac.currentTime;
@@ -192,6 +231,30 @@ const SFX = (() => {
     toggle() { muted = !muted; try { localStorage.setItem('molt_mute', muted ? '1' : '0'); } catch (e) {} return muted; } };
 })();
 window.addEventListener('pointerdown', () => SFX.init(), { capture: true });
+
+// ---------- Rewarded ads ----------
+// In the Android app the AndroidAds bridge shows a real AdMob rewarded ad; in a browser we
+// show a short placeholder so the flow can be tested.
+const Ads = {
+  show(done) {
+    Ads.cb = done;
+    if (window.AndroidAds) {
+      let shown = false;
+      try { shown = AndroidAds.showRewarded(); } catch (e) {}
+      if (!shown) { Ads.cb = null; if (typeof toast === 'function') toast('โฆษณายังไม่พร้อม ลองใหม่อีกสักครู่'); }
+      return;
+    }
+    const box = document.getElementById('adFake'), cnt = document.getElementById('adCount'), close = document.getElementById('adClose');
+    let n = 5; cnt.textContent = n; close.disabled = true; box.classList.remove('hidden');
+    const tick = setInterval(() => {
+      n--; cnt.textContent = Math.max(0, n);
+      if (n <= 0) { clearInterval(tick); close.disabled = false; close.textContent = 'รับรางวัล ✔'; }
+    }, 1000);
+    close.onclick = () => { box.classList.add('hidden'); close.textContent = 'ปิด'; Ads.finish(true); };
+  },
+  finish(ok) { const cb = Ads.cb; Ads.cb = null; if (cb) cb(!!ok); },
+};
+window.__adDone = ok => Ads.finish(ok);
 
 // ---------- Levels ----------
 // themes: sky top/bottom, sea top/bottom, road shade
@@ -226,10 +289,10 @@ function parseGate(t) { return { op: t[0] === 'x' ? 'x' : t[0], v: Number(t.slic
 
 // ---------- Images ----------
 const IMG = {};
-['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_shoot_front', 'cat_back', 'duckhouse', 'platform', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
-  const i = new Image(); i.src = 'img/' + n + (n === 'floor' ? '.jpg' : '.png'); IMG[n] = i;
+['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_shoot_front', 'cat_back', 'duckhouse', 'platform', 'boss_walk', 'boss_walk_back', 'boss_attack', 'boss_die', 'duck_cannon', 'duck_xbow', 'grass', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
+  const i = new Image(); i.src = 'img/' + n + (n === 'floor' || n === 'grass' ? '.jpg' : '.png'); IMG[n] = i;
 });
-const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6, duck_sleep: 2, duck_cook: 4, duck_hammer: 4, duck_idle: 4, duck_walk_back: 6, duck_walk_front: 6, duck_shoot_front: 4, cat_back: 6 };
+const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6, duck_sleep: 2, duck_cook: 4, duck_hammer: 4, duck_idle: 4, duck_walk_back: 6, duck_walk_front: 6, duck_shoot_front: 4, cat_back: 6, boss_walk: 6, boss_walk_back: 6, boss_attack: 4, boss_die: 3, duck_cannon: 4, duck_xbow: 4 };
 function ready(i) { return i && i.complete && i.naturalWidth > 0; }
 // draw an image so its bottom-centre sits at (x, y) with the given width
 function drawAt(img, x, y, w) {
@@ -673,6 +736,15 @@ function showResult() {
   document.getElementById('rInfo').textContent += loot;
   document.getElementById('rCoins').textContent = earned;
   document.getElementById('next').textContent = '🦆 กลับบ้านเป็ด';
+  document.getElementById('next').onclick = () => { hide('result'); enterTD(); };
+  const ab = document.getElementById('adBtn');
+  ab.classList.toggle('hidden', earned <= 0);
+  ab.innerHTML = `🎬 ดูโฆษณา รับ x3<small>+🪙${earned * 2} เพิ่ม</small>`;
+  ab.onclick = () => Ads.show(ok => {
+    if (!ok) return;
+    save.coins += earned * 2; persist(); SFX.play('reward');
+    document.getElementById('rCoins').textContent = earned * 3; ab.classList.add('hidden');
+  });
   show('result');
 }
 
@@ -1106,7 +1178,7 @@ function preview() {
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (state === 'td' || state === 'tdresult') { if (state === 'td' && !window.tutPause) tdUpdate(dt); tdDraw(); }
+  if (state === 'td' || state === 'tdresult') { if (!window.tutPause) tdUpdate(dt); tdDraw(); }
 
   else { if (state === 'play' || state === 'ending') update(dt); draw(); }
   requestAnimationFrame(frame);

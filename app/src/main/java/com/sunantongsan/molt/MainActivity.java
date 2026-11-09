@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setBackgroundColor(0xFF1D5FA8);
         setContentView(web);
+        web.addJavascriptInterface(new MoltAds(this, web), "AndroidAds");
         hideBars();
         web.loadUrl("file:///android_asset/index.html");
     }
