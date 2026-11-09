@@ -765,7 +765,16 @@ function drawBoss(o) {
   ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.32, h * 0.1, 0, 0, Math.PI * 2); ctx.fill();
   const shakeX = o.hitT > 0 ? Math.sin(o.hitT * 120) * h * 0.02 : 0;
   const t = performance.now() / 1000;
-  if (ready(IMG.boss)) drawAt(IMG.boss, p.x + shakeX, p.y, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
+  if (ready(IMG.boss)) {
+    // waddle while walking, wind up and slam while fighting
+    ctx.save(); ctx.translate(p.x + shakeX, p.y);
+    if (o.fight && battle && battle.o === o) {
+      const k = Math.min(1, battle.t / 0.3);
+      ctx.rotate(-0.12 + k * k * 0.22); ctx.scale(1 + k * 0.04, 1 - k * 0.06);
+    } else ctx.rotate(Math.sin(t * 6) * 0.06);
+    drawAt(IMG.boss, 0, Math.abs(Math.sin(t * 6)) * -h * 0.03, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
+    ctx.restore();
+  }
   else if (ready(IMG.cat)) {
     // placeholder until a boss sprite exists: a giant cat with a red aura
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -774,7 +783,7 @@ function drawBoss(o) {
     ctx.fillStyle = g; ctx.fillRect(p.x - h, p.y - h * 1.3, h * 2, h * 1.5); ctx.restore();
     drawFrame('cat', Math.floor(t * 6), p.x + shakeX, p.y, h);
   }
-  if (o.hitT > 0) { ctx.save(); ctx.globalAlpha = 0.35; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y - h * 0.5, h * 0.35, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  if (o.hitT > 0) { ctx.save(); ctx.globalAlpha = 0.18; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y - h * 0.5, h * 0.35, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   // HP bar
   const bw = Math.max(80, h * 0.9), by = p.y - h * 1.08;
   ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, by, bw, 12, 6); ctx.fill();
