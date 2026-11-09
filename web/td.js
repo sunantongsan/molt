@@ -538,9 +538,16 @@ function drawHouse() {
   ctx.fillStyle = 'rgba(0,0,0,.5)'; roundRect(p.x - bw / 2, y, bw, 9, 4.5); ctx.fill();
   ctx.fillStyle = '#5fe06a'; roundRect(p.x - bw / 2 + 2, y + 2, (bw - 4) * Math.max(0, D.houseHp / D.houseMax), 5, 2.5); ctx.fill();
 }
-const PICKET_COLS = ['#f4e3c8', '#cfe6f2', '#f2d6cf', '#f6edd2', '#dcecc8'];
+const PICKETS = ['fence_picket1', 'fence_picket2', 'fence_picket4', 'fence_picket2', 'fence_picket1', 'fence_picket2'];
+function drawRail(pts, f, hgt, shakeX) {
+  // soft pastel plank, same colours as the fence art: dark rim then light face
+  for (const [col, wdt] of [['#b9a68c', 0.24], ['#efe4cf', 0.17]]) {
+    ctx.strokeStyle = col; ctx.lineWidth = Math.max(3, dk * wdt); ctx.lineCap = 'round';
+    ctx.beginPath(); pts.forEach((q, i) => { const x = q.p.x + shakeX, y = q.p.y - hgt * f; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+  }
+}
 function drawFence(w) {
-  const span = Math.PI / 4 * 0.92, n = 6, hgt = dk * 0.85;
+  const span = Math.PI / 4 * 0.98, n = 5, hgt = dk * 1.2;
   const shakeX = w.hit > 0 ? Math.sin(w.hit * 90) * 3 : 0;
   const ratio = w.hp / w.max;
   const pts = [];
@@ -548,39 +555,32 @@ function drawFence(w) {
     const a = w.a - span / 2 + span * (i + 0.5) / n;
     pts.push({ a, p: dproj(Math.cos(a) * RING, Math.sin(a) * RING) });
   }
-  // grass tufts at the base
-  ctx.fillStyle = 'rgba(70,140,50,.55)';
-  for (const q of pts) { ctx.beginPath(); ctx.ellipse(q.p.x + shakeX, q.p.y, dk * 0.18, dk * 0.07, 0, 0, Math.PI * 2); ctx.fill(); }
+  const c = dproj(Math.cos(w.a) * RING, Math.sin(w.a) * RING);
+  // grassy base patch like the art
+  ctx.fillStyle = '#a8cf55'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 2, dk * 1.35, dk * 0.42, Math.atan2(pts[n - 1].p.y - pts[0].p.y, pts[n - 1].p.x - pts[0].p.x), 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#86b83c'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 5, dk * 1.2, dk * 0.3, Math.atan2(pts[n - 1].p.y - pts[0].p.y, pts[n - 1].p.x - pts[0].p.x), 0, Math.PI); ctx.fill();
   if (w.hp <= 0) {
-    // broken: stumps and fallen planks
     pts.forEach((q, i) => {
-      const x = q.p.x, y = q.p.y, sh = hgt * (0.2 + (i * 37 % 5) * 0.06);
-      ctx.fillStyle = PICKET_COLS[i % 5]; ctx.strokeStyle = '#9a7f62'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.lineTo(x - 5, y - sh); ctx.lineTo(x - 1, y - sh - 5); ctx.lineTo(x + 2, y - sh + 2); ctx.lineTo(x + 5, y - sh - 3); ctx.lineTo(x + 5, y); ctx.closePath(); ctx.fill(); ctx.stroke();
-      if (i % 2 === 0) { ctx.save(); ctx.translate(x + 8, y + 3); ctx.rotate(0.3 + i * 0.2); ctx.fillStyle = PICKET_COLS[(i + 2) % 5]; ctx.fillRect(-12, -3, 24, 6); ctx.strokeRect(-12, -3, 24, 6); ctx.restore(); }
+      if (i % 2 === 0 && ready(IMG.fence_stump)) drawAt(IMG.fence_stump, q.p.x, q.p.y + 2, dk * 0.42);
     });
-    const c = dproj(Math.cos(w.a) * RING, Math.sin(w.a) * RING);
+    if (ready(IMG.fence_plank)) { ctx.save(); ctx.translate(c.x + dk * 0.2, c.y + dk * 0.1); ctx.rotate((w.a * 7) % 0.6 - 0.3); drawAt(IMG.fence_plank, 0, dk * 0.35, dk * 1.3); ctx.restore(); }
     ctx.font = '900 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)';
-    ctx.strokeText('🔧 แตะซ่อม', c.x, c.y - hgt * 0.6); ctx.fillStyle = '#ffe2a8'; ctx.fillText('🔧 แตะซ่อม', c.x, c.y - hgt * 0.6);
+    ctx.strokeText('🔧 แตะซ่อม', c.x, c.y - hgt * 0.55); ctx.fillStyle = '#ffe2a8'; ctx.fillText('🔧 แตะซ่อม', c.x, c.y - hgt * 0.55);
     return;
   }
-  // rails behind the pickets
-  const lean = i => ratio < 0.5 ? ((i * 53 % 7) - 3) * 0.06 * (1 - ratio * 2) : 0;
-  ctx.strokeStyle = '#d8c3a5'; ctx.lineWidth = Math.max(3, dk * 0.12); ctx.lineCap = 'round';
-  for (const f of [0.35, 0.68]) {
-    ctx.beginPath(); pts.forEach((q, i) => { const x = q.p.x + shakeX, y = q.p.y - hgt * f; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
-  }
+  const lean = i => ratio < 0.5 ? ((i * 53 % 7) - 3) * 0.05 * (1 - ratio * 2) : 0;
+  drawRail(pts, 0.33, hgt, shakeX);
+  drawRail(pts, 0.64, hgt, shakeX);
   pts.forEach((q, i) => {
+    const key = PICKETS[(i + Math.round(w.a * 4)) % PICKETS.length], img = IMG[key];
     ctx.save(); ctx.translate(q.p.x + shakeX, q.p.y); ctx.rotate(lean(i));
-    const pw = dk * 0.26, ph = hgt * (0.92 + (i % 3) * 0.05);
-    ctx.fillStyle = PICKET_COLS[(i + Math.round(w.a * 3)) % 5]; ctx.strokeStyle = '#a88d6e'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(-pw / 2, 0); ctx.lineTo(-pw / 2, -ph + pw * 0.4); ctx.quadraticCurveTo(0, -ph - pw * 0.3, pw / 2, -ph + pw * 0.4); ctx.lineTo(pw / 2, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-pw / 2 + 2, -ph + pw * 0.4, 2, ph * 0.7);
-    ctx.fillStyle = '#8a6a4a'; ctx.beginPath(); ctx.arc(0, -hgt * 0.35, 1.8, 0, Math.PI * 2); ctx.arc(0, -hgt * 0.68, 1.8, 0, Math.PI * 2); ctx.fill();
+    if (ready(img)) drawAt(img, 0, 3, hgt * img.naturalWidth / img.naturalHeight * (1.35 + (i % 2) * 0.1));
     ctx.restore();
   });
+  // a little flower now and then
+  ctx.font = `${Math.round(dk * 0.28)}px system-ui`; ctx.textAlign = 'center';
+  if (Math.round(w.a * 10) % 2 === 0) ctx.fillText('🌼', pts[1].p.x + 6, pts[1].p.y + 4);
   if (w.hp < w.max) {
-    const c = dproj(Math.cos(w.a) * RING, Math.sin(w.a) * RING);
     ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(c.x - 18, c.y - hgt - 12, 36, 4);
     ctx.fillStyle = ratio > 0.5 ? '#7dde5a' : '#ffb347'; ctx.fillRect(c.x - 18, c.y - hgt - 12, 36 * ratio, 4);
   }
