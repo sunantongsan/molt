@@ -50,6 +50,11 @@
   .sbtn{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;border-radius:14px;padding:11px 14px;margin:6px 0;background:#4fb35b;color:#fff;font-family:inherit;box-shadow:0 4px 0 #2d7a36;cursor:pointer;text-align:left;gap:8px}
   .sbtn b{font-size:15px}.sbtn small{font-size:12px;opacity:.95;text-align:right}
   .sbtn.off{background:#b8ad9a;box-shadow:0 4px 0 #8c8371}
+  #baseUi .raid .btn.small{padding:8px 20px;font-size:15px;background:linear-gradient(#6d8fc9,#3f62a3);box-shadow:0 4px 0 #26406e}
+  #defHint{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:8px 14px;border-radius:12px;font:700 13px system-ui,sans-serif;white-space:nowrap;z-index:4;pointer-events:none}
+  .wrow{background:#f3e8d3;border-radius:14px;padding:8px 10px;margin:8px 0}
+  .wname b{font-size:15px}.wname span{font-size:12px;color:#8a6a3a;margin-left:4px}.wname small{display:block;font-size:11px;color:#6b5a40;margin-top:2px}
+  .wbtns{display:flex;gap:6px}.wbtns .sbtn{margin:6px 0 0;padding:8px 10px}
   .btn.ghost{background:rgba(255,255,255,.15);box-shadow:none;font-size:16px;padding:10px 22px}
   #toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 16px;border-radius:14px;font:700 14px system-ui,sans-serif;z-index:9;max-width:86vw;text-align:center}
   #mute{position:fixed;left:10px;top:10px;z-index:5;width:40px;height:40px;border-radius:12px;border:0;background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer}
@@ -76,7 +81,9 @@
     <span>🍗 <b id="bFood">0</b></span><span>⚙️ <b id="bMat">0</b></span><span>🪙 <b id="bCoin">0</b></span><span>🐤 <b id="bPop">0</b></span>
   </div>
   <div class="raid">
-    <button class="btn" id="raidBtn">⚔️ ออกรบ</button>
+    <button class="btn" id="defBtn">🛡️ ป้องกันฐาน</button>
+    <div id="defSub" class="rsub"></div>
+    <button class="btn small" id="raidBtn">⚔️ บุกปราสาทแมว</button>
     <div id="raidSub" class="rsub"></div>
   </div>
   <div id="sheet" class="hidden">
@@ -85,6 +92,7 @@
   </div>
 </div>
 <div id="toast" class="hidden"></div>
+<div id="defUi" class="hidden"><div id="defHint">แตะพื้นเพื่อขว้างระเบิด 💣 • แตะไม้กั้นที่พังเพื่อซ่อม 🔧</div></div>
 <div id="result" class="ui hidden">
   <h2 id="rTitle">ชนะ!</h2>
   <div id="rInfo" class="sub"></div>
@@ -1087,6 +1095,7 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (state === 'base') { baseUpdate(dt); drawBase(); }
+  else if (state === 'defense' || (state === 'result' && D && D.shown)) { if (state === 'defense') defenseUpdate(dt); defenseDraw(); }
   else { if (state === 'play' || state === 'ending') update(dt); draw(); }
   requestAnimationFrame(frame);
 }
@@ -1099,5 +1108,6 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) persi
 window.__molt = { get state() { return state; }, get army() { return army; }, get pz() { return pz; }, get finishZ() { return finishZ; }, get objs() { return objs; }, get px() { return px; }, set px(v) { px = v; }, set sel(v) { sel = v; }, startLevel, save, LEVELS };
 </script>
 <script src="base.js"></script>
+<script src="defense.js"></script>
 </body>
 </html>

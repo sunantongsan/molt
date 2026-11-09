@@ -22,6 +22,7 @@ function freshBase() {
       { slot: 0, type: 'kitchen', lvl: 1 },
       { slot: 1, type: 'bedroom', lvl: 1 },
       { slot: 2, type: 'workshop', lvl: 1 },
+      { slot: 3, type: 'armory', lvl: 1 },
     ],
     ducks: [{ id: 1, slot: 0 }, { id: 2, slot: 2 }, { id: 3, slot: 1 }, { id: 4, slot: 1 }],
   };
@@ -124,8 +125,9 @@ function baseUpdate(dt) {
       w.walking = true; w.dx = dx; w.dy = dy;
     } else { w.walking = false; w.x = s.x; w.y = s.y; }
   }
+  if (typeof startDefense === 'function' && Date.now() >= B.nextAttack && state === 'base') { closeSheet(); startDefense(true); return; }
   baseTimer += dt;
-  if (baseTimer > 2) { baseTimer = 0; persist(); renderBaseHud(); }
+  if (baseTimer > 1) { baseTimer = 0; persist(); renderBaseHud(); }
 }
 let baseTimer = 0;
 
@@ -256,7 +258,9 @@ function renderBaseHud() {
   $('bMat').textContent = fmt(B.mat) + '/' + cap;
   $('bCoin').textContent = fmt(save.coins);
   $('bPop').textContent = B.ducks.length + '/' + popCap();
-  $('raidSub').textContent = `ใช้ 🍗${raidFood(save.level)} • ทัพเสริมจากคลังอาวุธ +${armyBonus()}`;
+  const left = Math.max(0, Math.round((B.nextAttack - Date.now()) / 1000));
+  $('defSub').textContent = `คืนที่ ${B.day} • แมวบุกใน ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  $('raidSub').textContent = `บุกปราสาทแมว • ใช้ 🍗${raidFood(save.level)}`;
   if (bsel >= 0 && !$('sheet').classList.contains('hidden')) openSheet(bsel, true);
 }
 function closeSheet() { bsel = -1; $('sheet').classList.add('hidden'); }
@@ -304,6 +308,7 @@ function openSheet(s, refresh) {
       body.appendChild(btn('➕ ส่งเป็ดมาทำงาน', fd ? 'ดึงเป็ดที่นอนพักอยู่' : 'ไม่มีเป็ดว่าง', !!fd && n < T.slots, () => { fd.slot = s; }));
       body.appendChild(btn('➖ ให้เป็ดไปพัก', 'กลับห้องนอน', n > 0 && !!bedroomWithSpace(), () => { workersIn(s)[n - 1].slot = bedroomWithSpace().slot; }));
     }
+    if (r.type === 'armory' && typeof armorySheet === 'function') armorySheet(body);
     if (r.type === 'bedroom') {
       const cost = 25 + B.ducks.length * 8;
       body.appendChild(btn('🐤 รับเป็ดใหม่', `🍗${cost}`, B.food >= cost && B.ducks.length < popCap(), () => {
@@ -319,6 +324,7 @@ function openSheet(s, refresh) {
 
 // ---------- flow between base and raids ----------
 function enterBase() {
+  if (typeof D !== 'undefined') D = null;
   state = 'base';
   hide('menu'); hide('result'); show('baseUi');
   closeSheet();
@@ -328,6 +334,7 @@ function enterBase() {
 function openRaid() {
   SFX.init(); SFX.play('click');
   hide('baseUi'); closeSheet();
+  if (typeof D !== 'undefined') D = null;
   state = 'menu'; bsel = -1;
   renderMenu(); preview(); show('menu');
 }
