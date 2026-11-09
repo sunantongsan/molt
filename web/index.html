@@ -432,14 +432,15 @@ function update(dt) {
       if (Math.random() < 0.6) burst(o.x + rnd(-1, 1), o.z - 0.5, Math.random() < 0.5 ? '#e23b3b' : '#3f8bff', 2);
       shake = 0.12; SFX.play('clash');
       if (Math.random() < 0.5) hitFx('spark', o.x + rnd(-1, 1), o.z - crowdRadius(o.n), 0.6, '#ffffff');
-      if (o.n <= 0) { o.alive = false; battle = null; if (o.t === 'army') win(); }
+      if (o.n <= 0) { o.alive = false; battle = null; }
       else if (army <= 0) battle = null;
     }
 
     if (army <= 0 && state === 'play') lose();
+    else if (state === 'play' && pz >= finishZ + 7) win();
   } else if (state === 'ending') {
     endTimer += dt;
-    pz += 5 * dt;
+    if (won) pz = Math.min(pz + 3 * dt, finishZ + 8.2);
     camZ += ((pz - CAM_BACK) - camZ) * Math.min(1, dt * 4);
     if (endTimer > 1.6) showResult();
   }
