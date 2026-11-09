@@ -25,10 +25,28 @@ const WEAPONS = [
   { id: 'bow',    name: 'ธนูไม้',     icon: '🏹', dmg: 1,   rate: 1.3,  range: 6.5, speed: 13, cost: 0 },
   { id: 'xbow',   name: 'หน้าไม้',    icon: '🎯', dmg: 3,   rate: 0.8,  range: 8,   speed: 18, cost: 150 },
   { id: 'fire',   name: 'ธนูไฟ',      icon: '🔥', dmg: 2,   rate: 1.1,  range: 7,   speed: 13, splash: 1.0, cost: 300 },
+  { id: 'ice',    name: 'ธนูน้ำแข็ง', icon: '❄️', dmg: 1.4, rate: 1.1,  range: 7,   speed: 14, cost: 400 },
   { id: 'triple', name: 'ธนูสามดอก', icon: '🔱', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, cost: 500 },
+  { id: 'storm',  name: 'ธนูสายฟ้า',  icon: '⚡', dmg: 2.2, rate: 0.9,  range: 7.5, speed: 22, chain: 2, cost: 650 },
   { id: 'cannon', name: 'ปืนใหญ่ไม้', icon: '💣', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, cost: 800 },
 ];
 const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
+// level look: 0 = Lv1-3, 1 = Lv4-6, 2 = Lv7-9, 3 = Lv10
+function tierOf(lvl) { return lvl >= 10 ? 3 : lvl >= 7 ? 2 : lvl >= 4 ? 1 : 0; }
+const TIER_COL = ['#8a8f99', '#3fb24f', '#4a8cff', '#c06bff'];
+const TIER_GLOW = [null, '#a6ff9a', '#9fd0ff', '#ffd84a'];
+const WCOL = { bow: '#ffe27a', xbow: '#d8f4ff', fire: '#ff8a2a', ice: '#9fe8ff', triple: '#ffe27a', storm: '#c8b6ff', cannon: '#ffb347' };
+// special powers unlocked at Lv5 and Lv10
+const PERKS = {
+  bow:    ['ยิงทีละ 2 ดอก', 'คริติคอล 25% (x2)'],
+  xbow:   ['ยิงกระเด็นถอยหลัง', 'คริติคอล 30% (x2.5)'],
+  fire:   ['เผาไหม้ต่อเนื่อง', 'ระเบิดวงกว้าง'],
+  ice:    ['แช่แข็งเป็นวง', 'แช่แข็งจนหยุดนิ่ง'],
+  triple: ['ยิงทีละ 5 ดอก', 'ยิงทีละ 7 ดอก'],
+  storm:  ['สายฟ้ากระโดด 4 ตัว', 'สายฟ้ากระโดด 6 ตัว'],
+  cannon: ['ระเบิดแล้วมึน', 'ระเบิดวงยักษ์ + มึนนาน'],
+};
+function perkLv(p) { return p.lvl >= 10 ? 2 : p.lvl >= 5 ? 1 : 0; }
 WEAPON.bomb = { speed: 1, range: 0 };
 
 // ---------- save ----------
@@ -60,7 +78,7 @@ function freshField() {
     walls: Array.from({ length: 8 }, (_, i) => ({ a: i * Math.PI / 4, hp: wallMax(), max: wallMax(), hit: 0 })),
     shooters: new Map(),   // slot -> {cd, aimDx, aimDy, shootT}
     cats: [], shots: [], fx: [], floats: [], queue: [], banner: 0, killed: 0, earned: 0,
-    parts: [], coins: [], revived: false, hudPulse: 0,
+    parts: [], coins: [], revived: false, hudPulse: 0, seen: {}, bolts: [],
   };
 }
 function shooter(s) {
@@ -91,7 +109,11 @@ function buildWave(n) {
   for (let g = 0; g < groups; g++) {
     const side = Math.random() * Math.PI * 2;
     const size = 3 + Math.floor(n * 1.2 + Math.random() * 3);
-    for (let i = 0; i < size; i++) q.push({ t: t + i * 0.35, a: side + (Math.random() - 0.5) * 0.7, hp: 2 + Math.floor(n / 2), boss: false });
+    // from wave 3 some groups are ninja cats (fast), from wave 6 steel tank cats (tough)
+    const r = Math.random();
+    const kind = n >= 6 && r < 0.25 ? 'tank' : n >= 3 && r < 0.55 ? 'ninja' : 'cat';
+    const cnt = kind === 'tank' ? Math.max(2, Math.ceil(size / 3)) : size;
+    for (let i = 0; i < cnt; i++) q.push({ t: t + i * (kind === 'ninja' ? 0.22 : 0.35), a: side + (Math.random() - 0.5) * 0.7, hp: 2 + Math.floor(n / 2), boss: false, kind });
     t += Math.max(3.5, 8 - n * 0.3);
   }
   if (n % 5 === 0) q.push({ t: t + 2, a: Math.random() * Math.PI * 2, hp: 60 + n * 18, boss: true });
@@ -99,8 +121,15 @@ function buildWave(n) {
 }
 function spawnCatOrig(c) {
   const rx = W / 2 / dk + 1, ry = H * 0.53 / (dk * 0.62) + 1;
-  D.cats.push({ x: Math.cos(c.a) * rx, y: Math.sin(c.a) * ry, hp: c.hp, max: c.hp, boss: c.boss,
-    v: c.boss ? 0.7 : 0.9 + Math.random() * 0.5, st: 'walk', atk: 0, ph: Math.random() * 9, hitT: 0 });
+  const kind = c.kind || 'cat';
+  const hp = kind === 'ninja' ? Math.max(1, Math.round(c.hp * 0.6)) : kind === 'tank' ? c.hp * 3 + 4 : c.hp;
+  const v = c.boss ? 0.7 : kind === 'ninja' ? 1.8 + Math.random() * 0.5 : kind === 'tank' ? 0.55 + Math.random() * 0.15 : 0.9 + Math.random() * 0.5;
+  D.cats.push({ x: Math.cos(c.a) * rx, y: Math.sin(c.a) * ry, hp, max: hp, boss: c.boss, kind,
+    v, st: 'walk', atk: 0, ph: Math.random() * 9, hitT: 0, slow: 0, stun: 0, burn: 0 });
+  if (!c.boss && kind !== 'cat' && !D.seen[kind]) {
+    D.seen[kind] = true;
+    toast(kind === 'ninja' ? '🥷 แมวนินจามาแล้ว! วิ่งเร็วมาก' : '🛡️ แมวเกราะเหล็กมาแล้ว! ทนมาก ใช้อาวุธแรงๆ');
+  }
 }
 function spawnCat(c) {
   spawnCatOrig(c);
@@ -123,19 +152,24 @@ function tdUpdate(dt) {
     for (const c of D.cats) {
       if (c.hp <= 0) continue;
       c.hitT = Math.max(0, c.hitT - dt);
+      if (c.burn > 0) { c.burn -= dt; c.burnTick = (c.burnTick || 0) + dt; if (c.burnTick > 0.5) { c.burnTick = 0; hurtCat(c, c.burnDps * 0.5, 'burn'); if (c.hp <= 0) continue; } }
+      if (c.stun > 0) { c.stun -= dt; continue; }
+      if (c.slow > 0) c.slow -= dt;
+      const sdt = c.slow > 0 ? dt * (c.freeze ? 0 : 0.5) : dt;
+      if (c.slow <= 0) c.freeze = false;
       const dist = Math.hypot(c.x, c.y), wall = wallFor(c);
       if (c.st === 'walk') {
         if (dist <= RING + 0.5 && wall.hp > 0) { c.st = 'wall'; c.atk = 0; }
         else if (dist <= HOUSE_R + 0.5) { c.st = 'house'; c.atk = 0; }
         else {
-          c.x -= c.x / dist * c.v * dt; c.y -= c.y / dist * c.v * dt;
+          c.x -= c.x / dist * c.v * sdt; c.y -= c.y / dist * c.v * sdt;
           if (c.boss) { c.step = (c.step || 0) + dt; if (c.step > 0.55) { c.step = 0; SFX.play('bossStep'); D.shake = Math.max(D.shake, 0.08); } }
         }
       } else {
         // attacking the fence or the house; bosses swing slower but slam hard
         const period = c.boss ? BOSS_PERIOD : 0.9, hitAt = c.boss ? BOSS_PERIOD * 0.8 : 0.9;
         if (c.st === 'wall' && wall.hp <= 0) { c.st = 'walk'; c.atk = 0; continue; }
-        const before = c.atk; c.atk += dt;
+        const before = c.atk; c.atk += sdt;
         if (before < hitAt && c.atk >= hitAt) {
           if (c.boss) bossSlam(c);
           if (c.st === 'wall') {
@@ -159,14 +193,15 @@ function tdUpdate(dt) {
       const t = nearestCat(pos.x, pos.y, W0.range);
       if (!t) continue;
       o.cd = 1 / W0.rate; o.aimDx = t.x - pos.x; o.aimDy = t.y - pos.y; o.shootT = 0.3;
-      const n = W0.multi || 1;
+      const pk = perkLv(p), tier = tierOf(p.lvl);
+      const n = p.w === 'triple' ? [3, 5, 7][pk] : p.w === 'bow' && pk >= 1 ? 2 : (W0.multi || 1);
       for (let k = 0; k < n; k++) {
-        const spread = n > 1 ? (k - (n - 1) / 2) * 0.22 : 0;
+        const spread = n > 1 ? (k - (n - 1) / 2) * (p.w === 'bow' ? 0.08 : 0.22) : 0;
         const ang = Math.atan2(t.y - pos.y, t.x - pos.x) + spread, dist = Math.hypot(t.x - pos.x, t.y - pos.y);
         D.shots.push({ x: pos.x, y: pos.y, sx: pos.x, sy: pos.y, tx: pos.x + Math.cos(ang) * dist, ty: pos.y + Math.sin(ang) * dist,
-          target: n > 1 ? null : t, w: p.w, dmg: wDmg(p), t: 0, dur: dist / W0.speed, high: true });
+          target: n > 1 && p.w !== 'bow' ? null : t, w: p.w, dmg: wDmg(p), t: 0, dur: dist / W0.speed, high: true, pk, tier });
       }
-      SFX.play(p.w === 'cannon' ? 'cannon' : p.w === 'xbow' ? 'xbow' : p.w === 'fire' ? 'fire' : 'shoot');
+      SFX.play(p.w === 'cannon' ? 'cannon' : p.w === 'xbow' ? 'xbow' : p.w === 'fire' ? 'fire' : p.w === 'storm' ? 'zap' : p.w === 'ice' ? 'ice' : 'shoot');
       if (p.w === 'cannon') { D.shake = Math.max(D.shake, 0.06); o.flash = 0.15; }
     }
   }
@@ -183,20 +218,14 @@ function tdUpdate(dt) {
       addFx('boom', s.tx, s.ty, '#ffb347'); D.shake = 0.35; SFX.play('break');
       continue;
     }
-    const W0 = WEAPON[s.w];
-    if (W0.splash) {
-      for (const c of D.cats) if (c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < W0.splash) hurtCat(c, s.dmg);
-      addFx(s.w === 'cannon' ? 'boom' : 'fire', s.x, s.y, s.w === 'cannon' ? '#ffb347' : '#ff7a2a');
-      if (s.w === 'cannon') { SFX.play('break'); D.shake = 0.25; }
-    } else {
-      const c = s.target && s.target.hp > 0 ? s.target : D.cats.find(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < 0.55);
-      if (c) hurtCat(c, s.dmg);
-    }
+    impact(s);
   }
   D.shots = D.shots.filter(s => !s.done);
   D.cats = D.cats.filter(c => c.hp > 0 || (c.deadT = (c.deadT || 0) + dt) < (c.boss ? 2.2 : 0.6));
   for (const p of D.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.h += p.vh * dt; p.vh -= 14 * dt; p.t += dt; if (p.h < 0) { p.h = 0; p.vh *= -0.3; p.vx *= 0.6; p.vy *= 0.6; } }
   D.parts = D.parts.filter(p => p.t < p.life);
+  for (const b of D.bolts) b.t += dt;
+  D.bolts = D.bolts.filter(b => b.t < 0.25);
   for (const c of D.coins) c.t += dt;
   const arrived = D.coins.filter(c => c.t >= c.dur);
   if (arrived.length) { SFX.play('coin'); D.hudPulse = 0.25; }
@@ -214,8 +243,9 @@ function tdUpdate(dt) {
   if ((tdTick += dt) > 0.5) { tdTick = 0; renderTdHud(); }
 }
 let tdTick = 0;
-function hurtCat(c, dmg) {
+function hurtCat(c, dmg, src) {
   if (c.hp <= 0) return;
+  if (c.kind === 'tank' && src !== 'burn') dmg *= 0.7;
   c.hp -= dmg; c.hitT = 0.12;
   D.floats.push({ x: c.x, y: c.y, t: 0, text: '-' + (Math.round(dmg * 10) / 10), color: '#fff', small: true });
   addFx('spark', c.x, c.y, '#fff3b0'); SFX.play('hit');
@@ -231,7 +261,7 @@ function hurtCat(c, dmg) {
       addFx('poof', c.x, c.y, '#ffffff');
       for (let i = 0; i < 3; i++) D.parts.push({ x: c.x, y: c.y, h: 1.0, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 1.2, vh: 3 + Math.random() * 2, t: 0, life: 0.7, kind: 'star' });
     }
-    const co = c.boss ? 150 : (Math.random() < 0.5 ? 2 + Math.floor(T.wave / 2) : 0);
+    const co = c.boss ? 150 : c.kind === 'tank' ? 6 + Math.floor(T.wave / 2) : (Math.random() < 0.5 ? 2 + Math.floor(T.wave / 2) : 0);
     if (co) {
       save.coins += co; D.earned += co;
       D.floats.push({ x: c.x, y: c.y - 0.6, t: 0, text: '+' + co + '🪙', color: '#ffd84a' });
@@ -245,7 +275,46 @@ function nearestCat(x, y, r) {
   for (const c of D.cats) { if (c.hp <= 0) continue; const d = Math.hypot(c.x - x, c.y - y); if (d < bd) { bd = d; best = c; } }
   return best;
 }
-function addFx(type, x, y, color) { D.fx.push({ type, x, y, t: 0, color }); }
+function addFx(type, x, y, color, size) { D.fx.push({ type, x, y, t: 0, color, size: size || 1 }); }
+function impact(s) {
+  const W0 = WEAPON[s.w], pk = s.pk || 0, big = 1 + (s.tier || 0) * 0.25;
+  const near = r => D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < r);
+  const direct = () => s.target && s.target.hp > 0 ? s.target : D.cats.find(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < 0.55);
+  if (s.w === 'cannon') {
+    const r = pk >= 2 ? 2.6 : W0.splash;
+    for (const c of near(r)) { hurtCat(c, s.dmg); if (pk >= 1 && !c.boss) c.stun = Math.max(c.stun, pk >= 2 ? 1.4 : 0.8); }
+    addFx('boom', s.x, s.y, s.tier >= 3 ? '#ffe680' : '#ffb347', big * (pk >= 2 ? 1.35 : 1));
+    if (s.tier >= 2) addFx('shock', s.x, s.y, '#ffd59a', 0.6);
+    SFX.play('break'); D.shake = 0.25;
+  } else if (s.w === 'fire') {
+    const r = pk >= 2 ? 1.7 : W0.splash;
+    for (const c of near(r)) { hurtCat(c, s.dmg); if (pk >= 1) { c.burn = 2.5; c.burnDps = s.dmg * 0.5; } }
+    addFx('fire', s.x, s.y, s.tier >= 3 ? '#ffd84a' : '#ff7a2a', big * (pk >= 2 ? 1.5 : 1));
+  } else if (s.w === 'ice') {
+    const hits = pk >= 1 ? near(1.2) : [direct()].filter(Boolean);
+    for (const c of hits) { hurtCat(c, s.dmg); c.slow = Math.max(c.slow, 2.2); if (pk >= 2 && !c.boss) { c.freeze = true; c.slow = Math.max(c.slow, 1.2); } }
+    addFx('frost', s.x, s.y, '#bff4ff', big * (pk >= 1 ? 1.4 : 0.8));
+  } else if (s.w === 'storm') {
+    let c = direct(); const hitSet = new Set(); let from = { x: s.x, y: s.y };
+    const jumps = [2, 4, 6][pk];
+    for (let j = 0; c && j <= jumps; j++) {
+      hitSet.add(c); hurtCat(c, s.dmg * (j ? 0.7 : 1));
+      D.bolts.push({ x1: from.x, y1: from.y, x2: c.x, y2: c.y, t: 0, tier: s.tier || 0 });
+      from = c;
+      c = D.cats.filter(o => o.hp > 0 && !hitSet.has(o) && Math.hypot(o.x - from.x, o.y - from.y) < 2.6).sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
+    }
+  } else {
+    const c = direct();
+    if (c) {
+      let dmg = s.dmg;
+      const critP = s.w === 'bow' && pk >= 2 ? 0.25 : s.w === 'xbow' && pk >= 2 ? 0.3 : 0;
+      if (critP && Math.random() < critP) { dmg *= s.w === 'xbow' ? 2.5 : 2; D.floats.push({ x: c.x, y: c.y - 0.5, t: 0, text: 'CRIT!', color: '#ffd84a' }); addFx('ring', c.x, c.y, '#ffd84a'); }
+      hurtCat(c, dmg);
+      if (s.w === 'xbow' && pk >= 1 && !c.boss && c.kind !== 'tank') { const d = Math.hypot(c.x, c.y) || 1; c.x += c.x / d * 0.45; c.y += c.y / d * 0.45; if (c.st === 'wall') c.st = 'walk'; }
+      if ((s.tier || 0) >= 1) addFx('spark', c.x, c.y, TIER_GLOW[s.tier], big);
+    }
+  }
+}
 const BOSS_PERIOD = 1.5;
 function splinter(x, y) {
   D.parts.push({ x, y, h: 0.6, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 3, vh: 2 + Math.random() * 4, t: 0, life: 0.9, kind: 'wood', r: Math.random() * 6 });
@@ -389,6 +458,9 @@ function openSlot(s) {
     const info = document.createElement('div'); info.className = 'sinfo';
     info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • ดาเมจ ${wDmg(p).toFixed(1)} • ยิง ${W0.rate}/วิ • ระยะ ${W0.range}${W0.splash ? ' • ระเบิด' : ''}${W0.multi ? ' • 3 ดอก' : ''}`;
     body.appendChild(info);
+    const pk = PERKS[p.w], perk = document.createElement('div'); perk.className = 'sinfo';
+    perk.innerHTML = `⭐ Lv.5: ${pk[0]} ${p.lvl >= 5 ? '✅' : '🔒'}<br>🌟 Lv.10: ${pk[1]} ${p.lvl >= 10 ? '✅' : '🔒'}<br><small>เลเวล 4, 7, 10 เอฟเฟกต์ยิงจะสวยขึ้น</small>`;
+    body.appendChild(perk);
     const lc = lvlCost(p);
     body.appendChild(btn(p.lvl < 10 ? `⬆️ อัปเกรด → Lv.${p.lvl + 1}` : '⬆️ เลเวลเต็ม', p.lvl < 10 ? `🪙${lc}` : '', p.lvl < 10 && save.coins >= lc, () => { save.coins -= lc; p.lvl++; SFX.play('gateGood'); }));
     const head = document.createElement('div'); head.className = 'sinfo'; head.style.marginTop = '10px';
@@ -476,6 +548,16 @@ function tdDraw() {
   for (const it of list) it[1]();
   for (const s of D.shots) drawShot(s);
   for (const f of D.fx) drawFx(f);
+  for (const b of D.bolts) {
+    const a = dproj(b.x1, b.y1), c = dproj(b.x2, b.y2), y1 = a.y - dk * 0.6, y2 = c.y - dk * 0.6;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - b.t / 0.25;
+    for (const [col, w] of [[b.tier >= 2 ? '#ffe680' : '#9b7bff', 6 + b.tier * 2], ['#ffffff', 2]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(a.x, y1);
+      for (let i = 1; i < 6; i++) { const k = i / 6; ctx.lineTo(a.x + (c.x - a.x) * k + (Math.random() - 0.5) * 14, y1 + (y2 - y1) * k + (Math.random() - 0.5) * 14); }
+      ctx.lineTo(c.x, y2); ctx.stroke();
+    }
+    ctx.restore();
+  }
   for (const p of D.parts) {
     const q = dproj(p.x, p.y), y = q.y - p.h * dk, a = Math.min(1, (p.life - p.t) * 3);
     ctx.globalAlpha = Math.max(0, a);
@@ -643,6 +725,22 @@ function drawPlatform(s) {
     for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(p.x + i * k * 0.2, top - k * 0.27); ctx.lineTo(p.x + i * k * 0.2, top + k * 0.27); ctx.stroke(); }
     ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, top, k * 0.62, k * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
   }
+  // glowing aura on the deck that grows with the weapon level
+  const tr = tierOf(pl.lvl);
+  if (tr > 0) {
+    const tt = performance.now() / 1000 + s;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const ar = k * (0.55 + tr * 0.12) * (1 + Math.sin(tt * 3) * 0.06);
+    const gg = ctx.createRadialGradient(p.x, top, 0, p.x, top, ar);
+    gg.addColorStop(0, WCOL[pl.w]); gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.25 + tr * 0.15; ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(p.x, top, ar, ar * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+    if (tr >= 2) for (let i = 0; i < 3 + tr; i++) {
+      const a = tt * 1.5 + i / (3 + tr) * Math.PI * 2, py2 = top - ((tt * 0.6 + i * 0.3) % 1) * k * 1.4;
+      ctx.globalAlpha = 0.8; ctx.fillStyle = tr >= 3 ? '#ffe680' : WCOL[pl.w];
+      ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * k * 0.45, py2, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
   // the duck archer on top (hops up from the house when the platform is new)
   const o = shooter(s), h = k * 1.1, flip = o.aimDx < 0;
   const hop = o.arrive > 0 ? Math.sin(o.arrive * Math.PI) * k * 0.8 : 0;
@@ -664,24 +762,33 @@ function drawPlatform(s) {
   } else if (pl.w === 'xbow' && o.aimDy < 0 && ready(IMG.duck_xbow)) drawFrame('duck_xbow', o.shootT > 0 ? fk : 0, p.x, dy, h, flip);
   else if (o.aimDy < 0 && ready(IMG.duck_shoot)) drawFrame('duck_shoot', o.shootT > 0 ? 1 + fk % 3 : 0, p.x, dy, h, flip);
   else if (ready(IMG.duck_shoot_front)) drawFrame('duck_shoot_front', o.shootT > 0 ? fk : 0, p.x, dy, h, flip);
-  if (pl.w === 'fire' || pl.w === 'triple') {
+  if (pl.w === 'fire' || pl.w === 'triple' || pl.w === 'ice' || pl.w === 'storm') {
     // glowing arrow tip so fire / triple bows look different from the wooden bow
     const t = performance.now() / 1000 + s;
     const gx = p.x + (flip ? -1 : 1) * h * 0.3, gy = dy - h * 0.55, r = h * (0.18 + Math.sin(t * 12) * 0.04);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
-    g.addColorStop(0, pl.w === 'fire' ? '#fff0a0' : '#e0f6ff'); g.addColorStop(0.5, pl.w === 'fire' ? '#ff7a1a' : '#6ad0ff'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    g.addColorStop(0, pl.w === 'fire' ? '#fff0a0' : '#e0f6ff'); g.addColorStop(0.5, pl.w === 'fire' ? '#ff7a1a' : pl.w === 'storm' ? '#9b7bff' : pl.w === 'ice' ? '#7fe0ff' : '#6ad0ff'); g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
-  // weapon + level badge
+  // weapon + level badge, coloured by level tier, with stars
+  const tier = tierOf(pl.lvl);
   ctx.font = `900 ${Math.round(k * 0.32)}px system-ui,sans-serif`; ctx.textAlign = 'center';
-  const badge = `${WEAPON[pl.w].icon}${pl.lvl}`;
-  const bw = ctx.measureText(badge).width + 8;
-  ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, dy - h * 1.15, bw, k * 0.42, 6); ctx.fill();
+  const badge = `${WEAPON[pl.w].icon}${pl.lvl}${'★'.repeat(tier)}`;
+  const bw = ctx.measureText(badge).width + 10;
+  ctx.fillStyle = tier ? TIER_COL[tier] : 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, dy - h * 1.15, bw, k * 0.42, 6); ctx.fill();
+  if (tier >= 3) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.stroke(); }
   ctx.fillStyle = '#fff'; ctx.fillText(badge, p.x, dy - h * 1.15 + k * 0.32);
 }
+function catImg(c) { return c.kind === 'ninja' ? 'cat_ninja' : c.kind === 'tank' ? 'cat_tank' : 'cat'; }
 function drawCat(c) {
-  const p = dproj(c.x, c.y), h = dk * (c.boss ? 2.8 : 1.1);
+  const p = dproj(c.x, c.y), h = dk * (c.boss ? 2.8 : c.kind === 'tank' ? 1.45 : c.kind === 'ninja' ? 1.0 : 1.1);
+  if (c.kind === 'ninja' && c.hp > 0 && c.st === 'walk') {
+    // speed streaks behind ninja cats
+    ctx.strokeStyle = 'rgba(200,170,255,.45)'; ctx.lineWidth = 2;
+    const d = Math.hypot(c.x, c.y) || 1, bx = c.x / d, by = c.y / d;
+    for (let i = 0; i < 3; i++) { const q = dproj(c.x + bx * (0.3 + i * 0.15), c.y + by * (0.3 + i * 0.15)); ctx.beginPath(); ctx.moveTo(q.x - 4, q.y - h * (0.3 + i * 0.2)); ctx.lineTo(q.x + 4, q.y - h * (0.3 + i * 0.2)); ctx.stroke(); }
+  }
   ctx.globalAlpha = c.hp > 0 || c.boss ? 1 : Math.max(0, 1 - (c.deadT || 0) / 0.6);
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.25, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   const t = performance.now() / 1000 + c.ph, flip = c.x > 0;
@@ -709,12 +816,24 @@ function drawCat(c) {
   } else if (c.boss && ready(IMG.boss)) {
     ctx.save(); ctx.translate(x, py); ctx.rotate(atk ? Math.sin(k * Math.PI * 2) * 0.25 : Math.sin(t * 6) * 0.06);
     drawAt(IMG.boss, 0, 0, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight); ctx.restore();
-  } else if (c.y > 0.3 && c.hp > 0 && ready(IMG.cat_back)) {
+  } else if (c.y > 0.3 && c.hp > 0 && ready(IMG[catImg(c) + '_back'])) {
     const lunge = atk && k > 0.55 && k < 0.8 ? -h * 0.08 : 0;
-    drawFrame('cat_back', atk ? (k < 0.55 ? 0 : 3) : Math.floor(t * 9) % 6, x, py + lunge - (atk ? 0 : Math.abs(Math.sin(t * 7)) * h * 0.05), h, !flip);
+    drawFrame(catImg(c) + '_back', atk ? (k < 0.55 ? 0 : 3) : Math.floor(t * 9) % 6, x, py + lunge - (atk ? 0 : Math.abs(Math.sin(t * 7)) * h * 0.05), h, !flip);
   } else if (ready(IMG.cat)) {
-    if (atk) drawFrame('cat', k < 0.5 ? 2 : k < 0.75 ? 3 : 4, x, py, h, flip);
-    else drawFrame('cat', [0, 1, 5, 1][Math.floor(t * 8) % 4], x, py - Math.abs(Math.sin(t * 7)) * h * 0.06, h, flip);
+    const ci = ready(IMG[catImg(c)]) ? catImg(c) : 'cat';
+    if (atk) drawFrame(ci, k < 0.5 ? 2 : k < 0.75 ? 3 : 4, x, py, h, flip);
+    else drawFrame(ci, [0, 1, 5, 1][Math.floor(t * (c.kind === 'ninja' ? 14 : 8)) % 4], x, py - Math.abs(Math.sin(t * 7)) * h * 0.06, h, flip);
+  }
+  if (c.hp > 0 && (c.slow > 0 || c.burn > 0 || c.stun > 0)) {
+    ctx.save();
+    if (c.slow > 0) {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = c.freeze ? 0.5 : 0.3; ctx.fillStyle = '#7fd8ff';
+      ctx.beginPath(); ctx.ellipse(x, py - h * 0.45, h * 0.32, h * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+      if (c.freeze) { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.85; ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('🧊', x, py - h * 1.05); }
+    }
+    if (c.burn > 0) { ctx.globalAlpha = 0.9; ctx.font = `${Math.round(h * 0.28)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('🔥', x + Math.sin(performance.now() / 90) * 3, py - h * 0.95); }
+    if (c.stun > 0) { ctx.globalAlpha = 1; ctx.font = `${Math.round(h * 0.25)}px system-ui`; ctx.textAlign = 'center'; const a = performance.now() / 200; ctx.fillText('💫', x + Math.cos(a) * h * 0.2, py - h * 1.05); }
+    ctx.restore();
   }
   if (!c.boss && c.hitT > 0 && c.hp > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, py - h * 0.5, h * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   if (c.hp <= 0) ctx.restore();
@@ -738,13 +857,21 @@ function drawShot(s) {
     return;
   }
   const ang = Math.atan2((s.ty - s.sy) * 0.62 + (s.high ? dk * 0.05 : 0), s.tx - s.sx);
-  const len = s.w === 'xbow' ? 16 : 13;
-  const col = s.w === 'fire' ? '#ff8a2a' : s.w === 'xbow' ? '#d8f4ff' : '#ffe27a';
+  const tier = s.tier || 0, sz = 1 + tier * 0.22;
+  const len = (s.w === 'xbow' ? 16 : 13) * sz;
+  const col = tier >= 3 ? '#fff2a8' : WCOL[s.w] || '#ffe27a';
   ctx.save(); ctx.translate(p.x, y); ctx.rotate(ang);
   ctx.globalCompositeOperation = 'lighter';
-  const g = ctx.createLinearGradient(-len * 2, 0, 0, 0); g.addColorStop(0, 'rgba(255,220,120,0)'); g.addColorStop(1, col);
-  ctx.strokeStyle = g; ctx.lineWidth = s.w === 'fire' ? 5 : 3; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(-len * 2, 0); ctx.lineTo(0, 0); ctx.stroke();
+  if (tier >= 1) {
+    // brighter, longer glowing trail at higher levels
+    const gg = ctx.createRadialGradient(0, 0, 0, 0, 0, 8 * sz);
+    gg.addColorStop(0, TIER_GLOW[tier]); gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, 0, 8 * sz, 0, Math.PI * 2); ctx.fill();
+  }
+  const g = ctx.createLinearGradient(-len * (2 + tier), 0, 0, 0); g.addColorStop(0, 'rgba(255,220,120,0)'); g.addColorStop(1, col);
+  ctx.strokeStyle = g; ctx.lineWidth = (s.w === 'fire' ? 5 : s.w === 'storm' ? 4 : 3) * sz; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-len * (2 + tier), 0); ctx.lineTo(0, 0); ctx.stroke();
+  if (tier >= 3) for (let i = 0; i < 3; i++) { ctx.fillStyle = '#fff6c0'; ctx.fillRect(-len * (1 + i * 0.9) + Math.sin(s.t * 40 + i) * 2, Math.cos(s.t * 37 + i) * 4, 2, 2); }
   ctx.globalCompositeOperation = 'source-over';
   ctx.strokeStyle = '#6b3f1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(0, 0); ctx.stroke();
   ctx.fillStyle = '#eef'; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-2, -3); ctx.lineTo(-2, 3); ctx.fill();
@@ -753,7 +880,12 @@ function drawShot(s) {
 function drawFx(f) {
   const p = dproj(f.x, f.y), k = f.t / 0.5;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k;
-  if (f.type === 'shock' || f.type === 'shock2') {
+  if (f.type === 'frost') {
+    const r = dk * 1.1 * (f.size || 1) * (0.3 + k);
+    ctx.fillStyle = 'rgba(160,230,255,.35)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r * 0.62, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(p.x, p.y - dk * 0.4); ctx.lineTo(p.x + Math.cos(an) * r * 0.8, p.y - dk * 0.4 + Math.sin(an) * r * 0.5); ctx.stroke(); }
+  } else if (f.type === 'shock' || f.type === 'shock2') {
     const big = f.type === 'shock' ? 3.2 : 2.2, r = dk * big * (0.2 + k);
     ctx.strokeStyle = f.color; ctx.lineWidth = (f.type === 'shock' ? 8 : 4) * (1 - k);
     ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r * 0.62, 0, 0, Math.PI * 2); ctx.stroke();
@@ -766,7 +898,7 @@ function drawFx(f) {
       ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(cx, cy, dk * (f.type === 'dust' ? 0.45 : 0.22) * (0.6 + k * 0.6), 0, Math.PI * 2); ctx.fill();
     }
   } else if (f.type === 'boom' || f.type === 'fire') {
-    const r = dk * (f.type === 'boom' ? 1.9 : 1.0) * (0.3 + k);
+    const r = dk * (f.type === 'boom' ? 1.9 : 1.0) * (0.3 + k) * (f.size || 1);
     const g = ctx.createRadialGradient(p.x, p.y - 6, 0, p.x, p.y - 6, r);
     g.addColorStop(0, '#fff6c0'); g.addColorStop(0.4, f.color); g.addColorStop(1, 'rgba(255,80,20,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p.x, p.y - 6, r, r * 0.75, 0, 0, Math.PI * 2); ctx.fill();
