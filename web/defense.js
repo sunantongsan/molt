@@ -378,8 +378,11 @@ function drawDefDuck(d) {
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.22, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   const t = performance.now() / 1000 + d.id;
   const flip = d.aimDx < 0;
-  if (d.aimDy < 0 && ready(IMG.duck_shoot)) drawFrame('duck_shoot', d.shootT > 0 ? 2 + Math.floor((0.3 - d.shootT) * 6) % 2 : 0, p.x, p.y, h, flip);
-  else if (ready(IMG.duck_idle)) drawFrame('duck_idle', Math.floor(t * 4), p.x, p.y - (d.shootT > 0 ? 2 : 0), h, flip);
+  // aim pose: back view when shooting up the screen, front view (bow drawn) when shooting down
+  const k = d.shootT > 0 ? Math.min(3, Math.floor((0.3 - d.shootT) / 0.3 * 4)) : 0;
+  if (d.aimDy < 0 && ready(IMG.duck_shoot)) drawFrame('duck_shoot', d.shootT > 0 ? 1 + k % 3 : 0, p.x, p.y, h, flip);
+  else if (ready(IMG.duck_shoot_front)) drawFrame('duck_shoot_front', d.shootT > 0 ? k : 0, p.x, p.y, h, flip);
+  else if (ready(IMG.duck_idle)) drawFrame('duck_idle', Math.floor(t * 4), p.x, p.y, h, flip);
   // weapon badge + hp
   ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center';
   ctx.fillText(WEAPON[d.w].icon, p.x + h * 0.32, p.y - h * 0.82);
@@ -399,6 +402,11 @@ function drawDefCat(c) {
     const atk = c.st !== 'walk';
     ctx.save(); ctx.translate(x, py); ctx.rotate(atk ? Math.sin(c.atk / 0.9 * Math.PI * 2) * 0.25 : Math.sin(t * 6) * 0.06);
     drawAt(IMG.boss, 0, 0, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight); ctx.restore();
+  } else if (c.y > 0.3 && c.hp > 0 && ready(IMG.cat_back)) {
+    // cats below the base walk up the screen: show their backs
+    const atk = c.st !== 'walk', k = c.atk / 0.9;
+    const lunge = atk && k > 0.55 && k < 0.8 ? -h * 0.08 : 0;
+    drawFrame('cat_back', atk ? (k < 0.55 ? 0 : 3) : Math.floor(t * 9) % 6, x, py + lunge - (atk ? 0 : Math.abs(Math.sin(t * 7)) * h * 0.05), h, !flip);
   } else if (ready(IMG.cat)) {
     if (c.st !== 'walk' && c.hp > 0) { const k = c.atk / 0.9; drawFrame('cat', k < 0.5 ? 2 : k < 0.75 ? 3 : 4, x, py, h, flip); }
     else drawFrame('cat', [0, 1, 5, 1][Math.floor(t * 8) % 4], x, py - Math.abs(Math.sin(t * 7)) * h * 0.06, h, flip);
