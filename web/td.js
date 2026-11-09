@@ -114,6 +114,7 @@ function wallFor(c) {
 // ---------- update ----------
 function tdUpdate(dt) {
   if (!D) return;
+  fitField();
   D.t += dt; D.banner -= dt;
   for (const p of T.plats) { const o = shooter(p.slot); o.arrive = Math.max(0, o.arrive - dt); }
   if (D.phase === 'wave') {
@@ -425,8 +426,10 @@ function renderTdHud() {
 }
 
 // ---------- drawing ----------
+function fitField() { if (W > 0 && H > 0) dk = Math.min(W / 11.5, H / 15); }
 function tdDraw() {
   if (!D) return;
+  fitField();
   ctx.save();
   if (D.shake > 0) ctx.translate((Math.random() - 0.5) * 30 * D.shake, (Math.random() - 0.5) * 30 * D.shake);
   if (ready(IMG.grass)) {
