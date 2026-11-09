@@ -61,6 +61,29 @@ const UPGRADES = [
   { key: 'income',  name: 'รายได้',       desc: lv => `เหรียญ x${(1 + lv * 0.2).toFixed(1)}`, cost: lv => Math.round(80 * Math.pow(1.45, lv)) },
 ];
 
+// ---------- Images ----------
+const IMG = {};
+['duck_run', 'duck_shoot', 'duck_die', 'cat', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
+  const i = new Image(); i.src = 'img/' + n + (n === 'floor' ? '.jpg' : '.png'); IMG[n] = i;
+});
+const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6 };
+function ready(i) { return i && i.complete && i.naturalWidth > 0; }
+// draw an image so its bottom-centre sits at (x, y) with the given width
+function drawAt(img, x, y, w) {
+  const h = w * img.naturalHeight / img.naturalWidth;
+  ctx.drawImage(img, x - w / 2, y - h, w, h);
+  return h;
+}
+function drawFrame(name, frame, x, y, h, flip) {
+  const img = IMG[name], n = FRAMES[name];
+  const fw = img.naturalWidth / n, fh = img.naturalHeight;
+  const w = h * fw / fh;
+  const f = ((frame % n) + n) % n;
+  if (flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); x = 0; }
+  ctx.drawImage(img, f * fw, 0, fw, fh, x - w / 2, y - h, w, h);
+  if (flip) ctx.restore();
+}
+
 // ---------- Canvas / projection ----------
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
@@ -88,6 +111,7 @@ function proj(x, z) {
 // ---------- Game state ----------
 let state = 'menu';
 let level = save.level;
+let dying = [];
 let army, px, pz, speed, objs, arrows, parts, floats, enemyShots, finishZ, fireAcc, shake, battle, endTimer, earned, killed;
 
 function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -148,7 +172,7 @@ function startLevel() {
   level = save.level;
   army = 1 + save.army * 2;
   px = 0; pz = 0; speed = 8.5; camZ = pz - CAM_BACK;
-  arrows = []; parts = []; floats = []; enemyShots = [];
+  arrows = []; parts = []; floats = []; enemyShots = []; dying = [];
   fireAcc = 0; shake = 0; battle = null; endTimer = 0; earned = 0; killed = 0;
   buildLevel(level);
   state = 'play';
@@ -177,6 +201,11 @@ function addFloat(text, x, z, color) { floats.push({ text, x, z, y: 0, life: 1, 
 function burst(x, z, color, n) {
   for (let i = 0; i < n; i++) parts.push({ x, z, y: 0.3, vx: rnd(-2, 2), vz: rnd(-1, 3), vy: rnd(2, 5), life: rnd(0.4, 0.8), color });
 }
+function die(team, cx, cz, count, radius) {
+  const n = Math.min(count, 10);
+  for (let i = 0; i < n; i++) dying.push({ team, x: cx + rnd(-radius, radius), z: cz + rnd(-radius, radius) * 0.6, t: 0, flip: Math.random() < 0.5 });
+  if (dying.length > 80) dying.splice(0, dying.length - 80);
+}
 function applyGate(g) {
   const before = army;
   if (g.op === '+') army += g.v;
@@ -186,7 +215,7 @@ function applyGate(g) {
   army = Math.max(0, Math.round(army));
   const d = army - before;
   addFloat((d >= 0 ? '+' : '') + d, px, pz + 1, d >= 0 ? '#7dff8a' : '#ff6a6a');
-  if (d < 0) shake = 0.25;
+  if (d < 0) { shake = 0.25; die('duck', px, pz, -d, crowdRadius(before)); }
 }
 
 // ---------- Update ----------
@@ -234,7 +263,7 @@ function update(dt) {
         } else if ((o.t === 'squad' || o.t === 'army') && o.n > 0) {
           const r = crowdRadius(o.n);
           if (Math.abs(a.x - o.x) < r + 0.2 && a.z >= o.z - r * 0.6 && prevZ < o.z + r) {
-            a.life = 0; o.n--; killed++;
+            a.life = 0; o.n--; killed++; die('cat', a.x, o.z - r * 0.4, 1, 0.2);
             burst(a.x, o.z - r * 0.5, '#e23b3b', 3);
             if (o.n <= 0) o.alive = false;
             break;
@@ -254,7 +283,7 @@ function update(dt) {
         o.alive = false; army += 1; addFloat('+1', o.x, o.z, '#7dff8a');
       } else if (o.t === 'barrier' && pz >= o.z - 0.4 && pz < o.z + 0.6 && Math.abs(px - o.x) < o.w / 2 + R * 0.7) {
         const loss = Math.min(army, o.hp);
-        army -= loss; o.alive = false; shake = 0.35;
+        army -= loss; o.alive = false; shake = 0.35; die('duck', px, pz, loss, R);
         addFloat('-' + loss, px, pz + 1, '#ff6a6a');
         burst(o.x, o.z, '#8a5a2b', 20);
       } else if ((o.t === 'squad' || o.t === 'army') && o.n > 0 && !o.fight) {
@@ -273,6 +302,7 @@ function update(dt) {
       const tick = Math.max(1, Math.round(Math.min(army, o.n) * dt * 4));
       const k = Math.min(tick, army, o.n);
       army -= k; o.n -= k; killed += k;
+      die('duck', px, pz + crowdRadius(army) * 0.5, k, crowdRadius(army)); die('cat', o.x, o.z - crowdRadius(o.n) * 0.5, k, crowdRadius(o.n));
       if (Math.random() < 0.6) burst(o.x + rnd(-1, 1), o.z - 0.5, Math.random() < 0.5 ? '#e23b3b' : '#3f8bff', 2);
       shake = 0.12;
       if (o.n <= 0) { o.alive = false; battle = null; if (o.t === 'army') win(); }
@@ -290,6 +320,8 @@ function update(dt) {
   for (const p of parts) { p.x += p.vx * dt; p.z += p.vz * dt; p.y += p.vy * dt; p.vy -= 12 * dt; p.life -= dt; }
   parts = parts.filter(p => p.life > 0 && p.y > -0.2);
   if (parts.length > 300) parts.splice(0, parts.length - 300);
+  for (const d of dying) d.t += dt;
+  dying = dying.filter(d => d.t < 0.9);
   for (const f of floats) { f.y += dt * 1.6; f.life -= dt * 0.9; }
   floats = floats.filter(f => f.life > 0);
   shake = Math.max(0, shake - dt);
@@ -358,13 +390,24 @@ function drawRoad() {
   quad(-ROAD - 0.7, near, -ROAD, far, '#cdbf9e');
   quad(ROAD, near, ROAD + 0.7, far, '#cdbf9e');
   quad(-ROAD, near, ROAD, far, '#e3d7bd');
-  // stone rows
+  if (ready(IMG.floor)) {
+    // perspective floor drawn as thin screen rows (texture = 6x6 world units)
+    const T = IMG.floor, TW = 6, TH = T.naturalHeight, ROW = 3;
+    const yFar = Math.max(0, proj(0, far).y);
+    for (let y = Math.floor(yFar); y < H; y += ROW) {
+      const s = (y + ROW / 2 - H * 0.09) / (H * 0.6);
+      if (s <= 0) continue;
+      const z = camZ + FOCAL / s - 5;
+      const l = proj(-ROAD, z), r = proj(ROAD, z);
+      const v = (((-z % TW) + TW) % TW) / TW * TH;
+      ctx.drawImage(T, 0, Math.min(TH - 1, v), T.naturalWidth, 1, l.x, y, r.x - l.x, ROW + 0.5);
+    }
+  }
+  quad(-ROAD - 0.7, near, -ROAD, far, '#cdbf9e');
+  quad(ROAD, near, ROAD + 0.7, far, '#cdbf9e');
   const step = 1.6;
   for (let z = Math.floor(near / step) * step; z < far; z += step) {
     const k = Math.round(z / step);
-    quad(-ROAD, z, ROAD, z + 0.05, 'rgba(150,130,100,.35)');
-    const off = (k % 2) * 0.75;
-    for (let x = -ROAD + off; x < ROAD; x += 1.5) quad(x, z, x + 0.04, z + step, 'rgba(150,130,100,.25)');
     // crenellations
     if (k % 2 === 0) {
       for (const sx of [-ROAD - 0.7, ROAD]) {
@@ -389,7 +432,32 @@ function soldier(x, z, color, dark, phase) {
   ctx.beginPath(); ctx.arc(p.x, p.y - sz * 1.9 - bob, sz * 0.55, 0, Math.PI * 2); ctx.fill();
 }
 
+function unit(team, x, z, frame, mode) {
+  const p = proj(x, z);
+  if (p.y > H + 60 || p.s < 2) return;
+  const h = p.s * 0.95;
+  ctx.fillStyle = 'rgba(0,0,0,.2)';
+  ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.24, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+  if (team === 'duck') drawFrame(mode === 'shoot' ? 'duck_shoot' : 'duck_run', frame, p.x, p.y, h);
+  else drawFrame('cat', frame, p.x, p.y, h);
+}
 function drawCrowd(cx, cz, n, color, dark, facing) {
+  const team = facing < 0 ? 'duck' : 'cat';
+  if (team === 'duck' ? !ready(IMG.duck_run) || !ready(IMG.duck_shoot) : !ready(IMG.cat)) return drawCrowdBasic(cx, cz, n, color, dark, facing);
+  const shown = Math.min(n, 140);
+  const t = performance.now() / 1000;
+  const mode = team === 'duck' && (battle || state !== 'play') ? 'shoot' : 'run';
+  const pts = [];
+  for (let i = 0; i < shown; i++) {
+    const r = 0.23 * Math.sqrt(i + 0.5) * (n > 140 ? Math.sqrt(n / 140) * 0.9 : 1);
+    const a = i * 2.39996;
+    pts.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r * 0.8 * facing, i]);
+  }
+  pts.sort((a, b) => b[1] - a[1]);
+  const fps = team === 'duck' ? 12 : 8;
+  for (const q of pts) unit(team, Math.max(-ROAD + 0.1, Math.min(ROAD - 0.1, q[0])), q[1], Math.floor(t * fps + q[2] * 1.7), mode);
+}
+function drawCrowdBasic(cx, cz, n, color, dark, facing) {
   const shown = Math.min(n, 140);
   const t = performance.now() / 110;
   const pts = [];
@@ -439,13 +507,18 @@ function drawGate(o) {
     const good = g.op === '+' || g.op === 'x';
     const a = proj(x1 + 0.08, o.z), b = proj(x2 - 0.08, o.z);
     const h = a.s * 1.8;
-    ctx.globalAlpha = o.used ? 0.25 : 0.72;
+    const gi = good ? IMG.gate_blue : IMG.gate_red;
+    ctx.globalAlpha = o.used ? 0.12 : 0.38;
     ctx.fillStyle = good ? '#2f8cff' : '#ff4a4a';
-    ctx.fillRect(a.x, a.y - h, b.x - a.x, h);
+    ctx.fillRect(a.x + (b.x - a.x) * 0.12, a.y - h, (b.x - a.x) * 0.76, h);
+    ctx.globalAlpha = o.used ? 0.35 : 1;
+    if (ready(gi)) drawAt(gi, (a.x + b.x) / 2, a.y + a.s * 0.25, (b.x - a.x) * 1.08);
+    else {
+      ctx.fillStyle = good ? '#1a5fc2' : '#b72020';
+      ctx.fillRect(a.x - 2, a.y - h, 4, h); ctx.fillRect(b.x - 2, b.y - h, 4, h);
+      ctx.fillRect(a.x, a.y - h - 4, b.x - a.x, 6);
+    }
     ctx.globalAlpha = 1;
-    ctx.fillStyle = good ? '#1a5fc2' : '#b72020';
-    ctx.fillRect(a.x - 2, a.y - h, 4, h); ctx.fillRect(b.x - 2, b.y - h, 4, h);
-    ctx.fillRect(a.x, a.y - h - 4, b.x - a.x, 6);
     if (!o.used) {
       const fs = Math.max(12, (b.x - a.x) * 0.3);
       ctx.font = `900 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -457,6 +530,7 @@ function drawGate(o) {
 }
 
 function drawCastle(o) {
+  if (ready(IMG.castle)) { const p = proj(0, o.z); drawAt(IMG.castle, p.x, p.y + p.s * 0.6, p.s * (ROAD * 2 + 3)); return; }
   const a = proj(-ROAD - 0.7, o.z), b = proj(ROAD + 0.7, o.z);
   const h = a.s * 4;
   ctx.fillStyle = '#9a8a6a'; ctx.fillRect(a.x, a.y - h, b.x - a.x, h);
@@ -482,16 +556,38 @@ function draw() {
   const list = [];
   for (const o of objs) {
     if (o.z < camZ + 0.5 || o.z > camZ + 70) continue;
-    if (o.t === 'gate') list.push([o.z, () => drawGate(o)]);
+    if (o.t === 'gate') { if (!o.used) list.push([o.z, () => drawGate(o)]); }
     else if (o.t === 'castle') list.push([o.z + 0.5, () => drawCastle(o)]);
     else if (!o.alive) continue;
-    else if (o.t === 'tile') list.push([o.z, () => box(o.x, o.z, o.w, 1.0, 0.5, '#5fb2ff', '#2f7fe0', '+1')]);
-    else if (o.t === 'barrier') list.push([o.z, () => { box(o.x, o.z, o.w, 0.6, 1.0, '#b98a52', '#8a5a2b', String(o.hp)); }]);
+    else if (o.t === 'tile') list.push([o.z, () => {
+      if (!ready(IMG.plus1)) return box(o.x, o.z, o.w, 1.0, 0.5, '#5fb2ff', '#2f7fe0', '+1');
+      const p = proj(o.x, o.z + 0.5); drawAt(IMG.plus1, p.x, p.y + p.s * 0.15, p.s * 1.05);
+    }]);
+    else if (o.t === 'barrier') list.push([o.z, () => {
+      if (!ready(IMG.barrier)) return box(o.x, o.z, o.w, 0.6, 1.0, '#b98a52', '#8a5a2b', String(o.hp));
+      const p = proj(o.x, o.z + 0.3); const w = p.s * o.w * 1.05;
+      const h = drawAt(IMG.barrier, p.x, p.y + p.s * 0.1, w);
+      const fs = Math.max(12, w * 0.17);
+      ctx.font = `900 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = fs * 0.16; ctx.strokeStyle = 'rgba(60,30,0,.85)';
+      const ty = p.y + p.s * 0.1 - h * 0.6, tx = p.x + w * 0.02;
+      ctx.strokeText(String(o.hp), tx, ty); ctx.fillStyle = '#fff'; ctx.fillText(String(o.hp), tx, ty);
+    }]);
     else if (o.t === 'squad' || o.t === 'army') list.push([o.z + 0.3, () => {
       drawCrowd(o.x, o.z, o.n, '#ff5a4f', '#c22a2a', 1);
       label(o.x, o.z - crowdRadius(o.n) - 0.4, String(o.n), '#c22a2a', '#fff', o.t === 'army' ? 1.3 : 1);
     }]);
   }
+  for (const d of dying) list.push([d.z, () => {
+    const p = proj(d.x, d.z); const h = p.s * 0.95;
+    ctx.globalAlpha = Math.max(0, 1 - Math.max(0, d.t - 0.5) / 0.4);
+    if (d.team === 'duck' && ready(IMG.duck_die)) drawFrame('duck_die', Math.min(2, Math.floor(d.t * 7)), p.x, p.y, h, d.flip);
+    else if (d.team === 'cat' && ready(IMG.cat)) {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate((d.flip ? 1 : -1) * Math.min(1.4, d.t * 5));
+      drawFrame('cat', 0, 0, 0, h); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }]);
   for (const a of arrows) list.push([a.z, () => {
     const p = proj(a.x, a.z), q = proj(a.x, a.z + 0.7);
     ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = Math.max(1.5, p.s * 0.05);
