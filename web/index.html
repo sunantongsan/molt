@@ -58,6 +58,9 @@
   .roundbtn.help{left:auto;right:12px;background:linear-gradient(#8fd0ff,#4a9be0);box-shadow:0 5px 0 #2b6aa8,0 8px 16px rgba(0,0,0,.35)}
   .roundbtn.help small{color:#0c3560}
   #tut{position:fixed;inset:0;z-index:30}
+  #introUi{position:fixed;inset:0;z-index:25}
+  #introSkip{position:absolute;right:12px;top:12px;border:0;border-radius:14px;padding:9px 16px;background:rgba(0,0,0,.55);color:#fff;font:800 15px system-ui,sans-serif;cursor:pointer}
+  .introHint{position:absolute;left:0;right:0;bottom:54px;text-align:center;color:rgba(255,255,255,.85);font:700 13px system-ui,sans-serif;text-shadow:0 1px 3px #000}
   #tutSpot{position:fixed;border-radius:50%;box-shadow:0 0 0 200vmax rgba(0,0,0,.62);transition:all .35s ease;pointer-events:none;border:3px solid #ffd84a}
   #tutHand{position:fixed;font-size:44px;pointer-events:none;animation:tap 1s ease-in-out infinite;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))}
   @keyframes tap{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-4px,-14px) scale(1.08)}}
@@ -110,6 +113,7 @@
   <div id="sheetBody"></div>
 </div>
 <div id="toast" class="hidden"></div>
+<div id="introUi" class="hidden"><button id="introSkip">ข้าม ▶▶</button><div class="introHint">แตะเพื่อไปต่อ</div></div>
 <div id="tut" class="hidden">
   <div id="tutSpot"></div>
   <div id="tutHand">👆</div>
@@ -289,8 +293,8 @@ function parseGate(t) { return { op: t[0] === 'x' ? 'x' : t[0], v: Number(t.slic
 
 // ---------- Images ----------
 const IMG = {};
-['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_shoot_front', 'cat_back', 'duckhouse', 'platform', 'boss_walk', 'boss_walk_back', 'boss_attack', 'boss_die', 'duck_cannon', 'duck_xbow', 'grass', 'fence_picket1', 'fence_picket2', 'fence_picket4', 'fence_stump', 'fence_plank', 'fence_seg', 'duck_cannon_front', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
-  const i = new Image(); i.src = 'img/' + n + (n === 'floor' || n === 'grass' ? '.jpg' : '.png'); IMG[n] = i;
+['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_shoot_front', 'cat_back', 'duckhouse', 'platform', 'boss_walk', 'boss_walk_back', 'boss_attack', 'boss_die', 'duck_cannon', 'duck_xbow', 'grass', 'fence_picket1', 'fence_picket2', 'fence_picket4', 'fence_stump', 'fence_plank', 'fence_seg', 'duck_cannon_front', 'story1', 'story2', 'story3', 'story5', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
+  const i = new Image(); i.src = 'img/' + n + (n === 'floor' || n === 'grass' || n.startsWith('story') ? '.jpg' : '.png'); IMG[n] = i;
 });
 const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6, duck_sleep: 2, duck_cook: 4, duck_hammer: 4, duck_idle: 4, duck_walk_back: 6, duck_walk_front: 6, duck_shoot_front: 4, cat_back: 6, boss_walk: 6, boss_walk_back: 6, boss_attack: 4, boss_die: 3, duck_cannon: 4, duck_xbow: 4, duck_cannon_front: 4 };
 function ready(i) { return i && i.complete && i.naturalWidth > 0; }
@@ -1178,7 +1182,8 @@ function preview() {
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (state === 'td' || state === 'tdresult') { if (!window.tutPause) tdUpdate(dt); tdDraw(); }
+  if (state === 'intro') { introUpdate(dt); introDraw(); }
+  else if (state === 'td' || state === 'tdresult') { if (!window.tutPause) tdUpdate(dt); tdDraw(); }
 
   else { if (state === 'play' || state === 'ending') update(dt); draw(); }
   requestAnimationFrame(frame);
@@ -1192,6 +1197,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) persi
 window.__molt = { get state() { return state; }, get army() { return army; }, get pz() { return pz; }, get finishZ() { return finishZ; }, get objs() { return objs; }, get px() { return px; }, set px(v) { px = v; }, set sel(v) { sel = v; }, startLevel, save, LEVELS };
 </script>
 <script src="td.js"></script>
+<script src="intro.js"></script>
 <script src="tutorial.js"></script>
 </body>
 </html>

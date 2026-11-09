@@ -415,6 +415,8 @@ function openHouse() {
   body.appendChild(btn(`🏠 เสริมบ้าน Lv.${T.house}`, `ทน ${houseMax()} • 🪙${hc}`, save.coins >= hc, () => { save.coins -= hc; T.house++; D.houseHp = D.houseMax = houseMax(); }));
   body.appendChild(btn(`🪵 เสริมรั้ว Lv.${T.fence}`, `ทน ${wallMax()} • 🪙${fc}`, save.coins >= fc, () => { save.coins -= fc; T.fence++; for (const w of D.walls) { w.max = wallMax(); w.hp = Math.max(w.hp, Math.min(w.max, w.hp + 18)); } }));
   body.appendChild(btn(`💣 ระเบิดมือ Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; }));
+  const rp = document.createElement('button'); rp.className = 'sbtn'; rp.style.background = '#6d8fc9'; rp.style.boxShadow = '0 4px 0 #3f62a3';
+  rp.innerHTML = '<b>🎬 ดูเรื่องราวตอนต้นอีกครั้ง</b>'; rp.onclick = () => { closeSheet(); playIntro(); }; body.appendChild(rp);
   $('sheet').classList.remove('hidden');
 }
 function renderTdHud() {
