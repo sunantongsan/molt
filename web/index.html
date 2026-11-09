@@ -9,28 +9,33 @@
   html,body{margin:0;height:100%;background:#1d5fa8;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;
     font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Thai",Tahoma,sans-serif}
   canvas{display:block;width:100vw;height:100vh;height:100dvh}
-  .ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-    background:linear-gradient(180deg,rgba(10,30,70,.55),rgba(10,30,70,.85));color:#fff;text-align:center;padding:24px;box-sizing:border-box}
+  .ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;gap:12px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    background:linear-gradient(180deg,rgba(10,30,70,.55),rgba(10,30,70,.85));color:#fff;text-align:center;padding:62px 14px 24px;box-sizing:border-box}
+  .ui > *{flex-shrink:0}
+  .ui > :first-child{margin-top:auto}
+  .ui > :last-child{margin-bottom:auto}
   .hidden{display:none!important}
-  h1{margin:0;font-size:64px;letter-spacing:4px;font-weight:900;color:#ffd84a;text-shadow:0 4px 0 #b06a00,0 8px 18px rgba(0,0,0,.5)}
+  h1{margin:0;font-size:clamp(40px,13vw,60px);letter-spacing:4px;font-weight:900;color:#ffd84a;text-shadow:0 4px 0 #b06a00,0 8px 18px rgba(0,0,0,.5)}
   h2{margin:0;font-size:40px;font-weight:900;text-shadow:0 3px 0 rgba(0,0,0,.35)}
-  .sub{opacity:.9;font-size:16px;margin-top:-6px}
+  .sub{opacity:.9;font-size:15px;margin-top:-6px}
   .btn{border:0;border-radius:18px;padding:16px 36px;font-size:24px;font-weight:900;color:#fff;cursor:pointer;
     background:linear-gradient(#4fd35b,#22a32f);box-shadow:0 6px 0 #157020,0 10px 20px rgba(0,0,0,.35);font-family:inherit}
   .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #157020}
-  .ups{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:420px}
-  .up{width:120px;border-radius:16px;padding:10px 6px;background:#fff;color:#16335c;box-shadow:0 5px 0 #9fb4d6;cursor:pointer;border:0;font-family:inherit}
-  .up b{display:block;font-size:15px}
-  .up .lv{font-size:12px;opacity:.7}
-  .up .cost{margin-top:6px;font-weight:900;color:#c77d00;font-size:16px}
+  .ups{display:flex;gap:8px;flex-wrap:nowrap;justify-content:center;width:100%;max-width:420px}
+  .up{flex:1 1 0;min-width:0;max-width:130px;border-radius:14px;padding:8px 4px;background:#fff;color:#16335c;box-shadow:0 5px 0 #9fb4d6;cursor:pointer;border:0;font-family:inherit}
+  .up b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .up .lv{font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .up .cost{margin-top:4px;font-weight:900;color:#c77d00;font-size:15px;white-space:nowrap}
   .up.off{opacity:.5}
   .coins{font-size:22px;font-weight:900;color:#ffd84a}
   .big{font-size:56px;font-weight:900;color:#ffd84a}
-  .lvls{display:grid;grid-template-columns:repeat(5,52px);gap:8px}
-  .lvb{height:52px;border-radius:14px;border:0;font:900 20px system-ui,sans-serif;color:#fff;background:#3f6fb5;box-shadow:0 4px 0 #23467d;cursor:pointer}
+  .lvls{display:flex;gap:8px;overflow-x:auto;width:100%;max-width:420px;padding:6px 4px 10px;box-sizing:border-box;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .lvls::-webkit-scrollbar{display:none}
+  .lvb{flex:0 0 52px;height:52px;scroll-snap-align:center;border-radius:14px;border:0;font:900 20px system-ui,sans-serif;color:#fff;background:#3f6fb5;box-shadow:0 4px 0 #23467d;cursor:pointer}
   .lvb.done{background:#2fa84a;box-shadow:0 4px 0 #1b6e2d}
   .lvb.sel{outline:3px solid #ffd84a;outline-offset:2px}
   .lvb.lock{background:#555d6b;box-shadow:0 4px 0 #383e48;opacity:.7}
+  .lvb.siege{background:#8a3fb5;box-shadow:0 4px 0 #5a2378}
   .lvname{font-weight:900;font-size:18px;color:#bfe3ff;margin-top:-4px}
   #mute{position:fixed;left:10px;top:10px;z-index:5;width:40px;height:40px;border-radius:12px;border:0;background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer}
 </style>
@@ -153,12 +158,17 @@ const LEVELS = [
   { name: 'พายุเหล็ก', theme: 4, boss: 280, seq: [['tiles', -1.6, 12], ['gates', 'x2', '+15'], ['squad', 1, 18], ['tiles', 1.6, 12], ['wall', 22], ['gates', '-40', '+40'], ['squad', -1.3, 30], ['squad', 1.3, 30], ['wall', 30], ['gates', 'x2', '+30'], ['squad', 0, 60], ['gates', 'x2', '-50']] },
   { name: 'ปราสาทราชาแมว', theme: 5, boss: 330, seq: [['tiles', 1.6, 12], ['gates', 'x2', '+20'], ['squad', 0, 25], ['tiles', -1.6, 12], ['wall', 30], ['gates', '+50', '-50'], ['squad', -1.3, 40], ['squad', 1.3, 40], ['tiles', 1.6, 12], ['gates', 'x2', '÷2'], ['wall', 45], ['squad', 0, 80], ['gates', 'x2', '+60']] },
 ];
-function levelInfo(l) { return LEVELS[l - 1] || { name: 'ด่านไม่รู้จบ', theme: (l - 1) % THEMES.length }; }
+const SIEGE_FROM = 30;
+function levelInfo(l) {
+  if (LEVELS[l - 1]) return LEVELS[l - 1];
+  if (l >= SIEGE_FROM) return { name: 'ตั้งรับ! แมวบุก', theme: l % 2 ? 5 : 4, siege: true };
+  return { name: 'ด่านไม่รู้จบ', theme: (l - 1) % THEMES.length };
+}
 function parseGate(t) { return { op: t[0] === 'x' ? 'x' : t[0], v: Number(t.slice(1)) }; }
 
 // ---------- Images ----------
 const IMG = {};
-['duck_run', 'duck_shoot', 'duck_die', 'cat', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
+['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
   const i = new Image(); i.src = 'img/' + n + (n === 'floor' ? '.jpg' : '.png'); IMG[n] = i;
 });
 const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6 };
@@ -208,6 +218,8 @@ let state = 'menu';
 let level = save.level;
 let sel = save.level;
 let dying = [];
+let runT = 0;
+let siege = false, boss = null, bossZ0 = 1;
 let fx = [];
 let army, px, pz, speed, objs, arrows, parts, floats, enemyShots, finishZ, fireAcc, shake, battle, endTimer, earned, killed;
 
@@ -226,7 +238,42 @@ function makeGate(good, lvl) {
   return { op: '-', v: rint(2, 4 + lvl * 2) };
 }
 
+function buildSiege(lvl) {
+  // enemies walk toward the player; a big boss closes the level
+  const e = lvl - SIEGE_FROM;
+  objs = [];
+  let z = 16;
+  const len = 150 + Math.min(e, 20) * 6;
+  let i = 0;
+  while (z < len) {
+    const kind = i === 0 ? 'tiles' : pick(['gates', 'gates', 'tiles', 'walkers', 'walkers', 'walkers']);
+    i++;
+    if (kind === 'gates') {
+      const goodLeft = Math.random() < 0.5;
+      const good = { op: Math.random() < 0.3 ? 'x' : '+', v: 0 }; good.v = good.op === 'x' ? 2 : rint(15, 30 + e * 3);
+      const bad = Math.random() < 0.3 ? { op: '÷', v: 2 } : { op: '-', v: rint(15, 30 + e * 3) };
+      objs.push({ t: 'gate', z, L: goodLeft ? good : bad, R: goodLeft ? bad : good, used: false });
+      z += 13;
+    } else if (kind === 'tiles') {
+      const x = pick([-1.6, 1.6]), n = rint(8, 12);
+      for (let k = 0; k < n; k++) objs.push({ t: 'tile', x, z: z + k * 1.15, w: 1.5, hp: 1, alive: true });
+      z += n * 1.15 + 7;
+    } else {
+      const groups = rint(1, 2);
+      for (let g = 0; g < groups; g++)
+        objs.push({ t: 'squad', walk: true, x: groups === 1 ? rnd(-1, 1) : (g ? 1.3 : -1.3), z: z + 10 + g * 2, n: rint(12 + e * 2, 22 + e * 4), alive: true, fight: false });
+      z += 13;
+    }
+  }
+  const hp = 450 + e * 70;
+  boss = { t: 'boss', x: 0, z: z + 24, hp, max: hp, alive: true, fight: false, hitT: 0 };
+  bossZ0 = boss.z;
+  objs.push(boss);
+  finishZ = 1e9;   // siege levels end when the boss falls, not at a castle
+}
 function buildLevel(lvl) {
+  siege = lvl >= SIEGE_FROM; boss = null;
+  if (siege) return buildSiege(lvl);
   const L = LEVELS[lvl - 1];
   if (!L) return buildRandom(lvl);
   objs = [];
@@ -290,7 +337,7 @@ function startLevel() {
   army = 1 + save.army * 2;
   px = 0; pz = 0; speed = 8.5; camZ = pz - CAM_BACK;
   arrows = []; parts = []; floats = []; enemyShots = []; dying = []; fx = [];
-  fireAcc = 0; shake = 0; battle = null; endTimer = 0; earned = 0; killed = 0;
+  runT = 0; fireAcc = 0; shake = 0; battle = null; endTimer = 0; earned = 0; killed = 0;
   buildLevel(level);
   state = 'play';
   hide('menu'); hide('result');
@@ -350,8 +397,19 @@ function update(dt) {
     px = Math.max(-ROAD + 0.4, Math.min(ROAD - 0.4, px));
   }
   if (state === 'play') {
+    runT += dt;
     const stopped = battle !== null;
-    if (!stopped) pz += speed * dt;
+    if (!stopped) pz += speed * (siege ? 0.5 : 1) * dt;
+    if (siege) for (const o of objs) {
+      if (!o.alive || o.fight) continue;
+      if (o.t === 'squad' && o.walk) {
+        o.z -= 2.4 * dt;
+        if (o.z - pz < 14) o.x += Math.sign(px - o.x) * Math.min(Math.abs(px - o.x), 1.1 * dt);
+      } else if (o.t === 'boss' && o.z - pz < 30) {
+        o.z -= 1.4 * dt;
+        o.x += Math.sign(px - o.x) * Math.min(Math.abs(px - o.x), 0.6 * dt);
+      }
+    }
     camZ += ((pz - CAM_BACK) - camZ) * Math.min(1, dt * 6);
 
     // shooting: more soldiers → more arrows
@@ -386,6 +444,13 @@ function update(dt) {
             }
             break;
           }
+        } else if (o.t === 'boss') {
+          if (Math.abs(a.x - o.x) < 1.4 && a.z >= o.z - 0.9 && prevZ < o.z + 1) {
+            a.life = 0; o.hp -= 1; o.hitT = 0.1;
+            hitFx('spark', a.x, o.z - 0.5, 1.6 + Math.random(), '#fff3b0'); SFX.play('hit');
+            if (o.hp <= 0) { o.alive = false; bossDown(o); }
+            break;
+          }
         } else if ((o.t === 'squad' || o.t === 'army') && o.n > 0) {
           const r = crowdRadius(o.n);
           if (Math.abs(a.x - o.x) < r + 0.2 && a.z >= o.z - r * 0.6 && prevZ < o.z + r) {
@@ -412,6 +477,8 @@ function update(dt) {
         army -= loss; o.alive = false; shake = 0.35; die('duck', px, pz, loss, R);
         addFloat('-' + loss, px, pz + 1, '#ff6a6a');
         burst(o.x, o.z, '#8a5a2b', 26); SFX.play('break');
+      } else if (o.t === 'boss' && !o.fight && pz >= o.z - 1.2 - R) {
+        o.fight = true; battle = { o, t: 0 };
       } else if ((o.t === 'squad' || o.t === 'army') && o.n > 0 && !o.fight) {
         const r = crowdRadius(o.n);
         const reach = o.t === 'army' ? r + R : r + R * 0.8;
@@ -422,7 +489,20 @@ function update(dt) {
     }
 
     // melee: both sides trade soldiers over a short time
-    if (battle) {
+    if (battle && battle.o.t === 'boss') {
+      // the boss smashes ducks; every duck in reach hacks at it
+      const o = battle.o;
+      battle.t += dt;
+      if (battle.t > 0.3) {
+        battle.t = 0;
+        const k = Math.min(army, Math.max(2, Math.round(army * 0.08)));
+        army -= k; o.hp -= Math.max(4, k * 3); o.hitT = 0.12;
+        die('duck', px, pz + 0.5, k, crowdRadius(army)); shake = 0.3; SFX.play('break');
+        hitFx('ring', px, pz + 0.5, 0.1, '#ff9a6a');
+        if (o.hp <= 0) { o.alive = false; battle = null; bossDown(o); }
+        else if (army <= 0) battle = null;
+      }
+    } else if (battle) {
       const o = battle.o;
       battle.t += dt;
       const tick = Math.max(1, Math.round(Math.min(army, o.n) * dt * 4));
@@ -440,7 +520,7 @@ function update(dt) {
     else if (state === 'play' && pz >= finishZ + 7) win();
   } else if (state === 'ending') {
     endTimer += dt;
-    if (won) pz = Math.min(pz + 3 * dt, finishZ + 8.2);
+    if (won && !siege) pz = Math.min(pz + 3 * dt, finishZ + 8.2);
     camZ += ((pz - CAM_BACK) - camZ) * Math.min(1, dt * 4);
     if (endTimer > 1.6) showResult();
   }
@@ -459,6 +539,12 @@ function update(dt) {
 }
 
 let won = false;
+function bossDown(o) {
+  for (let i = 0; i < 50; i++) burst(o.x + rnd(-1.5, 1.5), o.z, pick(['#ffd84a', '#ff5a4f', '#ffffff']), 1);
+  hitFx('ring', o.x, o.z, 0.2, '#ffd84a'); hitFx('spark', o.x, o.z, 1.5, '#ffffff');
+  shake = 0.5;
+  if (state === 'play') win();
+}
 function win() {
   SFX.play('win');
   won = true; state = 'ending'; endTimer = 0;
@@ -466,11 +552,12 @@ function win() {
   earned = Math.round((20 + level * 8 + army * 2) * mult);
   for (let i = 0; i < 40; i++) burst(rnd(-2, 2), finishZ + 9, pick(['#ffd84a', '#7dff8a', '#4aa3ff']), 1);
 }
+function progress() { return siege ? Math.min(1, pz / Math.max(1, bossZ0 - 6)) : Math.min(1, pz / finishZ); }
 function lose() {
   SFX.play('lose');
   won = false; state = 'ending'; endTimer = 0;
   const mult = 1 + save.income * 0.2;
-  const prog = Math.min(1, pz / finishZ);
+  const prog = progress();
   earned = Math.round((5 + prog * (10 + level * 4) + killed * 0.3) * mult);
 }
 function showResult() {
@@ -483,7 +570,7 @@ function showResult() {
   document.getElementById('rTitle').style.color = won ? '#ffd84a' : '#ff7a7a';
   document.getElementById('rInfo').textContent = won
     ? `ด่าน ${level} ผ่าน • เหลือทหาร ${army} คน`
-    : `ไปได้ ${Math.round(Math.min(1, pz / finishZ) * 100)}% • ล้มศัตรู ${killed}`;
+    : `ไปได้ ${Math.round(progress() * 100)}% • ล้มศัตรู ${killed}`;
   document.getElementById('rCoins').textContent = earned;
   show('result');
 }
@@ -671,6 +758,30 @@ function drawGate(o) {
   }
 }
 
+function drawBoss(o) {
+  const p = proj(o.x, o.z);
+  const h = p.s * 3.2;
+  ctx.fillStyle = 'rgba(0,0,0,.3)';
+  ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.32, h * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+  const shakeX = o.hitT > 0 ? Math.sin(o.hitT * 120) * h * 0.02 : 0;
+  const t = performance.now() / 1000;
+  if (ready(IMG.boss)) drawAt(IMG.boss, p.x + shakeX, p.y, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
+  else if (ready(IMG.cat)) {
+    // placeholder until a boss sprite exists: a giant cat with a red aura
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(p.x, p.y - h * 0.5, 0, p.x, p.y - h * 0.5, h * 0.7);
+    g.addColorStop(0, 'rgba(255,60,30,.35)'); g.addColorStop(1, 'rgba(255,60,30,0)');
+    ctx.fillStyle = g; ctx.fillRect(p.x - h, p.y - h * 1.3, h * 2, h * 1.5); ctx.restore();
+    drawFrame('cat', Math.floor(t * 6), p.x + shakeX, p.y, h);
+  }
+  if (o.hitT > 0) { ctx.save(); ctx.globalAlpha = 0.35; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y - h * 0.5, h * 0.35, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  // HP bar
+  const bw = Math.max(80, h * 0.9), by = p.y - h * 1.08;
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, by, bw, 12, 6); ctx.fill();
+  ctx.fillStyle = '#ff4a3a'; roundRect(p.x - bw / 2 + 2, by + 2, (bw - 4) * Math.max(0, o.hp / o.max), 8, 4); ctx.fill();
+  ctx.font = '900 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#fff';
+  ctx.fillText('บอส ' + Math.max(0, Math.ceil(o.hp)), p.x, by - 2);
+}
 function drawCastle(o) {
   if (ready(IMG.castle)) { const p = proj(0, o.z); drawAt(IMG.castle, p.x, p.y + p.s * 0.6, p.s * (ROAD * 2 + 3)); return; }
   const a = proj(-ROAD - 0.7, o.z), b = proj(ROAD + 0.7, o.z);
@@ -716,6 +827,7 @@ function draw() {
       const ty = p.y + p.s * 0.1 - h * 0.6, tx = p.x + w * 0.02;
       ctx.strokeText(String(o.hp), tx, ty); ctx.fillStyle = '#fff'; ctx.fillText(String(o.hp), tx, ty);
     }]);
+    else if (o.t === 'boss') list.push([o.z, () => drawBoss(o)]);
     else if (o.t === 'squad' || o.t === 'army') list.push([o.z + 0.3, () => {
       drawCrowd(o.x, o.z, o.n, '#ff5a4f', '#c22a2a', 1);
       label(o.x, o.z - crowdRadius(o.n) - 0.4, String(o.n), '#c22a2a', '#fff', o.t === 'army' ? 1.3 : 1);
@@ -793,10 +905,16 @@ function draw() {
   if (state === 'play' || state === 'ending') {
     const top = 14 + (window.visualViewport ? 0 : 0);
     ctx.fillStyle = 'rgba(0,0,0,.28)'; roundRect(W / 2 - 110, top, 220, 14, 7); ctx.fill();
-    ctx.fillStyle = '#ffd84a'; roundRect(W / 2 - 108, top + 2, 216 * Math.min(1, pz / finishZ), 10, 5); ctx.fill();
+    ctx.fillStyle = '#ffd84a'; roundRect(W / 2 - 108, top + 2, 216 * progress(), 10, 5); ctx.fill();
     ctx.font = '900 18px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillStyle = '#fff'; ctx.fillText('ด่าน ' + level + ' • ' + levelInfo(level).name, W / 2, top + 20);
     ctx.textAlign = 'right'; ctx.fillStyle = '#ffd84a'; ctx.fillText('🪙 ' + save.coins, W - 14, top);
+    if (siege && runT < 3) {
+      ctx.globalAlpha = Math.min(1, (3 - runT) / 0.8);
+      ctx.font = '900 26px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(80,0,0,.7)';
+      ctx.strokeText('แมวบุกเข้ามาแล้ว!', W / 2, H * 0.3); ctx.fillStyle = '#ff6a5a'; ctx.fillText('แมวบุกเข้ามาแล้ว!', W / 2, H * 0.3);
+      ctx.globalAlpha = 1;
+    }
   }
 }
 
@@ -808,14 +926,15 @@ function renderMenu() {
   document.getElementById('mLevel').textContent = sel;
   document.getElementById('mName').textContent = levelInfo(sel).name;
   const lb = document.getElementById('lvls'); lb.innerHTML = '';
-  const cnt = Math.max(10, Math.min(save.level, 99));
+  const cnt = Math.max(10, save.level + 4);
   for (let i = 1; i <= cnt; i++) {
     const b = document.createElement('button');
     const lock = i > save.level;
-    b.className = 'lvb' + (i < save.level ? ' done' : '') + (lock ? ' lock' : '') + (i === sel ? ' sel' : '');
+    b.className = 'lvb' + (i < save.level ? ' done' : '') + (i >= SIEGE_FROM && !lock && i >= save.level ? ' siege' : '') + (lock ? ' lock' : '') + (i === sel ? ' sel' : '');
     b.textContent = lock ? '🔒' : i;
     b.onclick = () => { if (lock) return; SFX.init(); SFX.play('click'); sel = i; renderMenu(); preview(); };
     lb.appendChild(b);
+    if (i === sel) requestAnimationFrame(() => { try { b.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} });
   }
   const box = document.getElementById('ups'); box.innerHTML = '';
   for (const u of UPGRADES) {

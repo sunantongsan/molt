@@ -19,6 +19,7 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);           // keeps coins and upgrades
+        s.setTextZoom(100);                     // ignore the phone's large-font setting so menus fit
         s.setMediaPlaybackRequiresUserGesture(false);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setBackgroundColor(0xFF1D5FA8);
