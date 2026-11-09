@@ -26,6 +26,13 @@
   .up.off{opacity:.5}
   .coins{font-size:22px;font-weight:900;color:#ffd84a}
   .big{font-size:56px;font-weight:900;color:#ffd84a}
+  .lvls{display:grid;grid-template-columns:repeat(5,52px);gap:8px}
+  .lvb{height:52px;border-radius:14px;border:0;font:900 20px system-ui,sans-serif;color:#fff;background:#3f6fb5;box-shadow:0 4px 0 #23467d;cursor:pointer}
+  .lvb.done{background:#2fa84a;box-shadow:0 4px 0 #1b6e2d}
+  .lvb.sel{outline:3px solid #ffd84a;outline-offset:2px}
+  .lvb.lock{background:#555d6b;box-shadow:0 4px 0 #383e48;opacity:.7}
+  .lvname{font-weight:900;font-size:18px;color:#bfe3ff;margin-top:-4px}
+  #mute{position:fixed;left:10px;top:10px;z-index:5;width:40px;height:40px;border-radius:12px;border:0;background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -35,11 +42,14 @@
   <h1>MOLT</h1>
   <div class="sub">เลือกเส้นทาง • สร้างกองทัพ • บุกปราสาทศัตรู</div>
   <div class="coins">🪙 <span id="mCoins">0</span></div>
+  <div class="lvls" id="lvls"></div>
   <div class="ups" id="ups"></div>
+  <div class="lvname" id="mName"></div>
   <button class="btn" id="play">เล่นด่าน <span id="mLevel">1</span></button>
   <div class="sub" style="font-size:13px;margin-top:4px">ลากนิ้วซ้าย-ขวาเพื่อบังคับ</div>
 </div>
 
+<button id="mute" aria-label="sound">🔊</button>
 <div id="result" class="ui hidden">
   <h2 id="rTitle">ชนะ!</h2>
   <div id="rInfo" class="sub"></div>
@@ -60,6 +70,91 @@ const UPGRADES = [
   { key: 'archery', name: 'ธนูไว',        desc: lv => `ยิงเร็ว x${(1 + lv * 0.15).toFixed(2)}`, cost: lv => Math.round(60 * Math.pow(1.4, lv)) },
   { key: 'income',  name: 'รายได้',       desc: lv => `เหรียญ x${(1 + lv * 0.2).toFixed(1)}`, cost: lv => Math.round(80 * Math.pow(1.45, lv)) },
 ];
+
+// ---------- Sound (synthesised, no files) ----------
+const SFX = (() => {
+  let ac = null, master = null, muted = false, noiseBuf = null;
+  try { muted = localStorage.getItem('molt_mute') === '1'; } catch (e) {}
+  const last = {};
+  function init() {
+    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination);
+    } catch (e) { ac = null; }
+  }
+  function tone(type, f0, f1, dur, vol, delay) {
+    const t = ac.currentTime + (delay || 0);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t);
+    if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function noise(dur, vol, freq, q, delay) {
+    if (!noiseBuf) {
+      noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const t = ac.currentTime + (delay || 0);
+    const src = ac.createBufferSource(); src.buffer = noiseBuf;
+    const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = freq; fl.Q.value = q || 1;
+    const g = ac.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(fl); fl.connect(g); g.connect(master); src.start(t); src.stop(t + dur + 0.02);
+  }
+  const defs = {
+    shoot: () => { noise(0.07, 0.12, 2800, 2); tone('triangle', 950, 420, 0.06, 0.04); },
+    hit: () => { noise(0.09, 0.28, 900, 1.5); tone('square', 230, 90, 0.07, 0.05); },
+    meow: () => { tone('sawtooth', 650, 1100, 0.09, 0.035); tone('sawtooth', 1100, 480, 0.14, 0.035, 0.09); },
+    wood: () => { noise(0.1, 0.35, 520, 3); tone('sine', 170, 80, 0.09, 0.14); },
+    break: () => { noise(0.4, 0.5, 350, 0.8); tone('sine', 120, 40, 0.3, 0.3); },
+    plus: () => tone('sine', 880, 1400, 0.09, 0.1),
+    gateGood: () => [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, 0, 0.16, 0.12, i * 0.06)),
+    gateBad: () => { tone('sawtooth', 320, 110, 0.35, 0.1); noise(0.3, 0.15, 300, 1); },
+    clash: () => { noise(0.07, 0.25, 3200, 5); tone('square', 1500, 900, 0.05, 0.035); },
+    quack: () => { tone('sawtooth', 520, 300, 0.1, 0.05); tone('square', 480, 260, 0.08, 0.02); },
+    win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone('triangle', f, 0, 0.28, 0.14, i * 0.12)),
+    lose: () => [392, 330, 262, 196].forEach((f, i) => tone('triangle', f, 0, 0.32, 0.14, i * 0.18)),
+    click: () => tone('sine', 600, 900, 0.06, 0.1),
+  };
+  const gap = { shoot: 0.07, hit: 0.05, meow: 0.25, wood: 0.06, plus: 0.04, clash: 0.08, quack: 0.15 };
+  function play(n) {
+    if (muted || !ac) return;
+    const now = ac.currentTime;
+    if (gap[n] && last[n] && now - last[n] < gap[n]) return;
+    last[n] = now;
+    try { defs[n](); } catch (e) {}
+  }
+  return { init, play, get muted() { return muted; },
+    toggle() { muted = !muted; try { localStorage.setItem('molt_mute', muted ? '1' : '0'); } catch (e) {} return muted; } };
+})();
+window.addEventListener('pointerdown', () => SFX.init(), { capture: true });
+
+// ---------- Levels ----------
+// themes: sky top/bottom, sea top/bottom, road shade
+const THEMES = [
+  { sky: ['#7cc6ff', '#bfe6ff'], sea: ['#3b8fe0', '#1d5fa8'], shade: 0 },
+  { sky: ['#8fdcff', '#e6f9ff'], sea: ['#2bb3c9', '#11708f'], shade: 0 },
+  { sky: ['#ff9a5a', '#ffd9a0'], sea: ['#d7704e', '#6b2e5c'], shade: 0.08 },
+  { sky: ['#6a4fb3', '#e590b8'], sea: ['#4d3f93', '#211a4d'], shade: 0.18 },
+  { sky: ['#0d1836', '#2b3e74'], sea: ['#173560', '#08142c'], shade: 0.35, stars: true },
+  { sky: ['#3a0d0d', '#b0401f'], sea: ['#c0400f', '#3d0a05'], shade: 0.25 },
+];
+// seq: tiles(x,count) gates(left,right) barrier(x,hp) wall(hp = full width) squad(x,count)
+const LEVELS = [
+  { name: 'ทุ่งเริ่มต้น', theme: 0, boss: 14, seq: [['tiles', -1.6, 6], ['gates', '+5', '-2'], ['tiles', 1.6, 6], ['gates', '+3', '+8'], ['squad', 0, 5], ['gates', 'x2', '-5']] },
+  { name: 'สะพานไม้', theme: 0, boss: 28, seq: [['tiles', 1.6, 7], ['barrier', -1.5, 5], ['gates', '+6', '÷2'], ['squad', -1, 8], ['tiles', -1.6, 8], ['barrier', 1.5, 8], ['gates', '-6', '+10'], ['squad', 1, 10], ['gates', 'x2', '+12']] },
+  { name: 'ป้อมยามชายฝั่ง', theme: 1, boss: 45, seq: [['tiles', -1.6, 8], ['wall', 6], ['gates', '+10', '-8'], ['squad', 0, 12], ['tiles', 1.6, 9], ['barrier', -1.5, 10], ['gates', 'x2', '÷2'], ['squad', -1, 15], ['gates', '+15', '+5']] },
+  { name: 'ทัพหน้าแมว', theme: 1, boss: 65, seq: [['tiles', 1.6, 8], ['squad', -1.3, 8], ['squad', 1.3, 8], ['gates', '+12', '-10'], ['tiles', -1.6, 10], ['wall', 10], ['gates', 'x2', '-15'], ['squad', 0, 20], ['tiles', 1.6, 8], ['gates', '+20', 'x2']] },
+  { name: 'ทะเลอัสดง', theme: 2, boss: 90, seq: [['tiles', -1.6, 9], ['gates', '+8', 'x2'], ['barrier', 1.5, 12], ['squad', -1, 14], ['tiles', 1.6, 10], ['gates', '-20', '+15'], ['wall', 14], ['squad', 1, 20], ['gates', 'x2', '÷2'], ['squad', 0, 25]] },
+  { name: 'ด่านหอคอยคู่', theme: 2, boss: 120, seq: [['tiles', 1.6, 10], ['barrier', -1.5, 10], ['gates', 'x2', '+10'], ['squad', -1.3, 15], ['squad', 1.3, 15], ['tiles', -1.6, 10], ['wall', 18], ['gates', '+25', '-25'], ['squad', 0, 30], ['gates', 'x2', '+20']] },
+  { name: 'แสงสนธยา', theme: 3, boss: 160, seq: [['tiles', -1.6, 10], ['gates', '÷2', 'x2'], ['squad', 1, 20], ['tiles', 1.6, 10], ['barrier', -1.5, 16], ['gates', '+30', '-30'], ['wall', 22], ['squad', -1, 30], ['tiles', -1.6, 10], ['gates', 'x2', '+25'], ['squad', 0, 40]] },
+  { name: 'คืนแมวพราง', theme: 4, boss: 180, seq: [['tiles', 1.6, 12], ['gates', 'x2', '-20'], ['squad', 0, 14], ['wall', 18], ['tiles', -1.6, 12], ['squad', -1.3, 22], ['squad', 1.3, 22], ['gates', '+35', 'x2'], ['barrier', 1.5, 25], ['squad', 0, 45], ['gates', 'x2', '÷2']] },
+  { name: 'พายุเหล็ก', theme: 4, boss: 280, seq: [['tiles', -1.6, 12], ['gates', 'x2', '+15'], ['squad', 1, 18], ['tiles', 1.6, 12], ['wall', 22], ['gates', '-40', '+40'], ['squad', -1.3, 30], ['squad', 1.3, 30], ['wall', 30], ['gates', 'x2', '+30'], ['squad', 0, 60], ['gates', 'x2', '-50']] },
+  { name: 'ปราสาทราชาแมว', theme: 5, boss: 330, seq: [['tiles', 1.6, 12], ['gates', 'x2', '+20'], ['squad', 0, 25], ['tiles', -1.6, 12], ['wall', 30], ['gates', '+50', '-50'], ['squad', -1.3, 40], ['squad', 1.3, 40], ['tiles', 1.6, 12], ['gates', 'x2', '÷2'], ['wall', 45], ['squad', 0, 80], ['gates', 'x2', '+60']] },
+];
+function levelInfo(l) { return LEVELS[l - 1] || { name: 'ด่านไม่รู้จบ', theme: (l - 1) % THEMES.length }; }
+function parseGate(t) { return { op: t[0] === 'x' ? 'x' : t[0], v: Number(t.slice(1)) }; }
 
 // ---------- Images ----------
 const IMG = {};
@@ -111,7 +206,9 @@ function proj(x, z) {
 // ---------- Game state ----------
 let state = 'menu';
 let level = save.level;
+let sel = save.level;
 let dying = [];
+let fx = [];
 let army, px, pz, speed, objs, arrows, parts, floats, enemyShots, finishZ, fireAcc, shake, battle, endTimer, earned, killed;
 
 function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -130,6 +227,25 @@ function makeGate(good, lvl) {
 }
 
 function buildLevel(lvl) {
+  const L = LEVELS[lvl - 1];
+  if (!L) return buildRandom(lvl);
+  objs = [];
+  let z = 14;
+  for (const it of L.seq) {
+    const k = it[0];
+    if (k === 'gates') { objs.push({ t: 'gate', z, L: parseGate(it[1]), R: parseGate(it[2]), used: false }); z += 13; }
+    else if (k === 'tiles') { for (let i = 0; i < it[2]; i++) objs.push({ t: 'tile', x: it[1], z: z + i * 1.15, w: 1.5, hp: 1, alive: true }); z += it[2] * 1.15 + 7; }
+    else if (k === 'barrier') { objs.push({ t: 'barrier', x: it[1], z, w: 2.8, hp: it[2], max: it[2], alive: true }); z += 10; }
+    else if (k === 'wall') { objs.push({ t: 'barrier', x: 0, z, w: ROAD * 2 - 0.2, hp: it[1], max: it[1], alive: true }); z += 11; }
+    else if (k === 'squad') { objs.push({ t: 'squad', x: it[1], z, n: it[2], alive: true, fight: false }); z += 11; }
+  }
+  finishZ = z + 6;
+  objs.push({ t: 'army', x: 0, z: finishZ, n: L.boss, alive: true, fight: false });
+  objs.push({ t: 'castle', z: finishZ + 9 });
+}
+function buildRandom(lvl) {
+  const lv0 = lvl;
+  lvl = lvl > 10 ? 4 + Math.floor((lvl - 10) / 2) : lvl;
   objs = [];
   let z = 14;
   const len = 150 + Math.min(lvl, 20) * 12;
@@ -163,16 +279,17 @@ function buildLevel(lvl) {
   }
   for (const o of objs) if (o.t === 'barrier' && !o.max) o.max = o.hp;
   finishZ = z + 6;
-  const boss = Math.round(8 + lvl * 12 + Math.pow(lvl, 1.4) * 4);
+  const boss = Math.round(90 + (lv0 - 10) * 20);
   objs.push({ t: 'army', x: 0, z: finishZ, n: boss, alive: true, fight: false });
   objs.push({ t: 'castle', z: finishZ + 9 });
 }
 
 function startLevel() {
-  level = save.level;
+  SFX.init(); SFX.play('click');
+  level = sel;
   army = 1 + save.army * 2;
   px = 0; pz = 0; speed = 8.5; camZ = pz - CAM_BACK;
-  arrows = []; parts = []; floats = []; enemyShots = []; dying = [];
+  arrows = []; parts = []; floats = []; enemyShots = []; dying = []; fx = [];
   fireAcc = 0; shake = 0; battle = null; endTimer = 0; earned = 0; killed = 0;
   buildLevel(level);
   state = 'play';
@@ -201,7 +318,12 @@ function addFloat(text, x, z, color) { floats.push({ text, x, z, y: 0, life: 1, 
 function burst(x, z, color, n) {
   for (let i = 0; i < n; i++) parts.push({ x, z, y: 0.3, vx: rnd(-2, 2), vz: rnd(-1, 3), vy: rnd(2, 5), life: rnd(0.4, 0.8), color });
 }
+function hitFx(type, x, z, y, color) {
+  fx.push({ type, x, z, y: y || 0.5, t: 0, color });
+  if (fx.length > 120) fx.splice(0, fx.length - 120);
+}
 function die(team, cx, cz, count, radius) {
+  if (count > 0) SFX.play(team === 'duck' ? 'quack' : (Math.random() < 0.3 ? 'meow' : 'hit'));
   const n = Math.min(count, 10);
   for (let i = 0; i < n; i++) dying.push({ team, x: cx + rnd(-radius, radius), z: cz + rnd(-radius, radius) * 0.6, t: 0, flip: Math.random() < 0.5 });
   if (dying.length > 80) dying.splice(0, dying.length - 80);
@@ -215,6 +337,8 @@ function applyGate(g) {
   army = Math.max(0, Math.round(army));
   const d = army - before;
   addFloat((d >= 0 ? '+' : '') + d, px, pz + 1, d >= 0 ? '#7dff8a' : '#ff6a6a');
+  SFX.play(d >= 0 ? 'gateGood' : 'gateBad');
+  hitFx('ring', px, pz, 0.2, d >= 0 ? '#7fd0ff' : '#ff6a6a');
   if (d < 0) { shake = 0.25; die('duck', px, pz, -d, crowdRadius(before)); }
 }
 
@@ -238,7 +362,8 @@ function update(dt) {
       fireAcc -= 1;
       if (army <= 0) break;
       const ox = rnd(-R, R) * 0.8;
-      arrows.push({ x: px + ox, z: pz + 0.2, life: 1.3 });
+      arrows.push({ x: px + ox, z: pz + 0.2, z0: pz + 0.2, life: 1.3 });
+      SFX.play('shoot');
     }
     if (arrows.length > 160) arrows.splice(0, arrows.length - 160);
 
@@ -253,10 +378,11 @@ function update(dt) {
             a.life = 0;
             o.hp--;
             if (o.t === 'tile') {
-              if (o.hp <= 0) { o.alive = false; army += 1; addFloat('+1', o.x, o.z, '#7dff8a'); burst(o.x, o.z, '#4aa3ff', 6); }
+              if (o.hp <= 0) { o.alive = false; army += 1; addFloat('+1', o.x, o.z, '#7dff8a'); burst(o.x, o.z, '#4aa3ff', 8); hitFx('ring', o.x, o.z, 0.4, '#7fd0ff'); hitFx('spark', o.x, o.z, 0.5, '#ffffff'); SFX.play('plus'); }
             } else {
-              burst(o.x + rnd(-1, 1), o.z, '#b07a3e', 2);
-              if (o.hp <= 0) { o.alive = false; burst(o.x, o.z, '#8a5a2b', 16); }
+              burst(a.x, o.z, '#b07a3e', 3); o.hitT = 0.12;
+              hitFx('spark', a.x, o.z, 0.7, '#ffe2a8'); SFX.play('wood');
+              if (o.hp <= 0) { o.alive = false; burst(o.x, o.z, '#8a5a2b', 26); hitFx('ring', o.x, o.z, 0.3, '#ffd59a'); shake = Math.max(shake, 0.2); SFX.play('break'); }
             }
             break;
           }
@@ -264,7 +390,7 @@ function update(dt) {
           const r = crowdRadius(o.n);
           if (Math.abs(a.x - o.x) < r + 0.2 && a.z >= o.z - r * 0.6 && prevZ < o.z + r) {
             a.life = 0; o.n--; killed++; die('cat', a.x, o.z - r * 0.4, 1, 0.2);
-            burst(a.x, o.z - r * 0.5, '#e23b3b', 3);
+            burst(a.x, o.z - r * 0.5, '#ff5a4f', 4); hitFx('spark', a.x, o.z - r * 0.4, 0.6, '#fff3b0'); hitFx('ring', a.x, o.z - r * 0.4, 0.1, '#ff7a6a');
             if (o.n <= 0) o.alive = false;
             break;
           }
@@ -280,12 +406,12 @@ function update(dt) {
         o.used = true;
         applyGate(px < 0 ? o.L : o.R);
       } else if (o.t === 'tile' && Math.abs(pz - o.z) < 0.5 && Math.abs(px - o.x) < o.w / 2 + R * 0.6) {
-        o.alive = false; army += 1; addFloat('+1', o.x, o.z, '#7dff8a');
+        o.alive = false; army += 1; addFloat('+1', o.x, o.z, '#7dff8a'); SFX.play('plus'); hitFx('ring', o.x, o.z, 0.4, '#7fd0ff');
       } else if (o.t === 'barrier' && pz >= o.z - 0.4 && pz < o.z + 0.6 && Math.abs(px - o.x) < o.w / 2 + R * 0.7) {
         const loss = Math.min(army, o.hp);
         army -= loss; o.alive = false; shake = 0.35; die('duck', px, pz, loss, R);
         addFloat('-' + loss, px, pz + 1, '#ff6a6a');
-        burst(o.x, o.z, '#8a5a2b', 20);
+        burst(o.x, o.z, '#8a5a2b', 26); SFX.play('break');
       } else if ((o.t === 'squad' || o.t === 'army') && o.n > 0 && !o.fight) {
         const r = crowdRadius(o.n);
         const reach = o.t === 'army' ? r + R : r + R * 0.8;
@@ -304,7 +430,8 @@ function update(dt) {
       army -= k; o.n -= k; killed += k;
       die('duck', px, pz + crowdRadius(army) * 0.5, k, crowdRadius(army)); die('cat', o.x, o.z - crowdRadius(o.n) * 0.5, k, crowdRadius(o.n));
       if (Math.random() < 0.6) burst(o.x + rnd(-1, 1), o.z - 0.5, Math.random() < 0.5 ? '#e23b3b' : '#3f8bff', 2);
-      shake = 0.12;
+      shake = 0.12; SFX.play('clash');
+      if (Math.random() < 0.5) hitFx('spark', o.x + rnd(-1, 1), o.z - crowdRadius(o.n), 0.6, '#ffffff');
       if (o.n <= 0) { o.alive = false; battle = null; if (o.t === 'army') win(); }
       else if (army <= 0) battle = null;
     }
@@ -320,6 +447,9 @@ function update(dt) {
   for (const p of parts) { p.x += p.vx * dt; p.z += p.vz * dt; p.y += p.vy * dt; p.vy -= 12 * dt; p.life -= dt; }
   parts = parts.filter(p => p.life > 0 && p.y > -0.2);
   if (parts.length > 300) parts.splice(0, parts.length - 300);
+  for (const e of fx) e.t += dt;
+  fx = fx.filter(e => e.t < 0.45);
+  for (const o of objs) if (o.hitT > 0) o.hitT -= dt;
   for (const d of dying) d.t += dt;
   dying = dying.filter(d => d.t < 0.9);
   for (const f of floats) { f.y += dt * 1.6; f.life -= dt * 0.9; }
@@ -329,12 +459,14 @@ function update(dt) {
 
 let won = false;
 function win() {
+  SFX.play('win');
   won = true; state = 'ending'; endTimer = 0;
   const mult = 1 + save.income * 0.2;
   earned = Math.round((20 + level * 8 + army * 2) * mult);
   for (let i = 0; i < 40; i++) burst(rnd(-2, 2), finishZ + 9, pick(['#ffd84a', '#7dff8a', '#4aa3ff']), 1);
 }
 function lose() {
+  SFX.play('lose');
   won = false; state = 'ending'; endTimer = 0;
   const mult = 1 + save.income * 0.2;
   const prog = Math.min(1, pz / finishZ);
@@ -343,7 +475,8 @@ function lose() {
 function showResult() {
   state = 'result';
   save.coins += earned;
-  if (won) save.level += 1;
+  if (won && level >= save.level) save.level = level + 1;
+  if (won) sel = level + 1;
   persist();
   document.getElementById('rTitle').textContent = won ? 'ชนะ! 🏰' : 'กองทัพแตก!';
   document.getElementById('rTitle').style.color = won ? '#ffd84a' : '#ff7a7a';
@@ -357,12 +490,17 @@ function showResult() {
 // ---------- Draw ----------
 const SKY = ['#7cc6ff', '#bfe6ff'];
 function drawBackground() {
+  const th = THEMES[levelInfo(level).theme];
   const g = ctx.createLinearGradient(0, 0, 0, H * 0.17);
-  g.addColorStop(0, SKY[0]); g.addColorStop(1, SKY[1]);
+  g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * 0.17);
+  if (th.stars) {
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    for (let i = 0; i < 40; i++) ctx.fillRect((i * 97.3) % W, (i * 53.7) % (H * 0.15), 1.5, 1.5);
+  }
   // sea
   const s = ctx.createLinearGradient(0, H * 0.155, 0, H);
-  s.addColorStop(0, '#3b8fe0'); s.addColorStop(1, '#1d5fa8');
+  s.addColorStop(0, th.sea[0]); s.addColorStop(1, th.sea[1]);
   ctx.fillStyle = s; ctx.fillRect(0, H * 0.155, W, H);
   // waves
   ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 2;
@@ -403,8 +541,11 @@ function drawRoad() {
       ctx.drawImage(T, 0, Math.min(TH - 1, v), T.naturalWidth, 1, l.x, y, r.x - l.x, ROW + 0.5);
     }
   }
+  const shade = THEMES[levelInfo(level).theme].shade;
+  if (shade) quad(-ROAD, near, ROAD, far, `rgba(20,10,50,${shade})`);
   quad(-ROAD - 0.7, near, -ROAD, far, '#cdbf9e');
   quad(ROAD, near, ROAD + 0.7, far, '#cdbf9e');
+  if (shade) { quad(-ROAD - 0.7, near, -ROAD, far, `rgba(20,10,50,${shade})`); quad(ROAD, near, ROAD + 0.7, far, `rgba(20,10,50,${shade})`); }
   const step = 1.6;
   for (let z = Math.floor(near / step) * step; z < far; z += step) {
     const k = Math.round(z / step);
@@ -566,6 +707,7 @@ function draw() {
     else if (o.t === 'barrier') list.push([o.z, () => {
       if (!ready(IMG.barrier)) return box(o.x, o.z, o.w, 0.6, 1.0, '#b98a52', '#8a5a2b', String(o.hp));
       const p = proj(o.x, o.z + 0.3); const w = p.s * o.w * 1.05;
+      if (o.hitT > 0) p.x += Math.sin(o.hitT * 90) * p.s * 0.06;
       const h = drawAt(IMG.barrier, p.x, p.y + p.s * 0.1, w);
       const fs = Math.max(12, w * 0.17);
       ctx.font = `900 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -589,9 +731,41 @@ function draw() {
     ctx.globalAlpha = 1;
   }]);
   for (const a of arrows) list.push([a.z, () => {
-    const p = proj(a.x, a.z), q = proj(a.x, a.z + 0.7);
-    ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = Math.max(1.5, p.s * 0.05);
-    ctx.beginPath(); ctx.moveTo(p.x, p.y - p.s * 0.4); ctx.lineTo(q.x, q.y - q.s * 0.4); ctx.stroke();
+    // arrow flies in a small arc and leaves a glowing trail
+    const k = Math.min(1, (a.z - a.z0) / 18);
+    const hgt = 0.55 + Math.sin(k * Math.PI) * 0.6;
+    const tail = proj(a.x, a.z - 1.4), p = proj(a.x, a.z), q = proj(a.x, a.z + 0.55);
+    const ty = tail.y - tail.s * (hgt - 0.05), py = p.y - p.s * hgt, qy = q.y - q.s * hgt;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(tail.x, ty, p.x, py);
+    g.addColorStop(0, 'rgba(255,220,90,0)'); g.addColorStop(1, 'rgba(255,230,120,.75)');
+    ctx.strokeStyle = g; ctx.lineWidth = Math.max(2, p.s * 0.09); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(tail.x, ty); ctx.lineTo(p.x, py); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = '#7a4a1e'; ctx.lineWidth = Math.max(1.5, p.s * 0.035);
+    ctx.beginPath(); ctx.moveTo(p.x, py); ctx.lineTo(q.x, qy); ctx.stroke();
+    ctx.fillStyle = '#e8eef5';
+    const hs = Math.max(2, q.s * 0.07);
+    ctx.beginPath(); ctx.moveTo(q.x, qy - hs * 1.6); ctx.lineTo(q.x - hs, qy + hs * 0.4); ctx.lineTo(q.x + hs, qy + hs * 0.4); ctx.closePath(); ctx.fill();
+  }]);
+  for (const e of fx) list.push([e.z - 0.01, () => {
+    const p = proj(e.x, e.z), k = e.t / 0.45;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0, 1 - k);
+    if (e.type === 'ring') {
+      ctx.strokeStyle = e.color; ctx.lineWidth = Math.max(2, p.s * 0.08 * (1 - k));
+      ctx.beginPath(); ctx.ellipse(p.x, p.y - p.s * e.y * 0.3, p.s * (0.2 + k * 1.1), p.s * (0.08 + k * 0.4), 0, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      const cy = p.y - p.s * e.y, r = p.s * (0.15 + k * 0.45);
+      const g = ctx.createRadialGradient(p.x, cy, 0, p.x, cy, r);
+      g.addColorStop(0, e.color); g.addColorStop(0.4, 'rgba(255,200,80,.6)'); g.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, cy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, p.s * 0.03);
+      for (let i = 0; i < 4; i++) {
+        const an = i * Math.PI / 2 + e.x * 3;
+        ctx.beginPath(); ctx.moveTo(p.x + Math.cos(an) * r * 0.3, cy + Math.sin(an) * r * 0.3); ctx.lineTo(p.x + Math.cos(an) * r * 1.1, cy + Math.sin(an) * r * 1.1); ctx.stroke();
+      }
+    }
+    ctx.restore();
   }]);
   if (army > 0) list.push([pz, () => {
     drawCrowd(px, pz, army, '#5ab0ff', '#2a5fc4', -1);
@@ -620,7 +794,7 @@ function draw() {
     ctx.fillStyle = 'rgba(0,0,0,.28)'; roundRect(W / 2 - 110, top, 220, 14, 7); ctx.fill();
     ctx.fillStyle = '#ffd84a'; roundRect(W / 2 - 108, top + 2, 216 * Math.min(1, pz / finishZ), 10, 5); ctx.fill();
     ctx.font = '900 18px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillStyle = '#fff'; ctx.fillText('ด่าน ' + level, W / 2, top + 20);
+    ctx.fillStyle = '#fff'; ctx.fillText('ด่าน ' + level + ' • ' + levelInfo(level).name, W / 2, top + 20);
     ctx.textAlign = 'right'; ctx.fillStyle = '#ffd84a'; ctx.fillText('🪙 ' + save.coins, W - 14, top);
   }
 }
@@ -630,7 +804,18 @@ function show(id) { document.getElementById(id).classList.remove('hidden'); }
 function hide(id) { document.getElementById(id).classList.add('hidden'); }
 function renderMenu() {
   document.getElementById('mCoins').textContent = save.coins;
-  document.getElementById('mLevel').textContent = save.level;
+  document.getElementById('mLevel').textContent = sel;
+  document.getElementById('mName').textContent = levelInfo(sel).name;
+  const lb = document.getElementById('lvls'); lb.innerHTML = '';
+  const cnt = Math.max(10, Math.min(save.level, 99));
+  for (let i = 1; i <= cnt; i++) {
+    const b = document.createElement('button');
+    const lock = i > save.level;
+    b.className = 'lvb' + (i < save.level ? ' done' : '') + (lock ? ' lock' : '') + (i === sel ? ' sel' : '');
+    b.textContent = lock ? '🔒' : i;
+    b.onclick = () => { if (lock) return; SFX.init(); SFX.play('click'); sel = i; renderMenu(); preview(); };
+    lb.appendChild(b);
+  }
   const box = document.getElementById('ups'); box.innerHTML = '';
   for (const u of UPGRADES) {
     const lv = save[u.key], cost = u.cost(lv);
@@ -642,11 +827,14 @@ function renderMenu() {
   }
 }
 document.getElementById('play').onclick = startLevel;
+const muteBtn = document.getElementById('mute');
+muteBtn.textContent = SFX.muted ? '🔇' : '🔊';
+muteBtn.onclick = e => { e.stopPropagation(); SFX.init(); muteBtn.textContent = SFX.toggle() ? '🔇' : '🔊'; };
 document.getElementById('next').onclick = () => { hide('result'); state = 'menu'; renderMenu(); show('menu'); preview(); };
 
 function preview() {
-  level = save.level; army = 1 + save.army * 2; px = 0; pz = 0; camZ = -CAM_BACK;
-  arrows = []; parts = []; floats = []; battle = null; buildLevel(level);
+  level = sel; army = 1 + save.army * 2; px = 0; pz = 0; camZ = -CAM_BACK;
+  arrows = []; parts = []; floats = []; fx = []; dying = []; battle = null; buildLevel(level);
 }
 
 // ---------- Loop ----------
@@ -661,7 +849,7 @@ renderMenu(); preview();
 requestAnimationFrame(frame);
 
 // test hook
-window.__molt = { get state() { return state; }, get army() { return army; }, get pz() { return pz; }, get finishZ() { return finishZ; }, startLevel, save };
+window.__molt = { get state() { return state; }, get army() { return army; }, get pz() { return pz; }, get finishZ() { return finishZ; }, get objs() { return objs; }, get px() { return px; }, set px(v) { px = v; }, set sel(v) { sel = v; }, startLevel, save, LEVELS };
 </script>
 </body>
 </html>

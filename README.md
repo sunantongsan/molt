@@ -1,6 +1,6 @@
 # MOLT
 
-Runner–army game in the style of Top Lords: drag left/right to pick gates, shoot `+1` blocks to grow your army,
+Runner–army game in the style of Top Lords: duck archers vs cat soldiers. 10 hand-made levels (each with its own theme) then endless mode.
 break barriers, beat red squads and storm the enemy castle. Coins buy permanent upgrades between levels.
 
 - Game: `web/index.html` (plain HTML5 canvas, no build step — open it in any browser)
