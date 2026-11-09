@@ -238,6 +238,11 @@ function makeGate(good, lvl) {
   return { op: '-', v: rint(2, 4 + lvl * 2) };
 }
 
+function spawnFoes(n, z, depth, e) {
+  const hp = 2 + Math.floor(e / 3);
+  for (let i = 0; i < n; i++)
+    objs.push({ t: 'foe', x: rnd(-ROAD + 0.4, ROAD - 0.4), z: z + rnd(0, depth), hp, max: hp, v: rnd(1.8, 2.7), st: 'walk', atkT: 0, alive: true, ph: Math.random() * 10 });
+}
 function buildSiege(lvl) {
   // enemies walk toward the player; a big boss closes the level
   const e = lvl - SIEGE_FROM;
@@ -259,13 +264,12 @@ function buildSiege(lvl) {
       for (let k = 0; k < n; k++) objs.push({ t: 'tile', x, z: z + k * 1.15, w: 1.5, hp: 1, alive: true });
       z += n * 1.15 + 7;
     } else {
-      const groups = rint(1, 2);
-      for (let g = 0; g < groups; g++)
-        objs.push({ t: 'squad', walk: true, x: groups === 1 ? rnd(-1, 1) : (g ? 1.3 : -1.3), z: z + 10 + g * 2, n: rint(12 + e * 2, 22 + e * 4), alive: true, fight: false });
+      spawnFoes(Math.min(40, rint(12 + e, 18 + e * 2)), z + 14, 8, e);
       z += 13;
     }
   }
   const hp = 450 + e * 70;
+  spawnFoes(Math.min(30, 10 + e), z + 22, 4, e);
   boss = { t: 'boss', x: 0, z: z + 24, hp, max: hp, alive: true, fight: false, hitT: 0 };
   bossZ0 = boss.z;
   objs.push(boss);
@@ -361,7 +365,7 @@ window.addEventListener('keyup', e => keys[e.key] = false);
 
 // ---------- Helpers ----------
 function crowdRadius(n) { return Math.min(2.6, 0.3 + Math.sqrt(Math.min(n, 400)) * 0.17); }
-function addFloat(text, x, z, color) { floats.push({ text, x, z, y: 0, life: 1, color }); }
+function addFloat(text, x, z, color, small) { floats.push({ text, x, z, y: 0, life: 1, color, small }); if (floats.length > 70) floats.shift(); }
 function burst(x, z, color, n) {
   for (let i = 0; i < n; i++) parts.push({ x, z, y: 0.3, vx: rnd(-2, 2), vz: rnd(-1, 3), vy: rnd(2, 5), life: rnd(0.4, 0.8), color });
 }
@@ -402,9 +406,26 @@ function update(dt) {
     if (!stopped) pz += speed * (siege ? 0.5 : 1) * dt;
     if (siege) for (const o of objs) {
       if (!o.alive || o.fight) continue;
-      if (o.t === 'squad' && o.walk) {
-        o.z -= 2.4 * dt;
-        if (o.z - pz < 14) o.x += Math.sign(px - o.x) * Math.min(Math.abs(px - o.x), 1.1 * dt);
+      if (o.t === 'foe') {
+        const Rr = crowdRadius(army), front = pz + Rr * 0.7 + 0.35;
+        if (o.st === 'atk') {
+          // stick to the front of the duck army and swing the sword
+          o.z = Math.max(front, o.z - 3 * dt);
+          o.x += Math.sign(px - o.x) * Math.min(Math.max(0, Math.abs(px - o.x) - Rr * 0.8), 1.5 * dt);
+          o.atkT += dt;
+          if (o.atkT >= 0.75) {
+            o.atkT = 0;
+            if (army > 0) { army -= 1; die('duck', o.x, o.z - 0.6, 1, 0.2); }
+            hitFx('slash', o.x, o.z - 0.4, 0.6, '#ffffff'); SFX.play('clash'); shake = Math.max(shake, 0.08);
+            o.hp -= 1;   // the ducks hit back in melee
+            if (o.hp <= 0) { o.alive = false; killed++; die('cat', o.x, o.z, 1, 0); }
+          }
+        } else {
+          o.z -= o.v * dt;
+          if (o.z - pz < 9) o.x += Math.sign(px - o.x) * Math.min(Math.abs(px - o.x), 0.9 * dt);
+          if (o.z <= front && Math.abs(o.x - px) < Rr + 0.35) { o.st = 'atk'; o.atkT = 0.3; }
+          else if (o.z < pz - 1.5) o.alive = false;
+        }
       } else if (o.t === 'boss' && o.z - pz < 30) {
         o.z -= 1.4 * dt;
         o.x += Math.sign(px - o.x) * Math.min(Math.abs(px - o.x), 0.6 * dt);
@@ -444,6 +465,16 @@ function update(dt) {
             }
             break;
           }
+        } else if (o.t === 'foe') {
+          if (Math.abs(a.x - o.x) < 0.38 && a.z >= o.z - 0.35 && prevZ < o.z + 0.35) {
+            const dmg = 1 + Math.floor(save.archery / 4);
+            a.life = 0; o.hp -= dmg; o.hitT = 0.1;
+            addFloat('-' + dmg, o.x, o.z - 0.2, '#ffffff', true);
+            hitFx('spark', a.x, o.z, 0.5, '#fff3b0');
+            if (o.hp <= 0) { o.alive = false; killed++; die('cat', o.x, o.z, 1, 0); burst(o.x, o.z, '#ff5a4f', 5); }
+            else SFX.play('hit');
+            break;
+          }
         } else if (o.t === 'boss') {
           if (Math.abs(a.x - o.x) < 1.4 && a.z >= o.z - 0.9 && prevZ < o.z + 1) {
             a.life = 0; o.hp -= 1; o.hitT = 0.1;
@@ -477,7 +508,7 @@ function update(dt) {
         army -= loss; o.alive = false; shake = 0.35; die('duck', px, pz, loss, R);
         addFloat('-' + loss, px, pz + 1, '#ff6a6a');
         burst(o.x, o.z, '#8a5a2b', 26); SFX.play('break');
-      } else if (o.t === 'boss' && !o.fight && pz >= o.z - 1.2 - R) {
+      } else if (o.t === 'boss' && !o.fight && pz >= o.z - 2.2 - R) {
         o.fight = true; battle = { o, t: 0 };
       } else if ((o.t === 'squad' || o.t === 'army') && o.n > 0 && !o.fight) {
         const r = crowdRadius(o.n);
@@ -492,16 +523,23 @@ function update(dt) {
     if (battle && battle.o.t === 'boss') {
       // the boss smashes ducks; every duck in reach hacks at it
       const o = battle.o;
+      const before = battle.t % 1.1;
       battle.t += dt;
-      if (battle.t > 0.3) {
-        battle.t = 0;
-        const k = Math.min(army, Math.max(2, Math.round(army * 0.08)));
-        army -= k; o.hp -= Math.max(4, k * 3); o.hitT = 0.12;
-        die('duck', px, pz + 0.5, k, crowdRadius(army)); shake = 0.3; SFX.play('break');
-        hitFx('ring', px, pz + 0.5, 0.1, '#ff9a6a');
-        if (o.hp <= 0) { o.alive = false; battle = null; bossDown(o); }
-        else if (army <= 0) battle = null;
+      const ph = battle.t % 1.1;
+      // ducks in reach keep stabbing the boss
+      o.hp -= Math.min(army, 40) * 0.25 * dt;
+      if (before < 0.72 && ph >= 0.72) {
+        // SLAM: shockwave in front of the boss
+        const k = Math.min(army, Math.max(3, Math.round(army * 0.1)));
+        army -= k; o.hitT = 0.12;
+        const iz = o.z - 1.6;
+        die('duck', o.x, iz, k, 1.2); shake = 0.6; SFX.play('break'); SFX.play('gateBad');
+        hitFx('ring', o.x, iz, 0.05, '#ffd59a'); hitFx('ring', o.x, iz, 0.05, '#ff7a4a'); hitFx('spark', o.x, iz, 0.4, '#ffffff');
+        for (let i = 0; i < 18; i++) parts.push({ x: o.x + rnd(-1.2, 1.2), z: iz + rnd(-0.6, 0.6), y: 0.1, vx: rnd(-3, 3), vz: rnd(-2, 2), vy: rnd(3, 6), life: rnd(0.4, 0.8), color: pick(['#b9a27a', '#8a7a5a', '#e3d7bd']) });
+        addFloat('-' + k, px, pz + 1, '#ff6a6a');
       }
+      if (o.hp <= 0) { o.alive = false; battle = null; bossDown(o); }
+      else if (army <= 0) battle = null;
     } else if (battle) {
       const o = battle.o;
       battle.t += dt;
@@ -512,6 +550,7 @@ function update(dt) {
       if (Math.random() < 0.6) burst(o.x + rnd(-1, 1), o.z - 0.5, Math.random() < 0.5 ? '#e23b3b' : '#3f8bff', 2);
       shake = 0.12; SFX.play('clash');
       if (Math.random() < 0.5) hitFx('spark', o.x + rnd(-1, 1), o.z - crowdRadius(o.n), 0.6, '#ffffff');
+      if (Math.random() < 0.35) hitFx('slash', px + rnd(-1, 1), pz + crowdRadius(army) * 0.6, 0.6, '#ffffff');
       if (o.n <= 0) { o.alive = false; battle = null; }
       else if (army <= 0) battle = null;
     }
@@ -668,14 +707,15 @@ function unit(team, x, z, frame, mode) {
   ctx.fillStyle = 'rgba(0,0,0,.2)';
   ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.24, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   if (team === 'duck') drawFrame(mode === 'shoot' ? 'duck_shoot' : 'duck_run', frame, p.x, p.y, h);
-  else drawFrame('cat', frame, p.x, p.y, h);
+  else if (mode === 'atk') drawFrame('cat', 2 + (frame % 3), p.x, p.y + h * 0.04 * (frame % 3), h);
+  else drawFrame('cat', [0, 1, 5, 1][frame % 4], p.x, p.y - Math.abs(Math.sin(frame * 0.8)) * h * 0.06, h);
 }
-function drawCrowd(cx, cz, n, color, dark, facing) {
+function drawCrowd(cx, cz, n, color, dark, facing, fighting) {
   const team = facing < 0 ? 'duck' : 'cat';
   if (team === 'duck' ? !ready(IMG.duck_run) || !ready(IMG.duck_shoot) : !ready(IMG.cat)) return drawCrowdBasic(cx, cz, n, color, dark, facing);
   const shown = Math.min(n, 140);
   const t = performance.now() / 1000;
-  const mode = team === 'duck' && (battle || state !== 'play') ? 'shoot' : 'run';
+  const mode = team === 'duck' ? (battle || state !== 'play' ? 'shoot' : 'run') : (fighting ? 'atk' : 'run');
   const pts = [];
   for (let i = 0; i < shown; i++) {
     const r = 0.23 * Math.sqrt(i + 0.5) * (n > 140 ? Math.sqrt(n / 140) * 0.9 : 1);
@@ -683,7 +723,7 @@ function drawCrowd(cx, cz, n, color, dark, facing) {
     pts.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r * 0.8 * facing, i]);
   }
   pts.sort((a, b) => b[1] - a[1]);
-  const fps = team === 'duck' ? 12 : 8;
+  const fps = team === 'duck' ? 12 : (fighting ? 10 : 6);
   for (const q of pts) unit(team, Math.max(-ROAD + 0.1, Math.min(ROAD - 0.1, q[0])), q[1], Math.floor(t * fps + q[2] * 1.7), mode);
 }
 function drawCrowdBasic(cx, cz, n, color, dark, facing) {
@@ -758,6 +798,31 @@ function drawGate(o) {
   }
 }
 
+function drawFoe(o) {
+  if (!ready(IMG.cat)) return;
+  const p = proj(o.x, o.z), h = p.s * 0.95;
+  if (p.s < 2) return;
+  const t = performance.now() / 1000;
+  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.24, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+  let x = p.x, y = p.y;
+  if (o.hitT > 0) x += Math.sin(o.hitT * 120) * h * 0.05;
+  if (o.st === 'atk') {
+    const k = o.atkT / 0.75;                       // 0..1 swing cycle
+    const fr = k < 0.55 ? 2 : k < 0.75 ? 3 : 4;      // raise, swing, follow-through
+    y += (k > 0.55 && k < 0.8 ? h * 0.08 : 0);       // lunge toward the ducks
+    drawFrame('cat', fr, x, y, h * (k > 0.55 && k < 0.8 ? 1.08 : 1));
+  } else {
+    const ph = t * 9 + o.ph;
+    drawFrame('cat', [0, 1, 5, 1][Math.floor(ph) % 4], x + Math.sin(ph * 0.5) * h * 0.04, y - Math.abs(Math.sin(ph * 0.8)) * h * 0.07, h);
+  }
+  if (o.hitT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y - h * 0.5, h * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  if (o.hp < o.max) {
+    const bw = h * 0.6;
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(x - bw / 2, y - h * 1.08, bw, Math.max(3, h * 0.06));
+    ctx.fillStyle = '#ff4a3a'; ctx.fillRect(x - bw / 2, y - h * 1.08, bw * o.hp / o.max, Math.max(3, h * 0.06));
+  }
+}
 function drawBoss(o) {
   const p = proj(o.x, o.z);
   const h = p.s * 3.2;
@@ -768,11 +833,14 @@ function drawBoss(o) {
   if (ready(IMG.boss)) {
     // waddle while walking, wind up and slam while fighting
     ctx.save(); ctx.translate(p.x + shakeX, p.y);
+    let lift = Math.abs(Math.sin(t * 6)) * -h * 0.03;
     if (o.fight && battle && battle.o === o) {
-      const k = Math.min(1, battle.t / 0.3);
-      ctx.rotate(-0.12 + k * k * 0.22); ctx.scale(1 + k * 0.04, 1 - k * 0.06);
+      const ph = battle.t % 1.1;
+      if (ph < 0.6) { const k = ph / 0.6; ctx.rotate(-0.3 * k); ctx.scale(1 - 0.05 * k, 1 + 0.08 * k); lift = -h * 0.12 * k; }   // wind-up: lean back, rise
+      else if (ph < 0.8) { const k = (ph - 0.6) / 0.2; ctx.rotate(-0.3 + 0.65 * k); ctx.scale(1 + 0.1 * k, 1 - 0.12 * k); lift = -h * 0.12 * (1 - k); }   // slam down
+      else { const k = (ph - 0.8) / 0.3; ctx.rotate(0.35 * (1 - k)); ctx.scale(1 + 0.1 * (1 - k), 1 - 0.12 * (1 - k)); lift = 0; }   // recover
     } else ctx.rotate(Math.sin(t * 6) * 0.06);
-    drawAt(IMG.boss, 0, Math.abs(Math.sin(t * 6)) * -h * 0.03, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
+    drawAt(IMG.boss, 0, lift, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
     ctx.restore();
   }
   else if (ready(IMG.cat)) {
@@ -837,8 +905,9 @@ function draw() {
       ctx.strokeText(String(o.hp), tx, ty); ctx.fillStyle = '#fff'; ctx.fillText(String(o.hp), tx, ty);
     }]);
     else if (o.t === 'boss') list.push([o.z, () => drawBoss(o)]);
+    else if (o.t === 'foe') list.push([o.z, () => drawFoe(o)]);
     else if (o.t === 'squad' || o.t === 'army') list.push([o.z + 0.3, () => {
-      drawCrowd(o.x, o.z, o.n, '#ff5a4f', '#c22a2a', 1);
+      drawCrowd(o.x, o.z, o.n, '#ff5a4f', '#c22a2a', 1, o.fight && battle && battle.o === o);
       label(o.x, o.z - crowdRadius(o.n) - 0.4, String(o.n), '#c22a2a', '#fff', o.t === 'army' ? 1.3 : 1);
     }]);
   }
@@ -873,7 +942,12 @@ function draw() {
   for (const e of fx) list.push([e.z - 0.01, () => {
     const p = proj(e.x, e.z), k = e.t / 0.45;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0, 1 - k);
-    if (e.type === 'ring') {
+    if (e.type === 'slash') {
+      const cy = p.y - p.s * e.y, r = p.s * 0.55;
+      ctx.strokeStyle = e.color; ctx.lineWidth = Math.max(2, p.s * 0.09 * (1 - k)); ctx.lineCap = 'round';
+      const a0 = -2.6 + (e.x * 7 % 1), sweep = 0.4 + k * 1.8;
+      ctx.beginPath(); ctx.arc(p.x, cy, r, a0, a0 + sweep); ctx.stroke();
+    } else if (e.type === 'ring') {
       ctx.strokeStyle = e.color; ctx.lineWidth = Math.max(2, p.s * 0.08 * (1 - k));
       ctx.beginPath(); ctx.ellipse(p.x, p.y - p.s * e.y * 0.3, p.s * (0.2 + k * 1.1), p.s * (0.08 + k * 0.4), 0, 0, Math.PI * 2); ctx.stroke();
     } else {
@@ -903,7 +977,7 @@ function draw() {
   for (const f of floats) {
     const p = proj(f.x, f.z);
     ctx.globalAlpha = Math.max(0, f.life);
-    ctx.font = `900 ${Math.max(18, p.s * 0.5)}px system-ui,sans-serif`; ctx.textAlign = 'center';
+    ctx.font = `900 ${f.small ? Math.max(12, p.s * 0.3) : Math.max(18, p.s * 0.5)}px system-ui,sans-serif`; ctx.textAlign = 'center';
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.4)';
     ctx.strokeText(f.text, p.x, p.y - p.s * (1.2 + f.y)); ctx.fillStyle = f.color; ctx.fillText(f.text, p.x, p.y - p.s * (1.2 + f.y));
     ctx.globalAlpha = 1;
