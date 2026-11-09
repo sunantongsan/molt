@@ -1,6 +1,6 @@
 # MOLT
 
-Runner–army game in the style of Top Lords: duck archers vs cat soldiers. 10 hand-made levels (each with its own theme) then endless mode.
+Duck survivor base (Zero City style): build rooms, put ducks to work, then raid cat territory in the army-runner battles (10 hand-made levels, siege mode from 30).
 break barriers, beat red squads and storm the enemy castle. Coins buy permanent upgrades between levels.
 
 - Game: `web/index.html` (plain HTML5 canvas, no build step — open it in any browser)
