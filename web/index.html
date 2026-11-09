@@ -293,7 +293,7 @@ function parseGate(t) { return { op: t[0] === 'x' ? 'x' : t[0], v: Number(t.slic
 
 // ---------- Images ----------
 const IMG = {};
-['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_shoot_front', 'cat_back', 'duckhouse', 'platform', 'boss_walk', 'boss_walk_back', 'boss_attack', 'boss_die', 'duck_cannon', 'duck_xbow', 'grass', 'fence_picket1', 'fence_picket2', 'fence_picket4', 'fence_stump', 'fence_plank', 'fence_seg', 'duck_cannon_front', 'story1', 'story2', 'story3', 'story5', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
+['duck_run', 'duck_shoot', 'duck_die', 'cat', 'boss', 'duck_shoot_front', 'cat_back', 'duckhouse', 'platform', 'boss_walk', 'boss_walk_back', 'boss_attack', 'boss_die', 'duck_cannon', 'duck_xbow', 'grass', 'fence_picket1', 'fence_picket2', 'fence_picket4', 'fence_stump', 'fence_plank', 'fence_seg', 'duck_cannon_front', 'plus1', 'barrier', 'gate_blue', 'gate_red', 'castle', 'floor'].forEach(n => {
   const i = new Image(); i.src = 'img/' + n + (n === 'floor' || n === 'grass' || n.startsWith('story') ? '.jpg' : '.png'); IMG[n] = i;
 });
 const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6, duck_sleep: 2, duck_cook: 4, duck_hammer: 4, duck_idle: 4, duck_walk_back: 6, duck_walk_front: 6, duck_shoot_front: 4, cat_back: 6, boss_walk: 6, boss_walk_back: 6, boss_attack: 4, boss_die: 3, duck_cannon: 4, duck_xbow: 4, duck_cannon_front: 4 };
