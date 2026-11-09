@@ -557,8 +557,10 @@ function drawFence(w) {
   }
   const c = dproj(Math.cos(w.a) * RING, Math.sin(w.a) * RING);
   // grassy base patch like the art
+  if (!ready(IMG.fence_seg) || w.hp <= 0) {
   ctx.fillStyle = '#a8cf55'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 2, dk * 1.35, dk * 0.42, Math.atan2(pts[n - 1].p.y - pts[0].p.y, pts[n - 1].p.x - pts[0].p.x), 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#86b83c'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 5, dk * 1.2, dk * 0.3, Math.atan2(pts[n - 1].p.y - pts[0].p.y, pts[n - 1].p.x - pts[0].p.x), 0, Math.PI); ctx.fill();
+  }
   if (w.hp <= 0) {
     pts.forEach((q, i) => {
       if (i % 2 === 0 && ready(IMG.fence_stump)) drawAt(IMG.fence_stump, q.p.x, q.p.y + 2, dk * 0.42);
@@ -566,6 +568,29 @@ function drawFence(w) {
     if (ready(IMG.fence_plank)) { ctx.save(); ctx.translate(c.x + dk * 0.2, c.y + dk * 0.1); ctx.rotate((w.a * 7) % 0.6 - 0.3); drawAt(IMG.fence_plank, 0, dk * 0.35, dk * 1.3); ctx.restore(); }
     ctx.font = '900 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)';
     ctx.strokeText('🔧 แตะซ่อม', c.x, c.y - hgt * 0.55); ctx.fillStyle = '#ffe2a8'; ctx.fillText('🔧 แตะซ่อม', c.x, c.y - hgt * 0.55);
+    return;
+  }
+  if (ready(IMG.fence_seg)) {
+    // straight fence section, sheared so its pickets stay upright and its base follows this side of the ring
+    const S = { lx: 103, ly: 265, rx: 530, ry: 461, ph: 263 };
+    const a0 = w.a - span / 2, a1 = w.a + span / 2;
+    const P0 = dproj(Math.cos(a0) * RING, Math.sin(a0) * RING), P1 = dproj(Math.cos(a1) * RING, Math.sin(a1) * RING);
+    const bw = S.rx - S.lx, k0 = (S.ry - S.ly) / bw, d = hgt * 1.25 / S.ph;
+    // left/right sides run almost straight up the screen; keep a minimum width so the pickets don't collapse
+    const rawX = (P1.x - P0.x) / bw, minX = d * 0.75;
+    const ax = Math.abs(rawX) < minX ? (Math.sign(rawX) || 1) * minX * (Math.sin(w.a) >= 0 ? 1 : 1) : rawX;
+    const by = (P1.y - P0.y) / bw - d * k0;
+    const cx = (S.lx + S.rx) / 2, cy = (S.ly + S.ry) / 2;
+    const tilt = ratio < 0.5 ? Math.sin(w.a * 5) * 0.06 * (1 - ratio * 2) : 0;
+    ctx.save();
+    ctx.translate(c.x + shakeX, c.y + 2);
+    ctx.transform(ax, by, tilt * ax, d, 0, 0);
+    ctx.drawImage(IMG.fence_seg, -cx, -cy);
+    ctx.restore();
+    if (w.hp < w.max) {
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(c.x - 18, c.y - hgt * 1.3 - 6, 36, 4);
+      ctx.fillStyle = ratio > 0.5 ? '#7dde5a' : '#ffb347'; ctx.fillRect(c.x - 18, c.y - hgt * 1.3 - 6, 36 * ratio, 4);
+    }
     return;
   }
   const lean = i => ratio < 0.5 ? ((i * 53 % 7) - 3) * 0.05 * (1 - ratio * 2) : 0;
@@ -618,7 +643,11 @@ function drawPlatform(s) {
   const hop = o.arrive > 0 ? Math.sin(o.arrive * Math.PI) * k * 0.8 : 0;
   const fk = o.shootT > 0 ? Math.min(3, Math.floor((0.3 - o.shootT) / 0.3 * 4)) : 0;
   const dy = top + k * 0.05 - hop;
-  if (pl.w === 'cannon' && ready(IMG.duck_cannon)) {
+  const cannonFront = pl.w === 'cannon' && o.aimDy >= 0 && ready(IMG.duck_cannon_front);
+  if (cannonFront) {
+    // front view: the sprite fires toward bottom-left, mirror it for bottom-right targets
+    drawFrame('duck_cannon_front', o.shootT > 0 ? fk : 3, p.x, dy, h * 1.1, o.aimDx > 0);
+  } else if (pl.w === 'cannon' && ready(IMG.duck_cannon)) {
     drawFrame('duck_cannon', o.shootT > 0 ? fk : 3, p.x, dy, h * 1.05, flip);
     if (o.flash > 0) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = o.flash / 0.15;
