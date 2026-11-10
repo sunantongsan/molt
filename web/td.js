@@ -139,7 +139,9 @@ function buildWave(n) {
   const groups = 3 + Math.floor(n * 0.8);
   let t = 0;
   for (let g = 0; g < groups; g++) {
-    const side = Math.random() * Math.PI * 2;
+    let side = Math.random() * Math.PI * 2;
+    // no groups straight from the bottom yet: our cat art has no back view, so they'd look like they walk backwards
+    if (Math.sin(side) > 0.7) side += (Math.cos(side) >= 0 ? -1 : 1) * 0.8;
     const size = 3 + Math.floor(n * 1.2 + Math.random() * 3);
     // from wave 3 some groups are ninja cats (fast), from wave 6 steel tank cats (tough)
     const r = Math.random();
@@ -1057,28 +1059,28 @@ function drawCat(c) {
   }
 }
 function drawKitchenCat(c, x, py, h, atk, kk, t) {
-  // sprites face left; cats on the left side walk right, so mirror those
-  const flip = c.x < 0, w = h * 0.76, dead = c.hp <= 0;
+  // the kitchen cat sprites face RIGHT; cats on the right side walk left, so mirror those
+  const flip = c.x > 0, w = h * 0.76, dead = c.hp <= 0;
   let img = 'k_cat_walk', fr = Math.floor(t * (c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
-  let swing = 0;
+  let swing = -1;
   if (dead) { img = 'k_cat_act'; fr = 3; bob = 0; }
   else if (atk) { const kb = c.boss ? c.atk / BOSS_PERIOD : kk; img = 'k_cat_act'; fr = kb < 0.55 ? 0 : 1; swing = fr; bob = 0; }
   else if (c.hitT > 0 || c.stun > 0) { img = 'k_cat_act'; fr = 2; bob = 0; }
   ctx.save(); ctx.translate(x, py - bob); if (flip) ctx.scale(-1, 1);
   drawFrame(img, fr, 0, 0, h, false);
   if (!dead) {
-    // headgear
-    if (c.boss) drawItem('it_chefhat', -w * 0.02, -h * 0.97, h * 0.5);
-    else if (c.kind === 'tank') drawItem('it_steamer', -w * 0.02, -h * 0.88, h * 0.5);
-    else if (c.kind === 'ninja') { ctx.fillStyle = '#d8352a'; ctx.fillRect(-w * 0.36, -h * 0.82, w * 0.72, h * 0.07); ctx.beginPath(); ctx.moveTo(w * 0.34, -h * 0.8); ctx.lineTo(w * 0.52, -h * 0.86 + Math.sin(t * 15) * h * 0.04); ctx.lineTo(w * 0.5, -h * 0.74); ctx.fill(); }
-    else drawItem('it_pot', -w * 0.02, -h * 0.9, h * 0.5, -0.06);
-    // weapon in the paw
-    const wpn = c.boss ? 'it_pan' : c.kind === 'tank' ? 'it_pan' : c.kind === 'ninja' ? 'it_ladle' : 'it_spatula';
+    // headgear (front of the face is +x)
+    if (c.boss) drawItem('it_chefhat', w * 0.02, -h * 0.97, h * 0.5);
+    else if (c.kind === 'tank') drawItem('it_steamer', w * 0.02, -h * 0.88, h * 0.5);
+    else if (c.kind === 'ninja') { ctx.fillStyle = '#d8352a'; ctx.fillRect(-w * 0.36, -h * 0.82, w * 0.72, h * 0.07); ctx.beginPath(); ctx.moveTo(-w * 0.34, -h * 0.8); ctx.lineTo(-w * 0.52, -h * 0.86 + Math.sin(t * 15) * h * 0.04); ctx.lineTo(-w * 0.5, -h * 0.74); ctx.fill(); }
+    else drawItem('it_pot', w * 0.02, -h * 0.9, h * 0.5, 0.06);
+    // weapon in the front paw
+    const wpn = c.boss || c.kind === 'tank' ? 'it_pan' : c.kind === 'ninja' ? 'it_ladle' : 'it_spatula';
     const ws = h * (c.boss ? 0.55 : c.kind === 'tank' ? 0.5 : 0.45);
-    if (c.kind === 'tank' && !c.boss && !atk) drawItem(wpn, -w * 0.3, -h * 0.4, ws, 0);      // frying-pan shield in front
-    else if (swing === 1) drawItem(wpn, -w * 0.48, -h * 0.5, ws, -2.2);
-    else if (atk) drawItem(wpn, -w * 0.36, -h * 0.86, ws, -0.2);
-    else drawItem(wpn, -w * 0.38, -h * 0.5, ws, -0.5 + Math.sin(t * 7) * 0.12);
+    if (c.kind === 'tank' && !c.boss && !atk) drawItem(wpn, w * 0.3, -h * 0.4, ws, 0);          // frying-pan shield in front
+    else if (swing === 1) drawItem(wpn, w * 0.5, -h * 0.5, ws, 1.9);                               // smack!
+    else if (swing === 0) drawItem(wpn, -w * 0.3, -h * 0.88, ws, -0.7);                            // wind up behind the head
+    else drawItem(wpn, w * 0.36, -h * 0.5, ws, 0.3 + Math.sin(t * 7) * 0.12);
   }
   ctx.restore();
 }
