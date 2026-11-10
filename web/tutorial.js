@@ -11,17 +11,18 @@ function elRect(sel) {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: Math.max(r.width, r.height) / 2 + 10 };
 }
 function fieldRect(x, y, rr, up) { const p = dproj(x, y); return { x: p.x, y: p.y - (up || 0) * dk, r: rr * dk }; }
+function padRect(id) { const pd = padList().find(q => q.id === id); return pd ? fieldRect(pd.x, pd.y, 0.8) : fieldRect(0, 2.35, 0.8); }
 function firstEmptySlot() { for (let s = 0; s < SLOTS; s++) if (!platAt(s)) return s; return 0; }
 
 const TUT = {
   td: [
-    { text: 'นี่คือบ้านเป็ด 🏠\nเป็ดนอนอยู่ในบ้าน ฝูงแมวจะบุกมาจากทุกทิศ ต้องป้องกันบ้านไว้!', at: () => fieldRect(0, -0.6, 1.9) },
-    { text: 'เป็ดยืนยิงธนูอยู่บนนั่งร้าน 🏹\nแตะนั่งร้านเพื่ออัปเกรด หรือเปลี่ยนอาวุธให้แรงขึ้น', at: () => { const q = platPos(T.plats[0] ? T.plats[0].slot : 2); return fieldRect(q.x, q.y, 1.0, 0.8); } },
-    { text: 'แตะวงกลม ＋ เพื่อสร้างนั่งร้านใหม่\nเป็ดอีกตัวจะออกจากบ้านมาช่วยยิง', at: () => { const q = platPos(firstEmptySlot()); return fieldRect(q.x, q.y, 0.8); } },
-    { text: 'แมวต้องพังรั้วก่อนถึงบ้าน 🪵\nถ้ารั้วเสียหาย แตะเพื่อซ่อม (ใช้เหรียญ)', at: () => fieldRect(0, -RING, 1.3, 0.4) },
-    { text: 'กดปุ่มบ้าน 🏠 เพื่อเสริมความทนของบ้าน รั้ว และระเบิด', at: () => elRect('#houseBtn') },
-    { text: 'พร้อมแล้วกดเริ่มคลื่น! ▶\nระหว่างสู้ แตะพื้นเพื่อขว้างระเบิด 💣 ใส่ฝูงแมว', at: () => elRect('#waveBtn') },
-    { text: 'ล้มแมวได้เหรียญ 🪙 เอาไปอัปเกรดอาวุธ\nดูวิธีเล่นซ้ำได้ที่ปุ่ม ❓', at: () => elRect('#helpBtn') },
+    { text: 'นี่คือบ้านเป็ด 🏠\nฝูงแมวใส่หม้อถือตะหลิวจะบุกมาจากทุกทิศ ต้องป้องกันบ้านไว้!', at: () => fieldRect(0, -0.6, 1.9) },
+    { text: 'นี่คือเป็ดหัวหน้า 🦆\nลากนิ้วตรงไหนก็ได้บนจอเพื่อพาเดิน เป็ดจะฟาดแมวที่อยู่ใกล้ด้วยทัพพีเอง', at: () => fieldRect(D.lead.x, D.lead.y, 0.9, 0.5) },
+    { text: 'แมวล้มแล้วจะทิ้งเหรียญ 🪙 ไว้บนพื้น\nเดินไปเก็บให้ได้! เหรียญนอกรั้วเสี่ยงกว่าแต่มีเยอะกว่า', at: () => fieldRect(0, -RING, 1.3, 0.4) },
+    { text: 'ยืนบนวงกลม 🪵 เพื่อสร้างแท่นยิง\nเหรียญจะไหลเข้าไปจนครบ แล้วเป็ดอีกตัวจะขึ้นแท่นมาช่วยปา', at: () => padRect('b' + firstEmptySlot()) },
+    { text: 'ยืนบนวงกลมข้างแท่นที่มีอยู่เพื่ออัปเกรด ⬆️\nเลเวล 4, 7, 10 แท่นจะเปลี่ยนร่าง: ลังผัก → โต๊ะ → ตู้กับข้าว → ป้อมเตาทอง', at: () => padRect('u' + (T.plats[0] ? T.plats[0].slot : 2)) },
+    { text: 'แตะแท่นเพื่อเปลี่ยนอาวุธในครัว 🥢🍴🌶️\nแตะบ้านเพื่ออัปเป็ดหัวหน้า เสริมรั้ว และระเบิดพริก', at: () => elRect('#houseBtn') },
+    { text: 'พร้อมแล้วกดเริ่มคลื่น! ▶\nระหว่างสู้ แตะพื้นสั้นๆ เพื่อปาระเบิดพริก 🌶️ ใส่ฝูงแมว', at: () => elRect('#waveBtn') },
   ],
 };
 
@@ -53,9 +54,9 @@ function showTutStep() {
 function endTut() {
   $('tut').classList.add('hidden');
   window.tutPause = false;
-  save.tut[tutKey] = true; persist();
+  save.tut[tutKey] = true; if (tutKey === 'td') save.tut.td2 = true; persist();
 }
 $('tutNext').onclick = () => { SFX.init(); SFX.play('click'); if (++tutI >= tutSteps.length) endTut(); else showTutStep(); };
 $('tutSkip').onclick = () => { SFX.play('click'); endTut(); };
 $('helpBtn').onclick = () => { SFX.init(); SFX.play('click'); closeSheet(); runTut('td'); };
-if (!save.tut.td && state === 'td') setTimeout(() => runTut('td'), 600);
+if (!save.tut.td2 && state === 'td') setTimeout(() => runTut('td'), 600);
