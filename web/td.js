@@ -139,9 +139,7 @@ function buildWave(n) {
   const groups = 3 + Math.floor(n * 0.8);
   let t = 0;
   for (let g = 0; g < groups; g++) {
-    let side = Math.random() * Math.PI * 2;
-    // no groups straight from the bottom yet: our cat art has no back view, so they'd look like they walk backwards
-    if (Math.sin(side) > 0.7) side += (Math.cos(side) >= 0 ? -1 : 1) * 0.8;
+    const side = Math.random() * Math.PI * 2;
     const size = 3 + Math.floor(n * 1.2 + Math.random() * 3);
     // from wave 3 some groups are ninja cats (fast), from wave 6 steel tank cats (tough)
     const r = Math.random();
@@ -1062,10 +1060,34 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
   // the kitchen cat sprites face RIGHT; cats on the right side walk left, so mirror those
   const flip = c.x > 0, w = h * 0.76, dead = c.hp <= 0;
   let img = 'k_cat_walk', fr = Math.floor(t * (c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
-  let swing = -1;
+  let swing = -1, view = 'side';
+  // walking mostly up or down the screen: show the cat from the back or the front
+  if (!dead && !atk && !(c.hitT > 0 || c.stun > 0)) {
+    const sy = Math.abs(c.y) * 0.62, sx = Math.abs(c.x);
+    if (sy > sx * 1.1) { view = c.y > 0 ? 'back' : 'front'; img = view === 'back' ? 'k_cat_back' : 'k_cat_front'; if (!ready(IMG[img])) { img = 'k_cat_walk'; view = 'side'; } }
+  }
   if (dead) { img = 'k_cat_act'; fr = 3; bob = 0; }
   else if (atk) { const kb = c.boss ? c.atk / BOSS_PERIOD : kk; img = 'k_cat_act'; fr = kb < 0.55 ? 0 : 1; swing = fr; bob = 0; }
   else if (c.hitT > 0 || c.stun > 0) { img = 'k_cat_act'; fr = 2; bob = 0; }
+  if (view !== 'side') {
+    // front / back views are symmetric: no mirroring, gear centred
+    const fw = h * 0.7, tk = c.kind === 'tank', wpn = c.boss || tk ? 'it_pan' : c.kind === 'ninja' ? 'it_ladle' : 'it_spatula';
+    const ws = h * (c.boss ? 0.55 : tk ? 0.5 : 0.45), sw = Math.sin(t * 7) * 0.12;
+    ctx.save(); ctx.translate(x, py - bob);
+    if (view === 'back') drawItem(wpn, -fw * 0.48, -h * 0.5, ws, -0.4 + sw);       // weapon peeks out at the side
+    drawFrame(img, fr, 0, 0, h, false);
+    if (c.boss) drawItem('it_chefhat', 0, -h * 0.97, h * 0.5);
+    else if (tk) drawItem('it_steamer', 0, -h * 0.9, h * 0.52);
+    else if (c.kind === 'ninja') {
+      ctx.fillStyle = '#d8352a'; ctx.fillRect(-fw * 0.42, -h * (view === 'back' ? 0.78 : 0.8), fw * 0.84, h * 0.07);
+      if (view === 'back') { ctx.beginPath(); ctx.moveTo(-fw * 0.04, -h * 0.75); ctx.lineTo(-fw * 0.16 + Math.sin(t * 15) * fw * 0.05, -h * 0.58); ctx.lineTo(fw * 0.02, -h * 0.6); ctx.lineTo(fw * 0.16 + Math.sin(t * 13) * fw * 0.05, -h * 0.58); ctx.lineTo(fw * 0.04, -h * 0.75); ctx.fill(); }
+    }
+    else drawItem('it_pot', 0, -h * 0.92, h * 0.52);
+    if (view === 'front') { if (tk && !c.boss) drawItem(wpn, 0, -h * 0.38, ws); else drawItem(wpn, fw * 0.5, -h * 0.45, ws, 0.3 + sw); }
+    else if (tk && !c.boss) drawItem(wpn, 0, -h * 0.45, ws * 0.9);                  // pan strapped to the back
+    ctx.restore();
+    return;
+  }
   ctx.save(); ctx.translate(x, py - bob); if (flip) ctx.scale(-1, 1);
   drawFrame(img, fr, 0, 0, h, false);
   if (!dead) {
