@@ -82,4 +82,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web
+      # give GitHub a moment to register the uploaded artifact (deploy sometimes can't see it straight away)
+      - run: sleep 15
       - uses: actions/deploy-pages@v4
