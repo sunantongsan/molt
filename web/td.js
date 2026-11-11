@@ -157,7 +157,98 @@ function startWave() {
   D.phase = 'wave'; D.t = 0; D.banner = 2.5; D.bossBanner = false; D.bannerTxt = null; D.eshots = []; D.slowT = 0; D.killed = 0; D.earned = 0; D.revived = false;
   D.queue = buildWave(T.wave);
   D.total = D.queue.length;
+  // new faces today? the cat king shows them off first
+  if (!save.seenKinds) save.seenKinds = [];
+  const fresh = [];
+  for (const e of D.queue) { const k = e.boss ? 'boss' : e.kind || 'cat'; if (!save.seenKinds.includes(k) && !fresh.includes(k)) fresh.push(k); }
+  if (fresh.length) { D.phase = 'intro'; D.intro = { list: fresh, i: 0, t: 0 }; D.banner = 0; SFX.play('bossRoar'); }
   renderTdHud();
+}
+const INTRO_LINES = {
+  cat:    ['ทหารหม้อ', 'ฮ่าๆๆ เป็ดน้อย! เจอกองทัพหม้อของข้าซะ!'],
+  tray:   ['แมวถือถาด', 'ถาดเหล็กกันได้ทุกอย่าง! ตะเกียบเจ้าทำอะไรไม่ได้หรอก!'],
+  ninja:  ['นินจาผ้าแดง', 'นินจาของข้าวิ่งเร็วกว่าตะเกียบเจ้าซะอีก!'],
+  knight: ['อัศวินแดง', 'อัศวินแดงของข้ามีโล่ด้วยนะ จะปาอะไรก็ปามา!'],
+  cart:   ['รถยิงพริก', 'รถยิงพริก! จะยิงลูกน้องข้าข้ามรั้วไปถึงบ้านเจ้าเลย!'],
+  tank:   ['เกราะซึ้งนึ่ง', 'เกราะซึ้งนึ่ง! ทนยิ่งกว่าหม้อหุงข้าวของเจ้าอีก!'],
+  shadow: ['นินจาเงา', 'นินจาเงา... เจ้าจะไม่มีวันปาโดนมันหรอก!'],
+  healer: ['พ่อครัวต้มยำ', 'ต้มยำร้อนๆ! ลูกน้องข้าจะไม่มีวันหมดแรง!'],
+  steel:  ['เกราะเหล็กล้วน', 'เกราะเหล็กทั้งตัว! ไหนลองปามาสิ ฮ่าๆ!'],
+  glider: ['ร่มกระชอน', 'ร่มกระชอน! รั้วเจ้าไร้ความหมายแล้ว!'],
+  chief:  ['รองหัวหน้า แมวเชฟ', 'มือขวาของข้า! กระทะเขาฟาดทีเดียวรั้วพัง!'],
+  boss:   ['ราชาแมว', 'ข้าเอง! ราชาแมว!! วันนี้ข้าจะลงสนามเองโว้ย!!'],
+};
+function catIntroNext() {
+  const I = D.intro; if (!I) return;
+  const line = INTRO_LINES[I.list[I.i]] || ['', ''];
+  if (I.t < line[1].length / 26 + 0.3) { I.t = line[1].length / 26 + 0.3; return; }   // finish typing first
+  if (!save.seenKinds.includes(I.list[I.i])) save.seenKinds.push(I.list[I.i]);
+  I.i++; I.t = 0; SFX.play('click');
+  if (I.i >= I.list.length) { D.intro = null; D.phase = 'wave'; D.t = 0; D.banner = 2.5; SFX.play('horn'); persist(); renderTdHud(); }
+  else SFX.play('bossRoar');
+}
+function catIntroUpdate(dt) {
+  const I = D.intro; if (!I) return;
+  const prev = I.t; I.t += dt;
+  if (prev < 0.9 && I.t >= 0.9) SFX.play('quack');
+  const line = INTRO_LINES[I.list[I.i]] || ['', ''];
+  if (I.t > line[1].length / 26 + 3.2) catIntroNext();
+}
+function drawCatIntro() {
+  const I = D.intro; if (!I) return;
+  const kind = I.list[I.i], line = INTRO_LINES[kind] || [kind, ''], t = I.t, now = performance.now() / 1000;
+  const fade = Math.min(1, t * 4);
+  ctx.save();
+  // dark stage with letterbox bars
+  ctx.globalAlpha = 0.72 * fade; ctx.fillStyle = '#1a1020'; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1; ctx.fillStyle = '#000'; const bar = H * 0.09 * Math.min(1, t * 3); ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+  // spotlight on the new cat
+  const cx = W * 0.68, cy = H * 0.5, sh = Math.min(W, H) * 0.32;
+  const sp = ctx.createRadialGradient(cx, cy - sh * 0.4, 10, cx, cy - sh * 0.4, sh * 1.2); sp.addColorStop(0, 'rgba(255,240,180,.45)'); sp.addColorStop(1, 'rgba(255,240,180,0)');
+  ctx.fillStyle = sp; ctx.beginPath(); ctx.arc(cx, cy - sh * 0.4, sh * 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,240,180,.25)'; ctx.beginPath(); ctx.ellipse(cx, cy + 4, sh * 0.5, sh * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+  // the new cat slides in and poses
+  const inK = Math.min(1, t / 0.5), ex = cx + (1 - inK) * W * 0.5, pose = Math.abs(Math.sin(now * 3)) * 6;
+  const fake = { kind, gear: kind === 'boss' ? null : catGear(kind === 'boss' ? 'cat' : kind), hp: 1, max: 1, st: 'walk', mx: 0, my: 1, ph: 0, hitT: 0, stun: 0, atk: 0, x: 0, y: 0, trayHp: kind === 'tray' ? 4 : 0, boss: kind === 'boss' };
+  if (!I.gear || I.gearFor !== kind) { I.gear = fake.gear; I.gearFor = kind; } fake.gear = I.gear;
+  if (kind === 'boss') { if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
+  else if (kind === 'cart') drawCart(fake, { x: ex, y: cy - pose }, sh * 0.9);
+  else if (OLD_IMG[kind]) drawFrame(OLD_IMG[kind], [0, 1, 5, 1][Math.floor(now * 6) % 4], ex, cy - pose, sh * 0.85, true);
+  else drawKitchenCat(fake, ex, cy - pose, sh * (kind === 'chief' ? 1.0 : 0.85), false, 0, now);
+  // name card
+  if (t > 0.4) {
+    const pop = Math.min(1, (t - 0.4) * 5);
+    ctx.save(); ctx.translate(cx, cy + sh * 0.32); ctx.scale(pop, pop);
+    ctx.font = '900 20px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(line[0]).width + 30;
+    ctx.fillStyle = '#d8352a'; roundRect(-tw / 2, -18, tw, 36, 10); ctx.fill(); ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.fillText(line[0], 0, 1);
+    ctx.font = '800 11px system-ui,sans-serif'; ctx.fillStyle = '#ffd84a'; ctx.fillText(kind === 'boss' ? '👑 บอส' : kind === 'chief' ? '⭐ รองหัวหน้า' : '🆕 ศัตรูใหม่', 0, -28);
+    ctx.restore();
+  }
+  // the cat king on the left, bouncing as he gloats (when he is not the one on show)
+  const kx = W * 0.2, ky = H * 0.42, talk = Math.abs(Math.sin(now * 9)) * 4;
+  if (kind !== 'boss' && ready(IMG.boss_walk)) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame('boss_walk', 0, 0, 0, sh * 0.95, false); ctx.restore(); }
+  // speech bubble with typed text
+  const shown = line[1].slice(0, Math.floor(t * 26)), bx = W * 0.05, by = H * 0.13, bw = W * 0.9;
+  ctx.font = '800 17px system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  const lines = []; let cur = '';
+  for (const ch of shown) { if (ctx.measureText(cur + ch).width > bw - 28) { lines.push(cur); cur = ''; } cur += ch; } lines.push(cur);
+  const bh = 22 + Math.max(2, lines.length) * 24;
+  ctx.fillStyle = '#fffaf0'; roundRect(bx, by, bw, bh, 16); ctx.fill(); ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + bw * 0.18, by + bh - 1); ctx.lineTo(bx + bw * 0.14, by + bh + 22); ctx.lineTo(bx + bw * 0.28, by + bh - 1); ctx.closePath(); ctx.fillStyle = '#fffaf0'; ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a2a1a'; lines.forEach((l, i) => ctx.fillText(l, bx + 14, by + 12 + i * 24));
+  ctx.font = '900 12px system-ui,sans-serif'; ctx.fillStyle = '#d8352a'; ctx.fillText('ราชาแมว:', bx + 14, by - 16);
+  // a scared duck at the bottom
+  if (t > 0.9 && ready(IMG.k_duck_act)) {
+    const dx = W * 0.22 + Math.sin(now * 40) * 2, dy = H * 0.82;
+    drawFrame('k_duck_act', 2, dx, dy, sh * 0.6, false);
+    ctx.font = '900 18px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText('ก๊าบ!?', dx + sh * 0.45, dy - sh * 0.55); ctx.fillStyle = '#ffe680'; ctx.fillText('ก๊าบ!?', dx + sh * 0.45, dy - sh * 0.55);
+  }
+  // footer
+  ctx.font = '700 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,.8)';
+  ctx.fillText(`แตะเพื่อไปต่อ  ${I.i + 1}/${I.list.length}`, W / 2, H - bar / 2);
+  ctx.restore();
 }
 // enemy roster: new kinds join as the waves go on (kitchen cats + the old armoured cats)
 const CAT_KINDS = {
@@ -264,8 +355,7 @@ function spawnCatOrig(c) {
   if (c.pat && PATTERNS[c.pat] && PATTERNS[c.pat].name && !D.seen['p_' + c.pat]) { D.seen['p_' + c.pat] = true; toast(PATTERNS[c.pat].name); }
   D.cats.push({ zig: c.zig || 0, gear: catGear(kind), trayHp: kind === 'tray' ? 4 : 0, coward: !c.boss && kind !== 'chief' && kind !== 'cart' && Math.random() < 0.015, x: c.a, y: topY - (c.dy || 0) - Math.random() * 0.6, sway: Math.random() * 9, hp, max: hp, boss: c.boss, kind,
     v, st: 'walk', atk: 0, ph: Math.random() * 9, hitT: 0, slow: 0, stun: 0, burn: 0 });
-  if (kind === 'chief') { toast('👨‍🍳 รองหัวหน้า "แมวเชฟ" มาแล้ว! ทนมาก ฟาดแรง'); SFX.play('bossRoar'); }
-  else if (!c.boss && kind !== 'cat' && !D.seen[kind]) { D.seen[kind] = true; toast(K.name); }
+  if (kind === 'chief') SFX.play('bossRoar');
 }
 function spawnCat(c) {
   spawnCatOrig(c);
@@ -282,6 +372,7 @@ function tdUpdate(dt) {
   fitField();
   // slow motion after a big kill
   if (D.slowT > 0) { D.slowT -= dt; dt *= D.slowT > 0.25 ? 0.22 : 0.6; }
+  if (D.phase === 'intro') { catIntroUpdate(dt); return; }
   D.t += dt; D.banner -= dt;
   for (const p of T.plats) { const o = shooter(p.slot); o.arrive = Math.max(0, o.arrive - dt); }
   if (D.phase === 'wave' || D.phase === 'build' || D.phase === 'victory') leadUpdate(dt);
@@ -493,7 +584,11 @@ function tdUpdate(dt) {
     impact(s);
   }
   D.shots = D.shots.filter(s => !s.done);
-  D.cats = D.cats.filter(c => c.hp > 0 || (c.deadT = (c.deadT || 0) + dt) < (c.boss ? 2.2 : 0.6));
+  for (const c of D.cats) if (c.hp <= 0 && (c.boss || c.kind === 'chief') && (c.deadT || 0) > 1.3) {
+    c.y -= 0.75 * dt; c.x += Math.sin((c.deadT || 0) * 3) * 0.2 * dt;
+    if (Math.random() < dt * 0.8) D.floats.push({ x: c.x, y: c.y - (c.boss ? 1.5 : 0.8), t: 0, text: ['ฮือๆ...', 'จำไว้นะ!!', 'โอ๊ยๆ', 'ไว้เจอกันใหม่!'][Math.floor(Math.random() * 4)], color: '#ffd0d0', small: true });
+  }
+  D.cats = D.cats.filter(c => c.hp > 0 || (c.deadT = (c.deadT || 0) + dt) < ((c.boss || c.kind === 'chief') ? (c.y > dinv(0, 30).y ? 99 : 0) : 0.6));
   for (const p of D.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.h += p.vh * dt; p.vh -= 14 * dt; p.t += dt; if (p.h < 0) { p.h = 0; p.vh *= -0.3; p.vx *= 0.6; p.vy *= 0.6; } }
   D.parts = D.parts.filter(p => p.t < p.life);
   for (const b of D.bolts) b.t += dt;
@@ -694,7 +789,7 @@ function victoryUpdate(dt) {
   const T0 = D.slowT > 0 ? 99 : 0;   // wait while still in slow motion
   if (D.slowT > 0) { D.vicT = Math.min(D.vicT, 0.3); return; }
   if (D.vicT > 0.6 && !D.cheered) {
-    D.cheered = true; SFX.play('win'); D.banner = 3; D.bannerTxt = `ชนะแล้ว!! คลื่นที่ ${T.wave} 🎉`;
+    D.cheered = true; SFX.play('win'); D.banner = 3; D.bannerTxt = `ชนะแล้ว!! วันที่ ${T.wave} 🎉`;
     D.lead.happyT = 2.5;
     for (let i = 0; i < 60; i++) confetti((Math.random() - 0.5) * 8, FENCE_Y - Math.random() * 6);
   }
@@ -783,7 +878,7 @@ function endWave(won) {
 }
 function showWaveResult(won, bonus) {
   const earned = D.earned;
-  $('rTitle').textContent = won ? `ผ่านคลื่นที่ ${T.wave}! ${'⭐'.repeat(D.vicStars || 3)}` : 'บ้านพัง! 😿';
+  $('rTitle').textContent = won ? `ผ่านวันที่ ${T.wave}! ${'⭐'.repeat(D.vicStars || 3)}` : 'บ้านพัง! 😿';
   $('rTitle').style.color = won ? '#ffd84a' : '#ff7a7a';
   $('rInfo').textContent = won ? `ล้มแมว ${D.killed} ตัว • โบนัส 🪙${bonus}` : `ล้มแมวได้ ${D.killed} ตัว • ยังเหลือแมวอีก ${D.cats.filter(c => c.hp > 0).length + D.queue.length} ตัว`;
   $('rCoins').textContent = earned;
@@ -797,13 +892,13 @@ function showWaveResult(won, bonus) {
       $('rCoins').textContent = earned * 3; ab.classList.add('hidden');
       toast(`ได้เหรียญ x3! +🪙${earned * 2}`); renderTdHud();
     });
-    nx.textContent = `▶ ไปคลื่นที่ ${T.wave + 1}`;
+    nx.textContent = `▶ ไปวันที่ ${T.wave + 1}`;
     nx.onclick = () => { hide('result'); enterTD(); };
   } else {
     ab.classList.toggle('hidden', D.revived);
-    ab.innerHTML = '🎬 ดูโฆษณา สู้ต่อ!<small>ซ่อมบ้านกับรั้วเต็ม แล้วสู้คลื่นนี้ต่อ</small>';
+    ab.innerHTML = '🎬 ดูโฆษณา สู้ต่อ!<small>ซ่อมบ้านกับรั้วเต็ม แล้วสู้วันนี้ต่อ</small>';
     ab.onclick = () => Ads.show(ok => { if (ok) revive(); });
-    nx.textContent = '🔁 เริ่มคลื่นนี้ใหม่';
+    nx.textContent = '🔁 เริ่มวันนี้ใหม่';
     nx.onclick = () => { hide('result'); resetWave(); enterTD(); };
   }
   hide('tdUi'); show('result'); state = 'tdresult';
@@ -849,6 +944,7 @@ function joyEnd(e) {
 cv.addEventListener('pointerup', joyEnd);
 cv.addEventListener('pointercancel', joyEnd);
 function tapField(cx, cy) {
+  if (D.phase === 'intro') { catIntroNext(); return; }
   if (D.phase === 'victory') { if (D.vicT > 1.5 && D.slowT <= 0) { D.vicT = 99; } return; }
   if (D.phase === 'defeat') return;
   const p = dinv(cx, cy);
@@ -1016,7 +1112,7 @@ function openHouse() {
   const body = $('sheetBody'); body.innerHTML = '';
   $('sheetTitle').textContent = '🏠 บ้านเป็ด';
   const info = document.createElement('div'); info.className = 'sinfo';
-  info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • เป็ดยิง ${T.plats.length} ตัว • คลื่นถัดไป ${T.wave}`;
+  info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • เป็ดยิง ${T.plats.length} ตัว • วันถัดไป ${T.wave}`;
   body.appendChild(info);
   const fc = 50 * T.fence, bc = 60 * T.bomb;
   const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = '🦆 <b>เป็ดหัวหน้า</b> (ลากนิ้วบนจอเพื่อเดินไปวงกลมซื้อของ และฟาดแมวด้วยทัพพี)'; body.appendChild(lh);
@@ -1035,7 +1131,8 @@ function renderTdHud() {
   $('tdCoins').textContent = Math.floor(save.coins).toLocaleString();
   $('tdWave').textContent = T.wave;
   $('waveBtn').classList.toggle('hidden', D.phase !== 'build');
-  $('waveBtn').textContent = `▶ เริ่มคลื่นที่ ${T.wave}${T.wave % 5 === 0 ? ' 👑' : ''}`;
+  for (const id of ['raidBtn', 'houseBtn', 'helpBtn']) { const el = $(id); if (el) el.style.visibility = D.phase === 'intro' ? 'hidden' : ''; }
+  $('waveBtn').textContent = `▶ เริ่มวันที่ ${T.wave}${T.wave % 5 === 0 ? ' 👑' : ''}`;
 }
 
 // ---------- drawing ----------
@@ -1346,13 +1443,7 @@ function drawPlatform(s) {
     ctx.restore();
   }
   // weapon + level badge, coloured by level tier, with stars
-  const tier = tierOf(pl.lvl);
-  ctx.font = `900 ${Math.round(k * 0.32)}px system-ui,sans-serif`; ctx.textAlign = 'center';
-  const badge = `${WEAPON[pl.w].icon}${pl.lvl}${coffeeBuff(s) > 1 ? '☕' : ''}`;   // tier shows as the badge colour
-  const bw = ctx.measureText(badge).width + 10;
-  ctx.fillStyle = tier ? TIER_COL[tier] : 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, dy - h * 1.15, bw, k * 0.42, 6); ctx.fill();
-  if (tier >= 3) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.stroke(); }
-  ctx.fillStyle = '#fff'; ctx.fillText(badge, p.x, dy - h * 1.15 + k * 0.32);
+  // (no badge over the duck any more: it hid the face. Level and weapon show on the pad and in the sheet)
 }
 function catImg(c) { return OLD_IMG[c.kind] || 'cat'; }
 function drawCat(c) {
@@ -1376,15 +1467,22 @@ function drawCat(c) {
   if (c.hp <= 0 && !KC) { ctx.save(); ctx.translate(x, p.y); ctx.rotate((flip ? -1 : 1) * Math.min(1.4, (c.deadT || 0) * 5)); x = 0; }
   const py = c.hp <= 0 && !KC ? 0 : p.y, atk = c.st !== 'walk' && c.st !== 'flee' && c.st !== 'jump' && c.hp > 0, k = c.atk / 0.9;
   if (KC) {
-    if (c.hp <= 0) ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
+    if (c.hp <= 0 && c.kind !== 'chief') ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
   } else if (c.boss && ready(IMG.boss_walk)) {
     const bh = h * 1.05;
     if (c.hp <= 0 && ready(IMG.boss_die)) {
       ctx.restore(); // undo the generic death spin for the boss
-      ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 1.6) / 0.6);
-      drawFrame('boss_die', Math.min(2, Math.floor((c.deadT || 0) / 0.35)), p.x, p.y, bh * 0.95, flip);
       ctx.globalAlpha = 1;
+      const dt2 = c.deadT || 0;
+      if (dt2 < 1.3 || !ready(IMG.boss_walk_back)) drawFrame('boss_die', Math.min(2, Math.floor(dt2 / 0.35)), p.x, p.y, bh * 0.95, flip);
+      else {
+        // limping / crawling away, hunched over, with a sweat drop
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.sin(dt2 * 6) * 0.12); ctx.scale(1, 0.82);
+        drawFrame('boss_walk_back', Math.floor(dt2 * 4) % 6, 0, 0, bh * 0.9, false); ctx.restore();
+        ctx.font = `${Math.round(bh * 0.18)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', p.x + bh * 0.25, p.y - bh * 0.85 + Math.sin(dt2 * 12) * 3);
+        ctx.fillText('💫', p.x + Math.cos(dt2 * 5) * bh * 0.15, p.y - bh * 0.95);
+      }
       return;
     }
     if (atk && ready(IMG.boss_attack)) {
@@ -1471,6 +1569,14 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
       // attack from the front with code only: lean back while raising the weapon, then lunge down and smack
       if (atk) { const kb = kk; if (kb < 0.6) { lunge = -h * 0.05 * (kb / 0.6); swingA = -0.5 - kb; } else { const q = Math.min(1, (kb - 0.6) / 0.15); lunge = h * 0.1 * q; swingA = -1.1 + q * 3.2; } }
     }
+  }
+  if (dead && cb && (c.deadT || 0) > 1.3 && ready(IMG.k_cat_back)) {
+    // the sous-chef limps away, hat gone, sweating
+    const dt2 = c.deadT;
+    ctx.save(); ctx.translate(x, py); ctx.rotate(Math.sin(dt2 * 6) * 0.15); ctx.scale(1, 0.85);
+    drawFrame('k_cat_back', Math.floor(dt2 * 5) % 4, 0, 0, h, false); ctx.restore();
+    ctx.font = `${Math.round(h * 0.25)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', x + h * 0.3, py - h + Math.sin(dt2 * 12) * 3);
+    return;
   }
   if (dead) { img = 'k_cat_act'; fr = 3; bob = 0; }
   else if (view !== 'side') {}
@@ -1771,6 +1877,7 @@ function drawLeader() {
   ctx.restore();
 }
 function drawTdHud() {
+  if (D.phase === 'intro') { drawCatIntro(); return; }
   drawVictoryStars();
   if (D.flashT > 0) { D.flashT -= 1 / 60; ctx.fillStyle = `rgba(255,250,220,${Math.max(0, D.flashT) * 1.6})`; ctx.fillRect(0, 0, W, H); }
   if (D.slowT > 0) { const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(40,20,0,.35)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
@@ -1812,7 +1919,7 @@ $('waveBtn').onclick = e => { e.stopPropagation(); startWave(); };
 $('houseBtn').onclick = e => { e.stopPropagation(); SFX.init(); SFX.play('click'); openHouse(); };
 $('sheetClose').onclick = closeSheet;
 $('raidBtn').onclick = () => {
-  if (D && D.phase === 'wave') { toast('สู้คลื่นนี้ให้จบก่อน'); return; }
+  if (D && D.phase === 'wave') { toast('สู้วันนี้ให้จบก่อน'); return; }
   SFX.init(); SFX.play('click'); closeSheet(); hide('tdUi');
   state = 'menu'; renderMenu(); preview(); show('menu');
 };
