@@ -27,15 +27,20 @@ const WEAPONS = [
   { id: 'fire',   name: 'ซอสพริก',     icon: '🌶️', dmg: 2,   rate: 1.1,  range: 7,   speed: 13, splash: 1.0, cost: 300 },
   { id: 'ice',    name: 'ไอติมแท่ง',   icon: '🍧', dmg: 1.4, rate: 1.1,  range: 7,   speed: 14, cost: 400 },
   { id: 'triple', name: 'ตะเกียบทั้งกำ', icon: '🥢', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, cost: 500 },
+  { id: 'egg',    name: 'ไข่ดาวแฟลช',   icon: '🥚', dmg: 1.2, rate: 0.55, range: 7, speed: 9, splash: 1.5, arc: true, cost: 550 },
+  { id: 'coffee', name: 'เป็ดชงกาแฟ',   icon: '☕', dmg: 0, rate: 0, range: 0, speed: 1, support: true, cost: 600 },
   { id: 'storm',  name: 'ตะกร้อไฟฟ้า', icon: '⚡', dmg: 2.2, rate: 0.9,  range: 7.5, speed: 22, chain: 2, cost: 650 },
   { id: 'pan',    name: 'กระทะบูมเมอแรง', icon: '🍳', dmg: 2.4, rate: 0.7, range: 7, speed: 9, pierce: true, cost: 750 },
   { id: 'cannon', name: 'หม้อหุงข้าว', icon: '🍙', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, cost: 800 },
+  { id: 'stove',  name: 'เตาพ่นไฟ',     icon: '🔥', dmg: 0.55, rate: 6, range: 3.2, speed: 6, splash: 0.7, cost: 850 },
+  { id: 'fish',   name: 'น้ำปลาพิษ',     icon: '🐟', dmg: 1.2, rate: 0.45, range: 7, speed: 8, arc: true, pool: true, cost: 900 },
   { id: 'melon',  name: 'แตงโมระเบิด',  icon: '🍉', dmg: 7, rate: 0.4, range: 8, speed: 7, splash: 1.6, arc: true, cost: 1000 },
+  { id: 'roller', name: 'ไม้นวดแป้งกลิ้ง', icon: '🪵', dmg: 3, rate: 0.35, range: 9, speed: 6, pierce: true, cost: 1100 },
 ];
 for (const w of WEAPONS) { w.range *= 1.8; w.speed *= 1.6; }   // long lane: throw far
 const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 // kitchen look: what each duck holds, and what flies through the air
-const HELD = { pan: 'it_pan', melon: null, bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_sauce', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_ricecooker' };
+const HELD = { egg: null, coffee: 'it_soup', stove: null, fish: 'it_sauce', roller: null, pan: 'it_pan', melon: null, bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_sauce', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_ricecooker' };
 const AMMO = { pan: 'it_pan', bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_chili', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_riceball' };
 // platform looks by level tier: crates -> table & chairs -> cupboard tower -> golden stove fort
 const PLAT_NAME = ['ลังผัก', 'โต๊ะซ้อนเก้าอี้', 'หอตู้กับข้าว', 'ป้อมเตาแก๊สทองคำ'];
@@ -52,7 +57,7 @@ function drawItem(name, x, y, size, rot, flip) {
 function tierOf(lvl) { return lvl >= 10 ? 3 : lvl >= 7 ? 2 : lvl >= 4 ? 1 : 0; }
 const TIER_COL = ['#8a8f99', '#3fb24f', '#4a8cff', '#c06bff'];
 const TIER_GLOW = [null, '#a6ff9a', '#9fd0ff', '#ffd84a'];
-const WCOL = { pan: '#e6e6f5', melon: '#ff5a6a', seed: '#ff5a6a', bow: '#ffe27a', xbow: '#d8f4ff', fire: '#ff8a2a', ice: '#9fe8ff', triple: '#ffe27a', storm: '#c8b6ff', cannon: '#ffb347' };
+const WCOL = { egg: '#fff6c0', coffee: '#c08a5a', stove: '#ff8a2a', fish: '#9be36a', roller: '#e0b07a', pan: '#e6e6f5', melon: '#ff5a6a', seed: '#ff5a6a', bow: '#ffe27a', xbow: '#d8f4ff', fire: '#ff8a2a', ice: '#9fe8ff', triple: '#ffe27a', storm: '#c8b6ff', cannon: '#ffb347' };
 // special powers unlocked at Lv5 and Lv10
 const PERKS = {
   bow:    ['พุ่งทีละ 2 คู่', 'จิ้มคริติคอล 25% (x2)'],
@@ -64,13 +69,18 @@ const PERKS = {
   cannon: ['ข้าวเหนียวติดหนึบจนมึน', 'ข้าวเหนียวลูกยักษ์ + มึนนาน'],
   pan:    ['บินกลับมาตีซ้ำขากลับ', 'กระทะยักษ์ แรง x1.5'],
   melon:  ['แตกเป็นเมล็ดระเบิด 3 ลูก', 'เมล็ด 6 ลูก + น้ำแตงโมลื่นทำแมวช้า'],
+  egg:    ['แฟลชนานขึ้น (มึน 1.6 วิ)', 'แฟลชวงยักษ์'],
+  coffee: ['แท่นข้างๆ ยิงเร็วขึ้น 45%', 'เร็วขึ้น 60% + สาดกาแฟร้อนใส่แมว'],
+  stove:  ['ไฟกว้างเป็นกรวย 3 สาย', 'ไฟสีฟ้า ร้อนกว่า x1.5'],
+  fish:   ['แอ่งใหญ่ขึ้น อยู่นานขึ้น', 'กลิ่นแรง! แมวในแอ่งเดินช้า'],
+  roller: ['ไม้ใหญ่ขึ้น กวาดกว้าง', 'กลิ้งทีละ 2 อัน'],
 };
 function perkLv(p) { return p.lvl >= 10 ? 2 : p.lvl >= 5 ? 1 : 0; }
 WEAPON.bomb = { speed: 1, range: 0 };
 
 // ---------- save ----------
 // lane layout (like a zombie-defense game): y grows downward on screen
-const SLOTS = 4, SLOT_X = [-3.45, -1.8, 1.8, 3.45], PLAT_Y = 1.3, FENCE_Y = 0, HOUSE_Y = 4.2, HOUSE_R = 1.2;
+const SLOTS = 5, SLOT_X = [-3.6, -1.8, 0, 1.8, 3.6], PLAT_Y = 1.0, FENCE_Y = 0, HOUSE_Y = 5.0, HOUSE_R = 1.0;
 const NWALL = 5, WALL_W = 1.84, FIELD_X = 4.5, SPAWN_Y = -21;
 const RING = 4.4, PLAT_R = 2.75;   // old ring sizes, only used by leftover fallback drawing
 function wallX(i) { return (i - (NWALL - 1) / 2) * WALL_W; }
@@ -122,8 +132,8 @@ function freshField() {
     shooters: new Map(),   // slot -> {cd, aimDx, aimDy, shootT}
     cats: [], shots: [], fx: [], floats: [], queue: [], banner: 0, killed: 0, earned: 0,
     parts: [], coins: [], revived: false, hudPulse: 0, seen: {}, bolts: [],
-    drops: [],                                   // coins lying on the ground for the leader to pick up
-    lead: { x: -2.6, y: 3.6, face: 1, walkT: 0, moving: false, atkCd: 0, swingT: 0, hurtT: 0, happyT: 0 },
+    drops: [], pools: [],                                   // coins lying on the ground for the leader to pick up
+    lead: { x: -1.8, y: 3.4, face: 1, walkT: 0, moving: false, atkCd: 0, swingT: 0, hurtT: 0, happyT: 0 },
     joy: null,                                   // {sx, sy, x, y} while a finger is dragging
     padT: 0,
   };
@@ -167,16 +177,16 @@ function pickKind(n) {
 }
 function buildWave(n) {
   const q = [];
-  const groups = 3 + Math.floor(n * 0.8);
+  const groups = 4 + Math.floor(n * 1.0);
   let t = 0;
   for (let g = 0; g < groups; g++) {
     const side = (Math.random() * 2 - 1) * (FIELD_X - 0.8);      // group's x across the top
-    const size = 3 + Math.floor(n * 1.2 + Math.random() * 3);
+    const size = 4 + Math.floor(n * 1.6 + Math.random() * 4);
     // from wave 3 some groups are ninja cats (fast), from wave 6 steel tank cats (tough)
     const kind = pickKind(n), K = CAT_KINDS[kind];
     const cnt = K.hp >= 3 ? Math.max(2, Math.ceil(size / 3)) : K.hp >= 1.5 ? Math.ceil(size * 0.6) : size;
     for (let i = 0; i < cnt; i++) q.push({ t: t + i * (K.v > 1.5 ? 0.22 : 0.35), a: Math.max(-FIELD_X + 0.3, Math.min(FIELD_X - 0.3, side + (Math.random() - 0.5) * 2.2)), hp: 2 + Math.floor(n / 2), boss: false, kind });
-    t += Math.max(3.5, 8 - n * 0.3);
+    t += Math.max(2.6, 6.5 - n * 0.25);
   }
   if (n % 5 === 0) q.push({ t: t + 2, a: (Math.random() - 0.5) * 3, hp: 60 + n * 18, boss: true });
   // the sous-chef (second in command) leads the last group from wave 3 on
@@ -189,7 +199,7 @@ function spawnCatOrig(c) {
   const K = CAT_KINDS[kind];
   const hp = c.boss || kind === 'chief' ? c.hp : Math.max(1, Math.round(c.hp * K.hp + (K.hp >= 3 ? 4 : 0)));
   const v = 1.7 * (c.boss ? 0.7 : kind === 'chief' ? 0.75 : K.v * (0.85 + Math.random() * 0.35));
-  D.cats.push({ coward: !c.boss && Math.random() < 0.02, x: c.a, y: topY - Math.random() * 0.6, sway: Math.random() * 9, hp, max: hp, boss: c.boss, kind,
+  D.cats.push({ coward: !c.boss && kind !== 'chief' && Math.random() < 0.015, x: c.a, y: topY - Math.random() * 0.6, sway: Math.random() * 9, hp, max: hp, boss: c.boss, kind,
     v, st: 'walk', atk: 0, ph: Math.random() * 9, hitT: 0, slow: 0, stun: 0, burn: 0 });
   if (kind === 'chief') { toast('👨‍🍳 รองหัวหน้า "แมวเชฟ" มาแล้ว! ทนมาก ฟาดแรง'); SFX.play('bossRoar'); }
   else if (!c.boss && kind !== 'cat' && !D.seen[kind]) { D.seen[kind] = true; toast(K.name); }
@@ -226,6 +236,12 @@ function tdUpdate(dt) {
       if (c.st === 'flee') {
         // run back up the lane fast, then turn around and come again
         c.fleeT += dt; c.y -= c.v * 3.2 * sdt; c.mx = 0; c.my = -1;
+        // weave and shove through the crowd on the way out
+        c.x += Math.sin(c.fleeT * 11) * 2.2 * sdt;
+        for (const o of D.cats) if (o !== c && o.hp > 0 && o.st !== 'flee' && Math.abs(o.x - c.x) < 0.5 && Math.abs(o.y - c.y) < 0.45) {
+          const side = o.x >= c.x ? 1 : -1; o.x += side * 0.45; o.hitT = 0.15; o.y += 0.1;
+          if (!o.shoved && Math.random() < 0.35) { o.shoved = true; D.floats.push({ x: o.x, y: o.y - 0.3, t: 0, text: ['เฮ้ย!', 'อะไรวะ?!', 'ขอทาง!!', 'งง'][Math.floor(Math.random() * 4)], color: '#ffffff', small: true }); }
+        }
         if (c.y < dinv(0, 40).y - 0.5) { c.st = 'walk'; D.floats.push({ x: c.x, y: c.y + 1.5, t: 0, text: 'ลองใหม่...', color: '#fff' }); }
         continue;
       }
@@ -273,12 +289,35 @@ function tdUpdate(dt) {
             D.shots.push({ x: tx, y: ty, sx: tx, sy: ty, tx, ty, w: 'bow', dmg: wDmg(p) * 0.9, t: -i * 0.06, dur: 0.5, rain: true, tier }); }
         }
       }
+      if (W0.support) {
+        // coffee duck: brews for the neighbours; at Lv.10 also splashes hot coffee now and then
+        if (perkLv(p) >= 2 && o.cd <= 0) { const t2 = nearestCat(pos.x, pos.y, 9); if (t2) { o.cd = 2; o.shootT = 0.3; o.aimDx = t2.x - pos.x; o.aimDy = t2.y - pos.y;
+          D.shots.push({ x: pos.x, y: pos.y, sx: pos.x, sy: pos.y, tx: t2.x, ty: t2.y, w: 'coffee', dmg: 3 + p.lvl * 0.4, t: 0, dur: 0.6, high: true, tier, h0: o.topH || PLAT_H }); } }
+        continue;
+      }
       if (o.cd > 0 || o.arrive > 0) continue;
       const t = nearestCat(pos.x, pos.y, W0.range);
       if (!t) continue;
-      o.cd = 1 / (W0.rate * (1 + tier * 0.15)); o.aimDx = t.x - pos.x; o.aimDy = t.y - pos.y; o.shootT = 0.3;
+      o.cd = 1 / (W0.rate * (1 + tier * 0.15) * coffeeBuff(p.slot)); o.aimDx = t.x - pos.x; o.aimDy = t.y - pos.y; o.shootT = 0.3;
       const pk = perkLv(p);
       const n = p.w === 'triple' ? [3, 5, 7][pk] : p.w === 'bow' && pk >= 1 ? 2 : (W0.multi || 1);
+      if (p.w === 'stove') {
+        // a cone of flame puffs
+        const ang = Math.atan2(t.y - pos.y, t.x - pos.x), R = W0.range, nn = perkLv(p) >= 1 ? 3 : 1;
+        for (let k = 0; k < nn; k++) { const a = ang + (k - (nn - 1) / 2) * 0.28 + (Math.random() - 0.5) * 0.12;
+          D.shots.push({ flame: true, w: 'stove', x: pos.x, y: pos.y, sx: pos.x, sy: pos.y, tx: pos.x + Math.cos(a) * R, ty: pos.y + Math.sin(a) * R, t: 0, dur: R / W0.speed,
+            dmg: wDmg(p) * (perkLv(p) >= 2 ? 1.5 : 1), blue: perkLv(p) >= 2, hit: new Set(), tier, h0: o.topH || PLAT_H }); }
+        if (Math.random() < 0.15) SFX.play('fire');
+        continue;
+      }
+      if (p.w === 'roller') {
+        // rolls straight up the lane, flattening everything in its path
+        const nn = perkLv(p) >= 2 ? 2 : 1;
+        for (let k = 0; k < nn; k++) { const x0 = pos.x + (nn > 1 ? (k - 0.5) * 1.2 : 0);
+          D.shots.push({ roll: true, w: 'roller', x: x0, y: FENCE_Y - 0.6, sx: x0, sy: FENCE_Y - 0.6, tx: x0, ty: FENCE_Y - 0.6 - W0.range, t: -k * 0.15, dur: W0.range / W0.speed,
+            dmg: wDmg(p), wide: perkLv(p) >= 1 ? 1.15 : 0.75, hit: new Set(), tier }); }
+        SFX.play('wood'); continue;
+      }
       if (p.w === 'pan') {
         const ang = Math.atan2(t.y - pos.y, t.x - pos.x), R = W0.range;
         D.shots.push({ pan: true, w: 'pan', x: pos.x, y: pos.y, sx: pos.x, sy: pos.y, tx: pos.x + Math.cos(ang) * R, ty: pos.y + Math.sin(ang) * R,
@@ -295,11 +334,30 @@ function tdUpdate(dt) {
       if (p.w === 'cannon' || p.w === 'melon') { D.shake = Math.max(D.shake, 0.06); o.flash = 0.15; }
     }
   }
+  // fish-sauce puddles: hurt (and maybe slow) cats standing in them
+  for (const pl of D.pools) {
+    pl.t += dt; pl.tick += dt;
+    if (pl.tick >= 0.5) { pl.tick = 0; for (const c of D.cats) if (c.hp > 0 && Math.hypot(c.x - pl.x, (c.y - pl.y) * 1.2) < pl.r) { hurtCat(c, pl.dps * 0.5, 'burn'); if (pl.slow) c.slow = Math.max(c.slow, 0.6); } }
+  }
+  D.pools = D.pools.filter(pl => pl.t < pl.life);
   // projectiles + bombs
   for (const s of D.shots) {
     s.t += dt;
     if (s.rain) {
       if (s.t >= s.dur) { s.done = true; for (const c of D.cats) if (c.hp > 0 && Math.hypot(c.x - s.tx, c.y - s.ty) < 0.6) hurtCat(c, s.dmg); addFx('spark', s.tx, s.ty, '#ffe680'); }
+      continue;
+    }
+    if (s.flame || s.roll) {
+      if (s.t < 0) continue;
+      const u = Math.min(1, s.t / s.dur);
+      s.x = s.sx + (s.tx - s.sx) * u; s.y = s.sy + (s.ty - s.sy) * u;
+      const rad = s.flame ? 0.35 + u * 0.55 : s.wide;
+      for (const c of D.cats) if (c.hp > 0 && !s.hit.has(c) && Math.abs(c.x - s.x) < rad && Math.abs(c.y - s.y) < (s.flame ? rad : 0.5)) {
+        s.hit.add(c); hurtCat(c, s.dmg);
+        if (s.flame) { c.burn = Math.max(c.burn, 1.5); c.burnDps = Math.max(c.burnDps || 0, s.dmg * 0.6); }
+        else { if (!c.boss && c.kind !== 'steel') { c.y -= 0.55; if (c.st === 'wall') c.st = 'walk'; c.stun = Math.max(c.stun, 0.3); } burst(c.x, c.y, HIT_COLS.roller, 5, 3, 1); D.floats.push({ x: c.x, y: c.y - 0.3, t: 0, text: 'แบน!', color: '#ffe0b0', small: true }); }
+      }
+      if (u >= 1) s.done = true;
       continue;
     }
     if (s.pan) {
@@ -403,11 +461,31 @@ function burst(x, y, cols, n, sp, size, kind) {
       kind: kind || 'dot', col: cols[i % cols.length], sz: (size || 1) * (2 + Math.random() * 2.5), r: Math.random() * 6 });
   }
 }
-const HIT_COLS = { bow: ['#e8c48a', '#fff3b0'], triple: ['#e8c48a', '#fff3b0'], xbow: ['#dfe6f0', '#ffffff'], fire: ['#ff3a1a', '#ff8a2a', '#ffd04a'],
+const HIT_COLS = { egg: ['#ffffff', '#ffd23a'], stove: ['#ff6a1a', '#ffd04a', '#ff3a1a'], fish: ['#7a5a2a', '#9be36a'], roller: ['#e0b07a', '#fff3d0'], coffee: ['#7a4a2a', '#c08a5a'], bow: ['#e8c48a', '#fff3b0'], triple: ['#e8c48a', '#fff3b0'], xbow: ['#dfe6f0', '#ffffff'], fire: ['#ff3a1a', '#ff8a2a', '#ffd04a'],
   ice: ['#bff4ff', '#ffffff', '#7fd8ff'], storm: ['#c8b6ff', '#fff6a0', '#ffffff'], cannon: ['#ffffff', '#f4f0e0'], melon: ['#ff4a5a', '#3fa24a', '#2a1a1a'], seed: ['#ff4a5a', '#2a1a1a'] };
+function coffeeBuff(slot) {
+  let b = 1;
+  for (const q of T.plats) if (q.w === 'coffee' && Math.abs(q.slot - slot) === 1) b = Math.max(b, 1 + [0.3, 0.45, 0.6][perkLv(q)]);
+  return b;
+}
 function impact(s) {
   const W0 = WEAPON[s.w] || { splash: 0.8 }, pk = s.pk || 0, big = 1 + (s.tier || 0) * 0.25;
   burst(s.x, s.y, HIT_COLS[s.w] || ['#fff'], 5 + (s.tier || 0) * 3 + (s.w === 'melon' ? 14 : s.w === 'cannon' ? 6 : 0), s.w === 'melon' ? 4 : 2.5, s.w === 'melon' ? 1.4 : 1, s.w === 'ice' ? 'shard' : 'dot');
+  if (s.w === 'egg') {
+    const r = (pk >= 2 ? 2.3 : 1.5) * (1 + (s.tier || 0) * 0.08);
+    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < r)) { hurtCat(c, s.dmg); if (!c.boss) c.stun = Math.max(c.stun, pk >= 1 ? 1.6 : 1.0); }
+    addFx('flash', s.x, s.y, '#fff6c0', r); addFx('egg', s.x, s.y, '#ffffff'); SFX.play('break');
+    return;
+  }
+  if (s.w === 'fish') {
+    D.pools.push({ x: s.x, y: s.y, r: (pk >= 1 ? 1.5 : 1.1) * (1 + (s.tier || 0) * 0.08), t: 0, life: pk >= 1 ? 6 : 4, dps: s.dmg, slow: pk >= 2, tick: 0 });
+    addFx('splat', s.x, s.y, '#7a5a2a', 0.8); SFX.play('break');
+    return;
+  }
+  if (s.w === 'coffee') {
+    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < 1.1)) { hurtCat(c, s.dmg); c.burn = 2; c.burnDps = s.dmg * 0.3; }
+    addFx('splat', s.x, s.y, '#6a3a1a', 0.7); return;
+  }
   if (s.w === 'melon' || s.w === 'seed') {
     const r = s.w === 'seed' ? 0.85 : W0.splash * (1 + (s.tier || 0) * 0.1);
     for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < r)) { hurtCat(c, s.dmg); if (pk >= 2) c.slow = Math.max(c.slow, 1.6); }
@@ -486,7 +564,7 @@ function endWave(won) {
     return;
   }
   D.phase = 'build';
-  D.cats = []; D.shots = []; D.queue = [];
+  D.cats = []; D.shots = []; D.queue = []; D.pools = [];
   collectAll();
   if (won) {
     for (let i = 0; i < 50; i++) confetti((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
@@ -589,7 +667,7 @@ function tapField(cx, cy) {
 function padList() {
   const L = [];
   for (let s = 0; s < SLOTS; s++) {
-    const pl = platAt(s), x = SLOT_X[s], y = pl ? PLAT_Y + 1.15 : PLAT_Y;
+    const pl = platAt(s), x = SLOT_X[s], y = pl ? PLAT_Y + 1.1 : PLAT_Y;
     if (!pl) L.push({ id: 'b' + s, x, y, icon: '🪵', label: 'สร้างแท่น', cost: buildCost(), apply: () => {
       T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast('เป็ดขึ้นแท่นแล้ว! 🦆');
     } });
@@ -598,7 +676,7 @@ function padList() {
       if (after > before) { toast(`แท่นใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); const q = platPos(s); for (let i = 0; i < 30; i++) confetti(q.x, q.y); addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('win'); }
     } });
   }
-  L.push({ id: 'house', x: 2.6, y: HOUSE_Y + 0.4, icon: '🏠', label: `บ้าน Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
+  L.push({ id: 'house', x: 1.75, y: HOUSE_Y - 0.1, icon: '🏠', label: `บ้าน Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
   for (const w of D.walls) if (w.hp < w.max) {
     const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
     L.push({ id: 'w' + w.i, x: w.x, y: FENCE_Y + 0.85, icon: '🔧', label: 'ซ่อมรั้ว', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
@@ -633,7 +711,7 @@ function leadUpdate(dt) {
     }
   }
   // stay in the yard, and walk around the house rather than through it
-  L.x = Math.max(-FIELD_X + 0.2, Math.min(FIELD_X - 0.2, L.x)); L.y = Math.max(FENCE_Y + 0.55, Math.min(HOUSE_Y + 1.0, L.y));
+  L.x = Math.max(-FIELD_X + 0.2, Math.min(FIELD_X - 0.2, L.x)); L.y = Math.max(FENCE_Y + 0.55, Math.min(HOUSE_Y + 0.6, L.y));
   { const hx = L.x, hy = L.y - (HOUSE_Y - 0.5), d = Math.hypot(hx, hy * 1.4), r = HOUSE_R + 0.15;
     if (d < r) { const k = r / (d || 1); L.x = (hx || 0.01) * k; L.y = HOUSE_Y - 0.5 + hy * k; } }
   // bonk nearby cats with the ladle
@@ -711,7 +789,7 @@ function openSlot(s) {
     const W0 = WEAPON[p.w];
     $('sheetTitle').textContent = `${W0.icon} ${PLAT_NAME[tierOf(p.lvl)]} • ${W0.name} Lv.${p.lvl}`;
     const info = document.createElement('div'); info.className = 'sinfo';
-    info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • ดาเมจ ${wDmg(p).toFixed(1)} • ยิง ${W0.rate}/วิ • ระยะ ${W0.range}${W0.splash ? ' • ระเบิด' : ''}${W0.multi ? ' • 3 ดอก' : ''}`;
+    info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • ดาเมจ ${wDmg(p).toFixed(1)} • ยิง ${W0.rate}/วิ • ระยะ ${Math.round(W0.range)}${W0.splash ? ' • ระเบิด' : ''}${W0.multi ? ' • 3 ดอก' : ''}`;
     body.appendChild(info);
     const pk = PERKS[p.w], perk = document.createElement('div'); perk.className = 'sinfo';
     perk.innerHTML = `⭐ Lv.5: ${pk[0]} ${p.lvl >= 5 ? '✅' : '🔒'}<br>🌟 Lv.10: ${pk[1]} ${p.lvl >= 10 ? '✅' : '🔒'}<br><small>เลเวล 4, 7, 10 เอฟเฟกต์ยิงจะสวยขึ้น</small>`;
@@ -802,6 +880,7 @@ function tdDraw() {
     ctx.beginPath(); ctx.ellipse(s.x, s.y, r * dk, r * dk * 0.62, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   }
   drawPads();
+  for (const pl of D.pools) drawPool(pl);
   const list = [[HOUSE_Y, drawHouse]];
   for (const c of D.drops) list.push([c.y, () => drawDrop(c)]);
   list.push([D.lead.y, drawLeader]);
@@ -863,7 +942,7 @@ function tdDraw() {
 }
 let houseTop = 0;
 function drawHouse() {
-  const p = dproj(0, HOUSE_Y - 0.6), s = dk * 0.85;
+  const p = dproj(0, HOUSE_Y - 0.6), s = dk * 0.6;
   if (ready(IMG.duckhouse)) {
     houseTop = p.y + s * 0.9 - drawAt(IMG.duckhouse, p.x, p.y + s * 0.9, s * 3.0);
   } else {
@@ -1016,10 +1095,17 @@ function drawPlatform(s) {
     g.addColorStop(0, pl.w === 'fire' ? '#fff0a0' : '#e0f6ff'); g.addColorStop(0.5, pl.w === 'fire' ? '#ff7a1a' : pl.w === 'storm' ? '#9b7bff' : pl.w === 'ice' ? '#7fe0ff' : '#6ad0ff'); g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
+  if (pl.w === 'coffee') {
+    const tt = performance.now() / 1000;
+    ctx.save();
+    for (let i = 0; i < 4; i++) { const k2 = (tt * 0.6 + i / 4) % 1; ctx.globalAlpha = (1 - k2) * 0.6; ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(p.x + Math.sin(tt * 2 + i) * k * 0.2, dy - h * 0.9 - k2 * k * 1.2, 3 + k2 * 6, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
   // weapon + level badge, coloured by level tier, with stars
   const tier = tierOf(pl.lvl);
   ctx.font = `900 ${Math.round(k * 0.32)}px system-ui,sans-serif`; ctx.textAlign = 'center';
-  const badge = `${WEAPON[pl.w].icon}${pl.lvl}${'★'.repeat(tier)}`;
+  const badge = `${WEAPON[pl.w].icon}${pl.lvl}${coffeeBuff(s) > 1 ? '☕' : ''}`;   // tier shows as the badge colour
   const bw = ctx.measureText(badge).width + 10;
   ctx.fillStyle = tier ? TIER_COL[tier] : 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, dy - h * 1.15, bw, k * 0.42, 6); ctx.fill();
   if (tier >= 3) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.stroke(); }
@@ -1190,7 +1276,7 @@ function drawShot(s) {
   if (s.bomb) { drawItem('it_chili', p.x, y, dk * 0.5, s.t * 14) || (ctx.fillStyle = '#d33', ctx.fillRect(p.x - 4, y - 4, 8, 8)); return; }
   if (s.t < 0) return;
   // glowing trail behind every thrown item
-  {
+  if (!s.flame) {
     const tier = s.tier || 0, col = tier >= 3 ? '#ffe680' : WCOL[s.w] || '#fff', n = 5 + tier * 2;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 1; i <= n; i++) {
@@ -1200,6 +1286,29 @@ function drawShot(s) {
     }
     ctx.restore();
   }
+  if (s.flame) {
+    const u = Math.min(1, s.t / s.dur), q = dproj(s.x, s.y), r = dk * (0.25 + u * 0.55), yy = q.y - dk * (s.h0 || 1) * (1 - u) - dk * 0.4;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.85 * (1 - u * 0.7);
+    const g = ctx.createRadialGradient(q.x, yy, 0, q.x, yy, r);
+    if (s.blue) { g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, '#7ad0ff'); g.addColorStop(1, 'rgba(40,80,255,0)'); }
+    else { g.addColorStop(0, '#fff6c0'); g.addColorStop(0.35, '#ffa02a'); g.addColorStop(1, 'rgba(255,40,0,0)'); }
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q.x, yy, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    return;
+  }
+  if (s.roll) {
+    const q = dproj(s.x, s.y), w = dk * s.wide * 1.7, hh = dk * 0.32;
+    ctx.save(); ctx.translate(q.x, q.y - hh * 0.6);
+    ctx.fillStyle = '#c98a4a'; roundRect(-w / 2, -hh / 2, w, hh, hh / 2); ctx.fill();
+    ctx.fillStyle = '#e8b47a'; roundRect(-w / 2 + 3, -hh / 2 + 2, w - 6, hh * 0.35, hh / 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(110,60,20,.6)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i++) { const yy = ((s.t * 6 + i / 4) % 1) * hh - hh / 2; ctx.beginPath(); ctx.moveTo(-w / 2 + 6, yy); ctx.lineTo(w / 2 - 6, yy); ctx.stroke(); }
+    ctx.fillStyle = '#8a5a2b'; for (const sx of [-1, 1]) { roundRect(sx > 0 ? w / 2 : -w / 2 - hh * 0.6, -hh * 0.2, hh * 0.6, hh * 0.4, 3); ctx.fill(); }
+    ctx.restore();
+    return;
+  }
+  if (s.w === 'egg') { ctx.save(); ctx.translate(p.x, y); ctx.rotate(s.t * 9); ctx.fillStyle = '#fff8ea'; ctx.beginPath(); ctx.ellipse(0, 0, dk * 0.16, dk * 0.21, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); return; }
+  if (s.w === 'fish') { drawItem('it_sauce', p.x, y, dk * 0.45, s.t * 10); return; }
+  if (s.w === 'coffee') { ctx.fillStyle = '#6a3a1a'; ctx.beginPath(); ctx.arc(p.x, y, dk * 0.13, 0, Math.PI * 2); ctx.fill(); return; }
   if (s.pan) { drawItem('it_pan', p.x, p.y - dk * (s.h0 ? 0.9 : 0.6), dk * (s.big ? 0.75 : 0.55), s.t * 18); return; }
   if (s.w === 'melon' || s.w === 'seed') {
     const r = dk * (s.w === 'seed' ? 0.1 : 0.26) * (1 + (s.tier || 0) * 0.1);
@@ -1275,6 +1384,17 @@ function drawFx(f) {
     const g = ctx.createRadialGradient(p.x, p.y - 6, 0, p.x, p.y - 6, r);
     g.addColorStop(0, '#fff6c0'); g.addColorStop(0.4, f.color); g.addColorStop(1, 'rgba(255,80,20,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p.x, p.y - 6, r, r * 0.75, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (f.type === 'flash') {
+    const r = dk * (f.size || 1.5) * (0.6 + k * 0.8);
+    const g = ctx.createRadialGradient(p.x, p.y - dk * 0.4, 0, p.x, p.y - dk * 0.4, r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.4, f.color); g.addColorStop(1, 'rgba(255,240,180,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p.x, p.y - dk * 0.4, r, r * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(p.x + Math.cos(a) * r * 0.3, p.y - dk * 0.4 + Math.sin(a) * r * 0.3); ctx.lineTo(p.x + Math.cos(a) * r, p.y - dk * 0.4 + Math.sin(a) * r * 0.8); ctx.stroke(); }
+  } else if (f.type === 'egg') {
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1 - k * k;
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(p.x, p.y, dk * 0.55, dk * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffc21a'; ctx.beginPath(); ctx.ellipse(p.x + dk * 0.05, p.y - dk * 0.03, dk * 0.2, dk * 0.14, 0, 0, Math.PI * 2); ctx.fill();
   } else if (f.type === 'splat') {
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = (1 - k) * 0.7; ctx.fillStyle = f.color;
     const r = dk * 0.9 * (f.size || 1) * (0.5 + k * 0.6);
@@ -1322,6 +1442,17 @@ function drawPads(top) {
     const a = dproj(D.lead.x, D.lead.y), b = dproj(D.flow.x, D.flow.y);
     for (let i = 0; i < 3; i++) { const k = (performance.now() / 300 + i / 3) % 1; drawItem('it_coin', a.x + (b.x - a.x) * k, a.y - dk * 0.9 + (b.y - a.y + dk * 0.9) * k - Math.sin(k * Math.PI) * dk * 0.6, dk * 0.28); }
   }
+}
+function drawPool(pl) {
+  const p = dproj(pl.x, pl.y), a = Math.min(1, pl.t * 4) * Math.min(1, (pl.life - pl.t) * 1.5), r = pl.r * dk;
+  ctx.save(); ctx.globalAlpha = a * 0.75;
+  const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r); g.addColorStop(0, '#6a8a2a'); g.addColorStop(0.7, '#7a6a2a'); g.addColorStop(1, 'rgba(90,70,30,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r * 0.62, 0, 0, Math.PI * 2); ctx.fill();
+  const t = performance.now() / 1000;
+  for (let i = 0; i < 6; i++) { const k = (t * 0.8 + i / 6) % 1, ang = i * 2.1 + pl.x;
+    ctx.globalAlpha = a * (1 - k) * 0.9; ctx.fillStyle = '#b6f07a';
+    ctx.beginPath(); ctx.arc(p.x + Math.cos(ang) * r * 0.5, p.y + Math.sin(ang) * r * 0.25 - k * dk * 0.9, 2 + (1 - k) * 3, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
 }
 function drawDrop(c) {
   const p = dproj(c.x, c.y), sz = dk * 0.32, spin = Math.abs(Math.cos(c.t * 5 + c.x * 3));
