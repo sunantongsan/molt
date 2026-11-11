@@ -1124,6 +1124,7 @@ function openHouse() {
   body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; }));
   const rp = document.createElement('button'); rp.className = 'sbtn'; rp.style.background = '#6d8fc9'; rp.style.boxShadow = '0 4px 0 #3f62a3';
   rp.innerHTML = '<b>🎬 ดูเรื่องราวตอนต้นอีกครั้ง</b>'; rp.onclick = () => { closeSheet(); playIntro(); }; body.appendChild(rp);
+  const ver = document.createElement('div'); ver.className = 'sinfo'; ver.style.opacity = '.7'; ver.textContent = `เกม ${gameVersion()} • อัปเดตอัตโนมัติเมื่อมีแพตใหม่`; body.appendChild(ver);
   $('sheet').classList.remove('hidden');
 }
 function renderTdHud() {
@@ -1913,6 +1914,23 @@ function drawTdHud() {
     ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
   }
 }
+
+// ---------- over-the-air patches (Android app) ----------
+// the app downloads a newer game in the background and calls this when it is ready
+window.onMoltPatch = v => {
+  let b = document.getElementById('patchBar');
+  if (!b) {
+    b = document.createElement('button'); b.id = 'patchBar';
+    b.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:50;border:0;border-radius:16px;padding:10px 18px;font:900 15px system-ui,sans-serif;color:#fff;background:linear-gradient(#5fd06a,#2f9a3e);box-shadow:0 4px 0 #1f6a2a,0 8px 18px rgba(0,0,0,.35)';
+    document.body.appendChild(b);
+  }
+  b.innerHTML = `🔄 อัปเดตใหม่พร้อมแล้ว (รุ่น ${v})<br><small style="font-weight:700">แตะเพื่อโหลดเกมใหม่</small>`;
+  b.onclick = () => {
+    if (D && (D.phase === 'wave' || D.phase === 'intro')) { toast('สู้วันนี้ให้จบก่อน แล้วค่อยอัปเดตนะ'); return; }
+    persist(); if (window.AndroidPatch) AndroidPatch.reload();
+  };
+};
+function gameVersion() { try { return window.AndroidPatch ? 'รุ่น ' + AndroidPatch.version() : 'เว็บ'; } catch (e) { return '?'; } }
 
 // ---------- buttons ----------
 $('waveBtn').onclick = e => { e.stopPropagation(); startWave(); };

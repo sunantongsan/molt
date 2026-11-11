@@ -3,3 +3,5 @@ app/build/
 build/
 *.apk
 local.properties
+
+web/manifest.json

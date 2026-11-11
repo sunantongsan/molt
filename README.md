@@ -5,3 +5,6 @@ break barriers, beat red squads and storm the enemy castle. Coins buy permanent 
 
 - Game: `web/index.html` (plain HTML5 canvas, no build step — open it in any browser)
 - Android: `app/` wraps the game in a WebView. Every push to `main` builds an APK and publishes it under **Releases** (only the 3 newest are kept).
+
+## Over-the-air patches
+Every push also publishes `web/` to GitHub Pages (`https://sunantongsan.github.io/molt/`) with a `manifest.json` (build number + file hashes). The Android app checks it on start, downloads only the changed files in the background and shows "🔄 อัปเดตใหม่พร้อมแล้ว" — tap it to reload into the new game, no APK reinstall. Changes to the Android code itself (Java, manifest, ads) still need a new APK.

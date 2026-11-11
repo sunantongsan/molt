@@ -23,6 +23,19 @@ jobs:
           gradle-version: '8.13'
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Write game manifest (version + file hashes, used by the patch system)
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          root = 'web'; files = {}
+          for d, _, names in os.walk(root):
+              for n in names:
+                  p = os.path.join(d, n); rel = os.path.relpath(p, root).replace(os.sep, '/')
+                  if rel == 'manifest.json': continue
+                  files[rel] = hashlib.sha1(open(p, 'rb').read()).hexdigest()
+          json.dump({'version': int(os.environ['GITHUB_RUN_NUMBER']), 'files': files}, open(os.path.join(root, 'manifest.json'), 'w'))
+          print(len(files), 'files')
+          PY
       - name: Build APK
         run: gradle :app:assembleDebug --no-daemon
       - name: Rename APK
@@ -38,3 +51,35 @@ jobs:
         run: |
           gh release list --limit 100 --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[3:] | .[].tagName' |
           while read -r tag; do gh release delete "$tag" --yes --cleanup-tag || true; done
+
+  # Publish the game folder to GitHub Pages: installed apps download it as an over-the-air patch.
+  # Needs the repo to be public and Settings > Pages > Source = "GitHub Actions".
+  patch:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write game manifest (version + file hashes, used by the patch system)
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          root = 'web'; files = {}
+          for d, _, names in os.walk(root):
+              for n in names:
+                  p = os.path.join(d, n); rel = os.path.relpath(p, root).replace(os.sep, '/')
+                  if rel == 'manifest.json': continue
+                  files[rel] = hashlib.sha1(open(p, 'rb').read()).hexdigest()
+          json.dump({'version': int(os.environ['GITHUB_RUN_NUMBER']), 'files': files}, open(os.path.join(root, 'manifest.json'), 'w'))
+          print(len(files), 'files')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - uses: actions/deploy-pages@v4

@@ -5,6 +5,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
@@ -21,12 +22,24 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);           // keeps coins and upgrades
         s.setTextZoom(100);                     // ignore the phone's large-font setting so menus fit
         s.setMediaPlaybackRequiresUserGesture(false);
+        s.setAllowFileAccess(true);             // patched game files live in the app's own folder
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setBackgroundColor(0xFF1D5FA8);
         setContentView(web);
         web.addJavascriptInterface(new MoltAds(this, web), "AndroidAds");
         hideBars();
-        web.loadUrl("file:///android_asset/index.html");
+        web.addJavascriptInterface(new PatchBridge(), "AndroidPatch");
+        web.loadUrl(Patcher.startUrl(this));
+        // look for a newer game patch in the background; tell the game when one is ready
+        new Thread(() -> Patcher.check(getApplicationContext(), v -> runOnUiThread(() -> {
+            if (!isFinishing()) web.evaluateJavascript("window.onMoltPatch && window.onMoltPatch(" + v + ")", null);
+        })), "molt-patch").start();
+    }
+
+    /** Lets the game show its version and restart into a freshly downloaded patch. */
+    private class PatchBridge {
+        @JavascriptInterface public int version() { return Math.max(Patcher.bundledVersion(MainActivity.this), Patcher.liveVersion(MainActivity.this)); }
+        @JavascriptInterface public void reload() { runOnUiThread(() -> web.loadUrl(Patcher.startUrl(MainActivity.this))); }
     }
 
     private void hideBars() {
