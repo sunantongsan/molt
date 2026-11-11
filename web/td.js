@@ -30,6 +30,7 @@ const WEAPONS = [
   { id: 'storm',  name: 'ตะกร้อไฟฟ้า', icon: '⚡', dmg: 2.2, rate: 0.9,  range: 7.5, speed: 22, chain: 2, cost: 650 },
   { id: 'cannon', name: 'หม้อหุงข้าว', icon: '🍙', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, cost: 800 },
 ];
+for (const w of WEAPONS) { w.range *= 1.8; w.speed *= 1.6; }   // long lane: throw far
 const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 // kitchen look: what each duck holds, and what flies through the air
 const HELD = { bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_sauce', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_ricecooker' };
@@ -64,7 +65,11 @@ function perkLv(p) { return p.lvl >= 10 ? 2 : p.lvl >= 5 ? 1 : 0; }
 WEAPON.bomb = { speed: 1, range: 0 };
 
 // ---------- save ----------
-const SLOTS = 8, PLAT_R = 2.75, RING = 4.4, HOUSE_R = 1.2;
+// lane layout (like a zombie-defense game): y grows downward on screen
+const SLOTS = 4, SLOT_X = [-3.45, -1.8, 1.8, 3.45], PLAT_Y = 1.3, FENCE_Y = 0, HOUSE_Y = 4.2, HOUSE_R = 1.2;
+const NWALL = 5, WALL_W = 1.84, FIELD_X = 4.5, SPAWN_Y = -21;
+const RING = 4.4, PLAT_R = 2.75;   // old ring sizes, only used by leftover fallback drawing
+function wallX(i) { return (i - (NWALL - 1) / 2) * WALL_W; }
 if (!save.td) save.td = {
   wave: 1, house: 1, fence: 1, bomb: 1,
   plats: [{ slot: 2, w: 'bow', lvl: 1 }, { slot: 6, w: 'bow', lvl: 1 }],
@@ -73,12 +78,16 @@ const T = save.td;
 // leader duck upgrades (ladle damage, speed, coin magnet) and coins already paid into each buy pad
 if (!T.lead) T.lead = { atk: 1, spd: 1, mag: 1 };
 if (!T.pads) T.pads = {};
-const LEAD_R = RING + 2.2;           // how far outside the fence the leader may wander
+const LEAD_R = RING + 2.2;
 function leadSpeed() { return 3.2 + (T.lead.spd - 1) * 0.35; }
 function leadMag() { return 0.9 + (T.lead.mag - 1) * 0.35; }
 function leadDmg() { return 1 + (T.lead.atk - 1) * 0.8; }
 function platAt(s) { return T.plats.find(p => p.slot === s); }
-function platPos(s) { const a = s / SLOTS * Math.PI * 2 + Math.PI / SLOTS; return { x: Math.cos(a) * PLAT_R, y: Math.sin(a) * PLAT_R }; }
+function platPos(s) { return { x: SLOT_X[s] || 0, y: PLAT_Y }; }
+// old saves had 8 ring slots: keep the best platforms and give them the new row slots
+if (T.plats.some(p => p.slot >= SLOTS) || T.plats.length > SLOTS) {
+  T.plats.sort((a, b) => b.lvl - a.lvl); T.plats = T.plats.slice(0, SLOTS); T.plats.forEach((p, i) => p.slot = i); T.pads = {};
+}
 function wDmg(p) { return WEAPON[p.w].dmg * (1 + (p.lvl - 1) * 0.35); }
 function lvlCost(p) { const tier = WEAPONS.findIndex(w => w.id === p.w); return Math.round(40 * Math.pow(p.lvl, 1.5) * (1 + tier * 0.4)); }
 function buildCost() { return Math.round(60 * Math.pow(1.55, Math.max(0, T.plats.length - 2))); }
@@ -91,24 +100,26 @@ let D = null;
 let dk = 30;
 // camera: zoomed in, pans sideways (and a little up/down) to follow the leader duck
 let camX = 0, camY = 0;
-function dproj(x, y) { return { x: W / 2 + (x - camX) * dk, y: H * 0.45 + (y - camY) * dk * 0.62 }; }
-function dinv(sx, sy) { return { x: (sx - W / 2) / dk + camX, y: (sy - H * 0.45) / (dk * 0.62) + camY }; }
-function camFollow(dt) {
+function baseY() { return H - 150 - (HOUSE_Y + 0.6) * dk * 0.62; }
+function dproj(x, y) { return { x: W / 2 + (x - camX) * dk, y: baseY() + (y - camY) * dk * 0.62 }; }
+function dinv(sx, sy) { return { x: (sx - W / 2) / dk + camX, y: (sy - baseY()) / (dk * 0.62) + camY }; }
+function camFollow(dt) { camX = 0; camY = 0; }
+function camFollowOld(dt) {
   const L = D.lead, mx = Math.max(0, LEAD_R + 0.6 - W / 2 / dk), my = Math.max(0, (LEAD_R + 0.8) - H * 0.4 / (dk * 0.62));
   const tx = Math.max(-mx, Math.min(mx, L.x)), ty = Math.max(-my, Math.min(my, L.y * 0.6));
   const k = Math.min(1, dt * 4); camX += (tx - camX) * k; camY += (ty - camY) * k;
 }
 
 function freshField() {
-  dk = Math.min(W / 8.5, H / 13);
+  dk = Math.min(W / 9.6, H / 15);
   D = {
     phase: 'build', t: 0, houseHp: houseMax(), houseMax: houseMax(), bombCd: 0, shake: 0,
-    walls: Array.from({ length: 8 }, (_, i) => ({ a: i * Math.PI / 4, hp: wallMax(), max: wallMax(), hit: 0 })),
+    walls: Array.from({ length: NWALL }, (_, i) => ({ i, x: wallX(i), a: i, hp: wallMax(), max: wallMax(), hit: 0 })),
     shooters: new Map(),   // slot -> {cd, aimDx, aimDy, shootT}
     cats: [], shots: [], fx: [], floats: [], queue: [], banner: 0, killed: 0, earned: 0,
     parts: [], coins: [], revived: false, hudPulse: 0, seen: {}, bolts: [],
     drops: [],                                   // coins lying on the ground for the leader to pick up
-    lead: { x: 0, y: 1.6, face: 1, walkT: 0, moving: false, atkCd: 0, swingT: 0, hurtT: 0, happyT: 0 },
+    lead: { x: -2.6, y: 3.6, face: 1, walkT: 0, moving: false, atkCd: 0, swingT: 0, hurtT: 0, happyT: 0 },
     joy: null,                                   // {sx, sy, x, y} while a finger is dragging
     padT: 0,
   };
@@ -139,24 +150,24 @@ function buildWave(n) {
   const groups = 3 + Math.floor(n * 0.8);
   let t = 0;
   for (let g = 0; g < groups; g++) {
-    const side = -Math.PI / 2 + (Math.random() - 0.5) * 1.7;   // cats only come from the top
+    const side = (Math.random() * 2 - 1) * (FIELD_X - 0.8);      // group's x across the top
     const size = 3 + Math.floor(n * 1.2 + Math.random() * 3);
     // from wave 3 some groups are ninja cats (fast), from wave 6 steel tank cats (tough)
     const r = Math.random();
     const kind = n >= 6 && r < 0.25 ? 'tank' : n >= 3 && r < 0.55 ? 'ninja' : 'cat';
     const cnt = kind === 'tank' ? Math.max(2, Math.ceil(size / 3)) : size;
-    for (let i = 0; i < cnt; i++) q.push({ t: t + i * (kind === 'ninja' ? 0.22 : 0.35), a: side + (Math.random() - 0.5) * 0.7, hp: 2 + Math.floor(n / 2), boss: false, kind });
+    for (let i = 0; i < cnt; i++) q.push({ t: t + i * (kind === 'ninja' ? 0.22 : 0.35), a: Math.max(-FIELD_X + 0.3, Math.min(FIELD_X - 0.3, side + (Math.random() - 0.5) * 2.2)), hp: 2 + Math.floor(n / 2), boss: false, kind });
     t += Math.max(3.5, 8 - n * 0.3);
   }
-  if (n % 5 === 0) q.push({ t: t + 2, a: -Math.PI / 2 + (Math.random() - 0.5) * 0.8, hp: 60 + n * 18, boss: true });
+  if (n % 5 === 0) q.push({ t: t + 2, a: (Math.random() - 0.5) * 3, hp: 60 + n * 18, boss: true });
   return q;
 }
 function spawnCatOrig(c) {
-  const rx = Math.max(W / 2 / dk + 1, RING + 4), ry = Math.max(RING + 4, Math.min(H * 0.55 / (dk * 0.62) + 1, RING + 5.5));
+  const topY = Math.min(-8, dinv(0, 40).y - 1.2);
   const kind = c.kind || 'cat';
   const hp = kind === 'ninja' ? Math.max(1, Math.round(c.hp * 0.6)) : kind === 'tank' ? c.hp * 3 + 4 : c.hp;
-  const v = c.boss ? 0.7 : kind === 'ninja' ? 1.8 + Math.random() * 0.5 : kind === 'tank' ? 0.55 + Math.random() * 0.15 : 0.9 + Math.random() * 0.5;
-  D.cats.push({ coward: !c.boss && Math.random() < 0.02, x: Math.cos(c.a) * rx, y: Math.sin(c.a) * ry, hp, max: hp, boss: c.boss, kind,
+  const v = 1.7 * (c.boss ? 0.7 : kind === 'ninja' ? 1.8 + Math.random() * 0.5 : kind === 'tank' ? 0.55 + Math.random() * 0.15 : 0.9 + Math.random() * 0.5);
+  D.cats.push({ coward: !c.boss && Math.random() < 0.02, x: c.a, y: topY - Math.random() * 0.6, sway: Math.random() * 9, hp, max: hp, boss: c.boss, kind,
     v, st: 'walk', atk: 0, ph: Math.random() * 9, hitT: 0, slow: 0, stun: 0, burn: 0 });
   if (!c.boss && kind !== 'cat' && !D.seen[kind]) {
     D.seen[kind] = true;
@@ -168,9 +179,9 @@ function spawnCat(c) {
   if (c.boss) { SFX.play('bossRoar'); D.banner = 2.2; D.bossBanner = true; }
 }
 function wallFor(c) {
-  let a = Math.atan2(c.y, c.x); if (a < 0) a += Math.PI * 2;
-  return D.walls[Math.round(a / (Math.PI / 4)) % 8];
+  return D.walls[Math.max(0, Math.min(NWALL - 1, Math.round(c.x / WALL_W + (NWALL - 1) / 2)))];
 }
+const HOUSE_TY = HOUSE_Y - 0.9;    // where cats stand to hit the house
 
 // ---------- update ----------
 function tdUpdate(dt) {
@@ -191,18 +202,22 @@ function tdUpdate(dt) {
       if (c.slow > 0) c.slow -= dt;
       const sdt = c.slow > 0 ? dt * (c.freeze ? 0 : 0.5) : dt;
       if (c.slow <= 0) c.freeze = false;
-      const dist = Math.hypot(c.x, c.y), wall = wallFor(c);
+      const wall = wallFor(c), past = c.y > FENCE_Y - 0.2;
       if (c.st === 'flee') {
-        // run back out fast, then turn around and come again
-        c.fleeT += dt; c.x += c.x / dist * c.v * 3.2 * sdt; c.y += c.y / dist * c.v * 3.2 * sdt;
-        if (dist > RING + 6) { c.st = 'walk'; D.floats.push({ x: c.x, y: c.y + 0.6, t: 0, text: 'ลองใหม่...', color: '#fff' }); }
+        // run back up the lane fast, then turn around and come again
+        c.fleeT += dt; c.y -= c.v * 3.2 * sdt; c.mx = 0; c.my = -1;
+        if (c.y < dinv(0, 40).y - 0.5) { c.st = 'walk'; D.floats.push({ x: c.x, y: c.y + 1.5, t: 0, text: 'ลองใหม่...', color: '#fff' }); }
         continue;
       }
       if (c.st === 'walk') {
-        if (dist <= RING + 0.5 && wall.hp > 0) { c.st = 'wall'; c.atk = 0; }
-        else if (dist <= HOUSE_R + 0.5) { c.st = 'house'; c.atk = 0; }
+        const hx = 0, hy = HOUSE_TY, dh = Math.hypot(c.x - hx, c.y - hy);
+        if (!past && c.y >= FENCE_Y - 0.55 && wall.hp > 0) { c.st = 'wall'; c.atk = 0; }
+        else if (past && dh <= HOUSE_R + 0.3) { c.st = 'house'; c.atk = 0; }
         else {
-          c.x -= c.x / dist * c.v * sdt; c.y -= c.y / dist * c.v * sdt;
+          // straight down the lane; once through a hole in the fence, head for the house
+          let mx = Math.sin(D.t * 1.3 + c.sway) * 0.12, my = 1;
+          if (past) { mx = (hx - c.x) / dh; my = (hy - c.y) / dh; }
+          c.x += mx * c.v * sdt; c.y += my * c.v * sdt; c.mx = mx; c.my = my;
           if (c.boss) { c.step = (c.step || 0) + dt; if (c.step > 0.55) { c.step = 0; SFX.play('bossStep'); D.shake = Math.max(D.shake, 0.08); } }
         }
       } else {
@@ -214,8 +229,8 @@ function tdUpdate(dt) {
           if (c.boss) bossSlam(c);
           if (c.st === 'wall') {
             wall.hp -= c.boss ? 8 : 1; wall.hit = 0.2; SFX.play(c.boss ? 'crack' : 'wood');
-            for (let i = 0; i < (c.boss ? 10 : 2); i++) splinter(Math.cos(wall.a) * RING, Math.sin(wall.a) * RING);
-            if (wall.hp <= 0) { wall.hp = 0; SFX.play('crack'); addFx('ring', Math.cos(wall.a) * RING, Math.sin(wall.a) * RING, '#ffcf8a'); for (let i = 0; i < 14; i++) splinter(Math.cos(wall.a) * RING, Math.sin(wall.a) * RING); toast('รั้วพัง! พาเป็ดหัวหน้าไปยืนวงกลม 🔧 เพื่อซ่อม'); }
+            for (let i = 0; i < (c.boss ? 10 : 2); i++) splinter(wall.x, FENCE_Y);
+            if (wall.hp <= 0) { wall.hp = 0; SFX.play('crack'); addFx('ring', wall.x, FENCE_Y, '#ffcf8a'); for (let i = 0; i < 14; i++) splinter(wall.x, FENCE_Y); toast('รั้วพัง! พาเป็ดหัวหน้าไปยืนวงกลม 🔧 เพื่อซ่อม'); }
           } else {
             D.houseHp -= c.boss ? 4 : 1; D.shake = Math.max(D.shake, 0.15); SFX.play('hit');
             D.floats.push({ x: c.x, y: c.y, t: 0, text: c.boss ? '-4❤️' : '-1❤️', color: '#ff7a6a' });
@@ -323,7 +338,7 @@ function hurtCat(c, dmg, src) {
     }
     // a cowardly cat that sees a friend fall nearby turns tail and runs
     if (!c.boss) for (const o of D.cats) {
-      if (o.hp > 0 && o.coward && !o.fled && o.st === 'walk' && Math.hypot(o.x - c.x, o.y - c.y) < 3.5 && Math.hypot(o.x, o.y) < RING + 2.2) {
+      if (o.hp > 0 && o.coward && !o.fled && o.st === 'walk' && Math.hypot(o.x - c.x, o.y - c.y) < 3.5 && o.y > FENCE_Y - 3 && o.y < FENCE_Y) {
         o.st = 'flee'; o.fled = true; o.fleeT = 0;
         D.floats.push({ x: o.x, y: o.y - 0.4, t: 0, text: 'เมี้ยวว!! 😱', color: '#ffe0f0' });
         if (Math.random() < 0.5) SFX.play('catHurt');
@@ -373,7 +388,7 @@ function impact(s) {
       const critP = s.w === 'bow' && pk >= 2 ? 0.25 : s.w === 'xbow' && pk >= 2 ? 0.3 : 0;
       if (critP && Math.random() < critP) { dmg *= s.w === 'xbow' ? 2.5 : 2; D.floats.push({ x: c.x, y: c.y - 0.5, t: 0, text: 'CRIT!', color: '#ffd84a' }); addFx('ring', c.x, c.y, '#ffd84a'); }
       hurtCat(c, dmg);
-      if (s.w === 'xbow' && pk >= 1 && !c.boss && c.kind !== 'tank') { const d = Math.hypot(c.x, c.y) || 1; c.x += c.x / d * 0.45; c.y += c.y / d * 0.45; if (c.st === 'wall') c.st = 'walk'; }
+      if (s.w === 'xbow' && pk >= 1 && !c.boss && c.kind !== 'tank') { c.y -= 0.6; if (c.st === 'wall') c.st = 'walk'; }
       if ((s.tier || 0) >= 1) addFx('spark', c.x, c.y, TIER_GLOW[s.tier], big);
     }
   }
@@ -386,7 +401,7 @@ function confetti(x, y) {
   D.parts.push({ x, y, h: 1.5, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 4, vh: 4 + Math.random() * 5, t: 0, life: 1.4, kind: 'confetti', col: ['#ffd84a', '#ff6a5a', '#5ab0ff', '#7dff8a', '#ffffff'][Math.floor(Math.random() * 5)], r: Math.random() * 6 });
 }
 function bossSlam(c) {
-  const ix = c.x * 0.8, iy = c.y * 0.8;
+  const ix = c.x, iy = c.y + 0.6;
   SFX.play('slam'); D.shake = 0.55;
   addFx('shock', ix, iy, '#ffe2a8'); addFx('shock2', ix, iy, '#ffffff'); addFx('dust', ix, iy, '#d9c49a');
   for (let i = 0; i < 16; i++) D.parts.push({ x: ix, y: iy, h: 0.1, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 4, vh: 3 + Math.random() * 4, t: 0, life: 0.9, kind: 'rock', r: Math.random() * 6 });
@@ -460,10 +475,9 @@ function revive() {
   // knock every cat back out past the fence
   for (const c of D.cats) {
     if (c.hp <= 0) continue;
-    const d = Math.hypot(c.x, c.y) || 1, r = RING + 2.2;
-    c.x = c.x / d * r; c.y = c.y / d * r; c.st = 'walk'; c.atk = 0;
+    c.y = Math.min(c.y, FENCE_Y - 3); c.st = 'walk'; c.atk = 0;
   }
-  addFx('shock', 0, 0, '#bfe6ff'); addFx('shock2', 0, 0, '#ffffff'); D.shake = 0.3;
+  addFx('shock', 0, FENCE_Y, '#bfe6ff'); addFx('shock2', 0, FENCE_Y, '#ffffff'); D.shake = 0.3;
   hide('result'); show('tdUi'); state = 'td';
   toast('สู้ต่อ! บ้านและรั้วซ่อมเต็มแล้ว');
 }
@@ -500,7 +514,7 @@ function tapField(cx, cy) {
     const q = platPos(s);
     if (Math.hypot(p.x - q.x, p.y - q.y) < 0.75 || Math.hypot(p.x - q.x, p.y + 1.2 - q.y) < 0.75) { SFX.play('click'); openSlot(s); return; }
   }
-  if (Math.hypot(p.x, p.y + 0.6) < HOUSE_R + 0.3) { SFX.play('click'); openHouse(); return; }
+  if (Math.hypot(p.x, p.y - HOUSE_Y + 0.8) < HOUSE_R + 0.3) { SFX.play('click'); openHouse(); return; }
   closeSheet();
   if (D.phase !== 'wave' || D.bombCd > 0) return;
   D.bombCd = 7;
@@ -511,8 +525,7 @@ function tapField(cx, cy) {
 function padList() {
   const L = [];
   for (let s = 0; s < SLOTS; s++) {
-    const a = s / SLOTS * Math.PI * 2 + Math.PI / SLOTS, pl = platAt(s), r = !pl ? PLAT_R : 3.5;
-    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    const pl = platAt(s), x = SLOT_X[s], y = pl ? PLAT_Y + 1.15 : PLAT_Y;
     if (!pl) L.push({ id: 'b' + s, x, y, icon: '🪵', label: 'สร้างแท่น', cost: buildCost(), apply: () => {
       T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast('เป็ดขึ้นแท่นแล้ว! 🦆');
     } });
@@ -521,10 +534,10 @@ function padList() {
       if (after > before) { toast(`แท่นใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); const q = platPos(s); for (let i = 0; i < 30; i++) confetti(q.x, q.y); addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('win'); }
     } });
   }
-  L.push({ id: 'house', x: 0, y: 2.35, icon: '🏠', label: `บ้าน Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
+  L.push({ id: 'house', x: 2.6, y: HOUSE_Y + 0.4, icon: '🏠', label: `บ้าน Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
   for (const w of D.walls) if (w.hp < w.max) {
     const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
-    L.push({ id: 'w' + Math.round(w.a * 100), x: Math.cos(w.a) * (RING - 0.75), y: Math.sin(w.a) * (RING - 0.75), icon: '🔧', label: 'ซ่อมรั้ว', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
+    L.push({ id: 'w' + w.i, x: w.x, y: FENCE_Y + 0.85, icon: '🔧', label: 'ซ่อมรั้ว', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
   }
   return L;
 }
@@ -556,10 +569,9 @@ function leadUpdate(dt) {
     }
   }
   // stay in the yard, and walk around the house rather than through it
-  let d = Math.hypot(L.x, L.y);
-  if (d > LEAD_R) { L.x *= LEAD_R / d; L.y *= LEAD_R / d; }
-  d = Math.hypot(L.x, L.y);
-  if (d < HOUSE_R + 0.35) { const k = (HOUSE_R + 0.35) / (d || 1); L.x = (L.x || 0.01) * k; L.y = (L.y || 0.01) * k; }
+  L.x = Math.max(-FIELD_X + 0.2, Math.min(FIELD_X - 0.2, L.x)); L.y = Math.max(FENCE_Y + 0.55, Math.min(HOUSE_Y + 1.0, L.y));
+  { const hx = L.x, hy = L.y - (HOUSE_Y - 0.5), d = Math.hypot(hx, hy * 1.4), r = HOUSE_R + 0.15;
+    if (d < r) { const k = r / (d || 1); L.x = (hx || 0.01) * k; L.y = HOUSE_Y - 0.5 + hy * k; } }
   // bonk nearby cats with the ladle
   if (D.phase === 'wave' && L.atkCd <= 0) {
     const t = nearestCat(L.x, L.y, 1.05);
@@ -573,7 +585,7 @@ function leadUpdate(dt) {
   if (D.phase === 'wave' && L.hurtT <= 0) for (const c of D.cats) {
     if (c.hp <= 0 || Math.hypot(c.x - L.x, c.y - L.y) > (c.boss ? 1.1 : 0.5)) continue;
     L.hurtT = 1.0; SFX.play('quack');
-    const k = Math.hypot(L.x, L.y) || 1; L.x -= L.x / k * 0.9; L.y -= L.y / k * 0.9;
+    L.y = Math.min(HOUSE_Y + 1.0, L.y + 0.9);
     D.floats.push({ x: L.x, y: L.y, t: 0, text: 'โอ๊ย!', color: '#ffb0a0' });
     break;
   }
@@ -684,7 +696,7 @@ function renderTdHud() {
 }
 
 // ---------- drawing ----------
-function fitField() { if (W > 0 && H > 0) dk = Math.min(W / 8.5, H / 13); }
+function fitField() { if (W > 0 && H > 0) dk = Math.min(W / 9.6, H / 15); }
 function tdDraw() {
   if (!D) return;
   fitField();
@@ -711,13 +723,14 @@ function tdDraw() {
     if (i % 3 === 0) { ctx.fillStyle = ['#fff6a8', '#ffffff', '#ffb3c7'][i % 9 / 3 | 0]; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x + Math.cos(k * 1.57) * 3, y + Math.sin(k * 1.57) * 2, 2.2, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = '#ffb000'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill(); }
     else { ctx.strokeStyle = 'rgba(40,110,30,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x - 6, y - 7); ctx.moveTo(x, y); ctx.lineTo(x, y - 9); ctx.moveTo(x + 4, y); ctx.lineTo(x + 6, y - 7); ctx.stroke(); }
   }
-  const c0 = dproj(0, 0);
-  const yard = ctx.createRadialGradient(c0.x, c0.y, 0, c0.x, c0.y, (RING + 0.9) * dk);
-  yard.addColorStop(0, 'rgba(240,215,160,.95)'); yard.addColorStop(0.8, 'rgba(225,195,135,.9)'); yard.addColorStop(1, 'rgba(225,195,135,0)');
-  ctx.save(); ctx.translate(c0.x, c0.y); ctx.scale(1, 0.62); ctx.translate(-c0.x, -c0.y);
-  ctx.fillStyle = yard; ctx.beginPath(); ctx.arc(c0.x, c0.y, (RING + 0.9) * dk, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(150,205,95,.55)'; ctx.beginPath(); ctx.arc(c0.x, c0.y, (RING - 0.6) * dk, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
+  {
+    const f = dproj(0, FENCE_Y), yb = H + 20;
+    const g = ctx.createLinearGradient(0, f.y - dk * 0.6, 0, yb);
+    g.addColorStop(0, 'rgba(225,195,135,0)'); g.addColorStop(0.08, 'rgba(232,205,150,.92)'); g.addColorStop(1, 'rgba(215,185,125,.95)');
+    ctx.fillStyle = g; ctx.fillRect(-20, f.y - dk * 0.6, W + 40, yb - f.y + dk * 0.6);
+    // the lane the cats march down
+    ctx.fillStyle = 'rgba(40,90,30,.12)'; for (let i = 0; i < NWALL; i++) if (i % 2) { const a = dproj(wallX(i) - WALL_W / 2, 0); ctx.fillRect(a.x, -20, WALL_W * dk, f.y + 20 - dk * 0.6); }
+  }
   // range hint for the selected platform
   if (sheetFor && sheetFor.slot !== undefined && platAt(sheetFor.slot)) {
     const p = platAt(sheetFor.slot), q = platPos(p.slot), s = dproj(q.x, q.y), r = WEAPON[p.w].range;
@@ -725,10 +738,10 @@ function tdDraw() {
     ctx.beginPath(); ctx.ellipse(s.x, s.y, r * dk, r * dk * 0.62, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   }
   drawPads();
-  const list = [[0, drawHouse]];
+  const list = [[HOUSE_Y, drawHouse]];
   for (const c of D.drops) list.push([c.y, () => drawDrop(c)]);
   list.push([D.lead.y, drawLeader]);
-  for (const w of D.walls) list.push([Math.sin(w.a) * RING, () => drawFence(w)]);
+  for (const w of D.walls) list.push([FENCE_Y, () => drawFence(w)]);
   for (let s = 0; s < SLOTS; s++) { const q = platPos(s); list.push([q.y, () => drawPlatform(s)]); }
   for (const c of D.cats) list.push([c.y, () => drawCat(c)]);
   list.sort((a, b) => a[0] - b[0]);
@@ -784,7 +797,7 @@ function tdDraw() {
 }
 let houseTop = 0;
 function drawHouse() {
-  const p = dproj(0, 0), s = dk;
+  const p = dproj(0, HOUSE_Y - 0.6), s = dk * 0.85;
   if (ready(IMG.duckhouse)) {
     houseTop = p.y + s * 0.9 - drawAt(IMG.duckhouse, p.x, p.y + s * 0.9, s * 3.0);
   } else {
@@ -823,83 +836,23 @@ function drawRail(pts, f, hgt, shakeX) {
   }
 }
 function drawFence(w) {
-  const span = Math.PI / 4 * 0.98, n = 5, hgt = dk * 1.2;
+  const c = dproj(w.x, FENCE_Y), ratio = w.hp / w.max, hgt = dk * 1.2;
   const shakeX = w.hit > 0 ? Math.sin(w.hit * 90) * 3 : 0;
-  const ratio = w.hp / w.max;
-  const pts = [];
-  for (let i = 0; i < n; i++) {
-    const a = w.a - span / 2 + span * (i + 0.5) / n;
-    pts.push({ a, p: dproj(Math.cos(a) * RING, Math.sin(a) * RING) });
-  }
-  const c = dproj(Math.cos(w.a) * RING, Math.sin(w.a) * RING);
-  // grassy base patch like the art
   if (w.hp <= 0) {
-  ctx.fillStyle = '#a8cf55'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 2, dk * 1.35, dk * 0.42, Math.atan2(pts[n - 1].p.y - pts[0].p.y, pts[n - 1].p.x - pts[0].p.x), 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#86b83c'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 5, dk * 1.2, dk * 0.3, Math.atan2(pts[n - 1].p.y - pts[0].p.y, pts[n - 1].p.x - pts[0].p.x), 0, Math.PI); ctx.fill();
-  }
-  if (w.hp <= 0) {
-    pts.forEach((q, i) => {
-      if (i % 2 === 0 && ready(IMG.fence_stump)) drawAt(IMG.fence_stump, q.p.x, q.p.y + 2, dk * 0.42);
-    });
-    if (ready(IMG.fence_plank)) { ctx.save(); ctx.translate(c.x + dk * 0.2, c.y + dk * 0.1); ctx.rotate((w.a * 7) % 0.6 - 0.3); drawAt(IMG.fence_plank, 0, dk * 0.35, dk * 1.3); ctx.restore(); }
+    for (const f of [-0.3, 0.05, 0.35]) if (ready(IMG.fence_stump)) drawAt(IMG.fence_stump, c.x + f * dk * WALL_W, c.y + 2, dk * 0.42);
     ctx.font = '900 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)';
-    ctx.strokeText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.55); ctx.fillStyle = '#ffe2a8'; ctx.fillText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.55);
+    ctx.strokeText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.4); ctx.fillStyle = '#ffe2a8'; ctx.fillText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.4);
     return;
   }
   const fimg = IMG[T.fence >= 6 ? 'k_fence3' : T.fence >= 3 ? 'k_fence2' : 'k_fence1'];
   if (ready(fimg)) {
-    // kitchen fence: two pieces per side (bamboo -> cutting boards -> stacked pots as the fence levels up)
-    const tilt = ratio < 0.5 ? Math.sin(w.a * 5) * 0.12 * (1 - ratio * 2) : 0;
-    for (const f of [0.27, 0.73]) {
-      const a = w.a - span / 2 + span * f, q = dproj(Math.cos(a) * RING, Math.sin(a) * RING);
-      ctx.save(); ctx.translate(q.x + shakeX, q.y + dk * 0.15); ctx.rotate(tilt);
-      if ((Math.cos(a) > 0) !== (f > 0.5)) ctx.scale(-1, 1);
-      drawAt(fimg, 0, 0, dk * 1.75); ctx.restore();
-    }
-    if (w.hp < w.max) {
-      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(c.x - 18, c.y - hgt * 1.3 - 6, 36, 4);
-      ctx.fillStyle = ratio > 0.5 ? '#7dde5a' : '#ffb347'; ctx.fillRect(c.x - 18, c.y - hgt * 1.3 - 6, 36 * ratio, 4);
-    }
-    return;
+    const tilt = ratio < 0.5 ? Math.sin(w.i * 5) * 0.1 * (1 - ratio * 2) : 0;
+    ctx.save(); ctx.translate(c.x + shakeX, c.y + dk * 0.2); ctx.rotate(tilt); if (w.i % 2) ctx.scale(-1, 1);
+    drawAt(fimg, 0, 0, dk * WALL_W * 1.12); ctx.restore();
   }
-  if (ready(IMG.fence_seg)) {
-    // straight fence section, sheared so its pickets stay upright and its base follows this side of the ring
-    const S = { lx: 103, ly: 265, rx: 530, ry: 461, ph: 263 };
-    const a0 = w.a - span / 2, a1 = w.a + span / 2;
-    const P0 = dproj(Math.cos(a0) * RING, Math.sin(a0) * RING), P1 = dproj(Math.cos(a1) * RING, Math.sin(a1) * RING);
-    const bw = S.rx - S.lx, k0 = (S.ry - S.ly) / bw, d = hgt * 1.25 / S.ph;
-    // left/right sides run almost straight up the screen; keep a minimum width so the pickets don't collapse
-    const rawX = (P1.x - P0.x) / bw, minX = d * 0.75;
-    const ax = Math.abs(rawX) < minX ? (Math.sign(rawX) || 1) * minX * (Math.sin(w.a) >= 0 ? 1 : 1) : rawX;
-    const by = (P1.y - P0.y) / bw - d * k0;
-    const cx = (S.lx + S.rx) / 2, cy = (S.ly + S.ry) / 2;
-    const tilt = ratio < 0.5 ? Math.sin(w.a * 5) * 0.06 * (1 - ratio * 2) : 0;
-    ctx.save();
-    ctx.translate(c.x + shakeX, c.y + 2);
-    ctx.transform(ax, by, tilt * ax, d, 0, 0);
-    ctx.drawImage(IMG.fence_seg, -cx, -cy);
-    ctx.restore();
-    if (w.hp < w.max) {
-      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(c.x - 18, c.y - hgt * 1.3 - 6, 36, 4);
-      ctx.fillStyle = ratio > 0.5 ? '#7dde5a' : '#ffb347'; ctx.fillRect(c.x - 18, c.y - hgt * 1.3 - 6, 36 * ratio, 4);
-    }
-    return;
-  }
-  const lean = i => ratio < 0.5 ? ((i * 53 % 7) - 3) * 0.05 * (1 - ratio * 2) : 0;
-  drawRail(pts, 0.33, hgt, shakeX);
-  drawRail(pts, 0.64, hgt, shakeX);
-  pts.forEach((q, i) => {
-    const key = PICKETS[(i + Math.round(w.a * 4)) % PICKETS.length], img = IMG[key];
-    ctx.save(); ctx.translate(q.p.x + shakeX, q.p.y); ctx.rotate(lean(i));
-    if (ready(img)) drawAt(img, 0, 3, hgt * img.naturalWidth / img.naturalHeight * (1.35 + (i % 2) * 0.1));
-    ctx.restore();
-  });
-  // a little flower now and then
-  ctx.font = `${Math.round(dk * 0.28)}px system-ui`; ctx.textAlign = 'center';
-  if (Math.round(w.a * 10) % 2 === 0) ctx.fillText('🌼', pts[1].p.x + 6, pts[1].p.y + 4);
   if (w.hp < w.max) {
-    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(c.x - 18, c.y - hgt - 12, 36, 4);
-    ctx.fillStyle = ratio > 0.5 ? '#7dde5a' : '#ffb347'; ctx.fillRect(c.x - 18, c.y - hgt - 12, 36 * ratio, 4);
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(c.x - 18, c.y - hgt * 1.25, 36, 4);
+    ctx.fillStyle = ratio > 0.5 ? '#7dde5a' : '#ffb347'; ctx.fillRect(c.x - 18, c.y - hgt * 1.25, 36 * ratio, 4);
   }
 }
 const PLAT_H = 1.25;  // how high the duck stands (meters, drawn upward)
@@ -1012,7 +965,7 @@ function drawCat(c) {
   if (c.kind === 'ninja' && c.hp > 0 && c.st === 'walk') {
     // speed streaks behind ninja cats
     ctx.strokeStyle = 'rgba(200,170,255,.45)'; ctx.lineWidth = 2;
-    const d = Math.hypot(c.x, c.y) || 1, bx = c.x / d, by = c.y / d;
+    const bx = -(c.mx || 0), by = -(c.my === undefined ? 1 : c.my);
     for (let i = 0; i < 3; i++) { const q = dproj(c.x + bx * (0.3 + i * 0.15), c.y + by * (0.3 + i * 0.15)); ctx.beginPath(); ctx.moveTo(q.x - 4, q.y - h * (0.3 + i * 0.2)); ctx.lineTo(q.x + 4, q.y - h * (0.3 + i * 0.2)); ctx.stroke(); }
   }
   ctx.globalAlpha = c.hp > 0 || c.boss ? 1 : Math.max(0, 1 - (c.deadT || 0) / 0.6);
@@ -1076,15 +1029,22 @@ function drawCat(c) {
 }
 function drawKitchenCat(c, x, py, h, atk, kk, t) {
   // the kitchen cat sprites face RIGHT; cats on the right side walk left, so mirror those
-  const flee = c.st === 'flee', flip = flee ? c.x < 0 : c.x > 0, w = h * 0.76, dead = c.hp <= 0;
+  const flee = c.st === 'flee', flip = (c.mx || 0) < 0, w = h * 0.76, dead = c.hp <= 0;
   let img = 'k_cat_walk', fr = Math.floor(t * (flee ? 16 : c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
   let swing = -1, view = 'side';
   // walking mostly up or down the screen: show the cat from the back or the front
-  if (!dead && !atk && !(c.hitT > 0 || c.stun > 0)) {
-    const sy = Math.abs(c.y) * 0.62, sx = Math.abs(c.x);
-    if (sy > sx * 1.1) { view = (c.y > 0) !== flee ? 'back' : 'front'; img = view === 'back' ? 'k_cat_back' : 'k_cat_front'; if (!ready(IMG[img])) { img = 'k_cat_walk'; view = 'side'; } }
+  let lunge = 0, swingA = null;
+  if (!dead) {
+    const my = c.my === undefined ? 1 : c.my, mx = c.mx || 0;
+    if (atk || c.hitT > 0 || c.stun > 0 || Math.abs(my) * 0.8 > Math.abs(mx)) { view = !atk && my < 0 ? 'back' : 'front'; img = view === 'back' ? 'k_cat_back' : 'k_cat_front'; if (!ready(IMG[img])) { img = 'k_cat_walk'; view = 'side'; } }
+    if (view !== 'side' && (atk || c.hitT > 0 || c.stun > 0)) {
+      fr = 1; bob = 0;
+      // attack from the front with code only: lean back while raising the weapon, then lunge down and smack
+      if (atk) { const kb = c.boss ? c.atk / BOSS_PERIOD : kk; if (kb < 0.6) { lunge = -h * 0.05 * (kb / 0.6); swingA = -0.5 - kb; } else { const q = Math.min(1, (kb - 0.6) / 0.15); lunge = h * 0.1 * q; swingA = -1.1 + q * 3.2; } }
+    }
   }
   if (dead) { img = 'k_cat_act'; fr = 3; bob = 0; }
+  else if (view !== 'side') {}
   else if (atk) { const kb = c.boss ? c.atk / BOSS_PERIOD : kk; img = 'k_cat_act'; fr = kb < 0.55 ? 0 : 1; swing = fr; bob = 0; }
   else if (c.hitT > 0 || c.stun > 0) { img = 'k_cat_act'; fr = 2; bob = 0; }
   if (flee && !dead) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', x + h * 0.3, py - h * 1.0 + Math.sin(t * 20) * 3); }
@@ -1092,7 +1052,8 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
     // front / back views are symmetric: no mirroring, gear centred
     const fw = h * 0.7, tk = c.kind === 'tank', wpn = c.boss || tk ? 'it_pan' : c.kind === 'ninja' ? 'it_ladle' : 'it_spatula';
     const ws = h * (c.boss ? 0.55 : tk ? 0.5 : 0.45), sw = Math.sin(t * 7) * 0.12;
-    ctx.save(); ctx.translate(x, py - bob);
+    ctx.save(); ctx.translate(x, py - bob + lunge);
+    if (lunge < 0) ctx.scale(1, 1 + lunge / h * 0.6); else if (lunge > 0) ctx.scale(1 + lunge / h * 0.5, 1 - lunge / h * 0.4);
     if (view === 'back') drawItem(wpn, -fw * 0.48, -h * 0.5, ws, -0.4 + sw);       // weapon peeks out at the side
     drawFrame(img, fr, 0, 0, h, false);
     if (c.boss) drawItem('it_chefhat', 0, -h * 0.97, h * 0.5);
@@ -1102,7 +1063,11 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
       if (view === 'back') { ctx.beginPath(); ctx.moveTo(-fw * 0.04, -h * 0.75); ctx.lineTo(-fw * 0.16 + Math.sin(t * 15) * fw * 0.05, -h * 0.58); ctx.lineTo(fw * 0.02, -h * 0.6); ctx.lineTo(fw * 0.16 + Math.sin(t * 13) * fw * 0.05, -h * 0.58); ctx.lineTo(fw * 0.04, -h * 0.75); ctx.fill(); }
     }
     else drawItem('it_pot', 0, -h * 0.92, h * 0.52);
-    if (view === 'front') { if (tk && !c.boss) drawItem(wpn, 0, -h * 0.38, ws); else drawItem(wpn, fw * 0.5, -h * 0.45, ws, 0.3 + sw); }
+    if (view === 'front') {
+      if (swingA !== null && !(tk && !c.boss)) drawItem(wpn, fw * 0.45 + Math.sin(swingA) * fw * 0.2, -h * 0.55 - Math.cos(swingA) * h * 0.25, ws * 1.1, swingA);
+      else if (tk && !c.boss) drawItem(wpn, 0, -h * 0.38 + (swingA !== null ? lunge * 0.5 : 0), ws);
+      else drawItem(wpn, fw * 0.5, -h * 0.45, ws, 0.3 + sw);
+    }
     else if (tk && !c.boss) drawItem(wpn, 0, -h * 0.45, ws * 0.9);                  // pan strapped to the back
     ctx.restore();
     return;

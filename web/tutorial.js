@@ -11,14 +11,14 @@ function elRect(sel) {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: Math.max(r.width, r.height) / 2 + 10 };
 }
 function fieldRect(x, y, rr, up) { const p = dproj(x, y); return { x: p.x, y: p.y - (up || 0) * dk, r: rr * dk }; }
-function padRect(id) { const pd = padList().find(q => q.id === id); return pd ? fieldRect(pd.x, pd.y, 0.8) : fieldRect(0, 2.35, 0.8); }
+function padRect(id) { const pd = padList().find(q => q.id === id); return pd ? fieldRect(pd.x, pd.y, 0.8) : fieldRect(2.6, HOUSE_Y + 0.4, 0.8); }
 function firstEmptySlot() { for (let s = 0; s < SLOTS; s++) if (!platAt(s)) return s; return 0; }
 
 const TUT = {
   td: [
-    { text: 'นี่คือบ้านเป็ด 🏠\nฝูงแมวใส่หม้อถือตะหลิวจะบุกมาจากด้านบน ต้องป้องกันบ้านไว้!', at: () => fieldRect(0, -0.6, 1.9) },
+    { text: 'นี่คือบ้านเป็ด 🏠\nฝูงแมวใส่หม้อถือตะหลิวจะบุกมาจากด้านบน ต้องป้องกันบ้านไว้!', at: () => fieldRect(0, HOUSE_Y - 1.2, 1.6) },
     { text: 'นี่คือเป็ดหัวหน้า 🦆\nลากนิ้วตรงไหนก็ได้บนจอเพื่อพาเดิน เป็ดจะฟาดแมวที่อยู่ใกล้ด้วยทัพพีเอง', at: () => fieldRect(D.lead.x, D.lead.y, 0.9, 0.5) },
-    { text: 'แมวบุกมาจากด้านบน ⬆️ ล้มแมวได้เหรียญ 🪙 เข้ากระเป๋าเลย\nระวังแมวขี้ขลาด! เห็นเพื่อนล้มจะวิ่งหนี แล้วกลับมาใหม่', at: () => fieldRect(0, -RING, 1.3, 0.4) },
+    { text: 'แมวบุกมาจากด้านบน ⬆️ ล้มแมวได้เหรียญ 🪙 เข้ากระเป๋าเลย\nระวังแมวขี้ขลาด! เห็นเพื่อนล้มจะวิ่งหนี แล้วกลับมาใหม่', at: () => fieldRect(0, FENCE_Y - 4, 1.8) },
     { text: 'ยืนบนวงกลม 🪵 เพื่อสร้างแท่นยิง\nเหรียญจะไหลเข้าไปจนครบ แล้วเป็ดอีกตัวจะขึ้นแท่นมาช่วยปา', at: () => padRect('b' + firstEmptySlot()) },
     { text: 'ยืนบนวงกลมข้างแท่นที่มีอยู่เพื่ออัปเกรด ⬆️\nเลเวล 4, 7, 10 แท่นจะเปลี่ยนร่าง: ลังผัก → โต๊ะ → ตู้กับข้าว → ป้อมเตาทอง', at: () => padRect('u' + (T.plats[0] ? T.plats[0].slot : 2)) },
     { text: 'แตะแท่นเพื่อเปลี่ยนอาวุธในครัว 🥢🍴🌶️\nแตะบ้านเพื่ออัปเป็ดหัวหน้า เสริมรั้ว และระเบิดพริก', at: () => elRect('#houseBtn') },
