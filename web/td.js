@@ -1161,6 +1161,16 @@ function tapField(cx, cy) {
     return;
   }
   const p = dinv(cx, cy);
+  // buy / upgrade circles: the leader walks over and pays by himself
+  { let best = null, bd = 0.7;
+    for (const pd of padList()) { const d = Math.hypot(p.x - pd.x, (p.y - pd.y) * 1.2); if (d < bd) { bd = d; best = pd; } }
+    if (best) {
+      SFX.play('click'); closeSheet();
+      D.lead.goal = { id: best.id, x: best.x, y: best.y, fresh: true }; D.padLock = null;
+      if (save.coins < 1 && (T.pads[best.id] || 0) < best.cost) toast('เหรียญไม่พอ 🪙 ล้มแมวเพิ่มก่อนนะ');
+      if (!save.td.walked) { save.td.walked = true; persist(); }
+      return;
+    } }
   // platforms (drawn raised, so test a little above the ground point too)
   for (let s = 0; s < SLOTS; s++) {
     const q = platPos(s);
@@ -1215,7 +1225,31 @@ function leadUpdate(dt) {
   const L = D.lead;
   L.atkCd -= dt; L.swingT = Math.max(0, L.swingT - dt); L.hurtT = Math.max(0, L.hurtT - dt); L.happyT = Math.max(0, L.happyT - dt);
   L.moving = false;
-  if (D.joy && D.joy.moved && L.hurtT < 0.6) {
+  if (D.joy && D.joy.moved) L.goal = null;           // dragging takes over again
+  if (L.goal && !D.joy && L.hurtT < 0.6) {
+    // auto-walk to the tapped circle, stepping around the house
+    let tx = L.goal.x, ty = L.goal.y;
+    const hcx = 0, hcy = HOUSE_Y - 0.5, rr = HOUSE_R + 0.45;
+    const sx = tx - L.x, sy = ty - L.y, sl = Math.hypot(sx, sy) || 1;
+    const u = Math.max(0, Math.min(1, ((hcx - L.x) * sx + (hcy - L.y) * sy) / (sl * sl)));
+    const qx = L.x + sx * u, qy = L.y + sy * u;
+    if (Math.hypot(qx - hcx, (qy - hcy) * 1.4) < rr) {
+      // blocked by the house: slide round it along the tangent, toward the target's side
+      const rx = L.x - hcx, ry = L.y - hcy, rl = Math.hypot(rx, ry) || 1;
+      const cr = rx * (ty - hcy) - ry * (tx - hcx), sg = cr >= 0 ? 1 : -1;
+      tx = L.x - ry / rl * sg + rx / rl * 0.25; ty = L.y + rx / rl * sg + ry / rl * 0.25;
+    }
+    const dx = tx - L.x, dy = ty - L.y, len = Math.hypot(dx, dy);
+    if (len > 0.08) {
+      const sp = leadSpeed() * 1.1, st = Math.min(len, sp * dt);
+      L.x += dx / len * st; L.y += dy / len * st;
+      L.moving = true; L.walkT += dt * (4 + sp * 1.5);
+      if (Math.abs(dx) > 0.05) L.face = dx > 0 ? 1 : -1;
+    }
+    // finished: pad bought (it disappears / changes id) or paid in full, or out of coins
+    const still = padList().find(q => q.id === L.goal.id);
+    if (!still || L.goal.fresh === false || (Math.hypot(L.x - L.goal.x, L.y - L.goal.y) < 0.3 && (D.padDone || save.coins < 1) && (D.padWait || 0) <= 0)) L.goal = null;
+  } else if (D.joy && D.joy.moved && L.hurtT < 0.6) {
     let dx = D.joy.x - D.joy.sx, dy = (D.joy.y - D.joy.sy) / 0.62;
     const len = Math.hypot(dx, dy);
     if (len > 4) {
@@ -1266,10 +1300,13 @@ function leadUpdate(dt) {
   const prev = D.pad ? D.pad.id : null;
   D.pad = null;
   D.padT -= dt;
+  if (D.padLock && Math.hypot(L.x - D.padLock.x, L.y - D.padLock.y) > 0.7) D.padLock = null;
   for (const pd of padList()) {
     if (Math.hypot(L.x - pd.x, L.y - pd.y) > 0.55) continue;
+    if (L.goal && L.goal.id !== pd.id) continue;          // walking past other circles: don't pay into them
+    if (D.padLock && !(L.goal && L.goal.fresh)) break;
     D.pad = pd;
-    if (pd.id !== prev) { D.padWait = 0.3; D.padDone = false; }
+    if (pd.id !== prev) { D.padWait = L.goal ? 0.05 : 0.3; D.padDone = false; }
     if ((D.padWait -= dt) > 0 || D.padDone || D.padT > 0) break;
     D.padT = 0.06;
     const paid = T.pads[pd.id] || 0, need = pd.cost - paid;
@@ -1279,7 +1316,7 @@ function leadUpdate(dt) {
     D.flow = { x: pd.x, y: pd.y, t: 0.15 };
     if (Math.random() < 0.5) SFX.play('click');
     if (T.pads[pd.id] >= pd.cost) {
-      T.pads[pd.id] = 0; pd.apply(); L.happyT = 0.8; SFX.play('gateGood'); D.padDone = true;
+      T.pads[pd.id] = 0; pd.apply(); L.happyT = 0.8; D.padLock = { x: pd.x, y: pd.y }; if (L.goal) L.goal.fresh = false; SFX.play('gateGood'); D.padDone = true;
       addFx('ring', pd.x, pd.y, '#ffd84a'); persist(); renderTdHud();
     }
     break;
@@ -1298,7 +1335,7 @@ function openSlot(s) {
   if (!p) {
     $('sheetTitle').textContent = '🪵 สร้างแท่นยิง';
     const info = document.createElement('div'); info.className = 'sinfo';
-    info.innerHTML = `ลากนิ้วพาเป็ดหัวหน้า 🦆 ไปยืนบน<b>วงกลม 🪵</b> ข้างจุดนี้ เหรียญจะไหลเข้าไปจนครบ 🪙${buildCost()} แล้วแท่นจะสร้างเอง`;
+    info.innerHTML = `แตะ<b>วงกลม 🪵</b> ข้างจุดนี้ เป็ดหัวหน้า 🦆 จะเดินไปจ่ายเหรียญให้เองจนครบ 🪙${buildCost()} แล้วแท่นจะสร้างเอง`;
     body.appendChild(info);
   } else {
     const W0 = WEAPON[p.w];
@@ -1333,7 +1370,7 @@ function openHouse() {
   info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • เป็ดยิง ${T.plats.length} ตัว • วันถัดไป ${T.wave}`;
   body.appendChild(info);
   const fc = 50 * T.fence, bc = 60 * T.bomb;
-  const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = '🦆 <b>เป็ดหัวหน้า</b> (ลากนิ้วบนจอเพื่อเดินไปวงกลมซื้อของ และฟาดแมวด้วยทัพพี)'; body.appendChild(lh);
+  const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = '🦆 <b>เป็ดหัวหน้า</b> (แตะวงกลมซื้อของ เป็ดจะเดินไปจ่ายเอง ลากนิ้วก็ยังบังคับเดินได้ และฟาดแมวด้วยทัพพี)'; body.appendChild(lh);
   const la = 70 * T.lead.atk, ls = 60 * T.lead.spd, lm = 50 * T.lead.mag;
   body.appendChild(btn(`🥄 ทัพพี Lv.${T.lead.atk}${T.lead.atk >= 5 ? ' → กระทะ' : ''}`, `ฟาดแรง ${leadDmg().toFixed(1)} • 🪙${la}`, save.coins >= la, () => { save.coins -= la; T.lead.atk++; if (T.lead.atk === 5) toast('ได้กระทะ! ฟาดแรงขึ้น 🍳'); }));
   body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; }));
@@ -2213,11 +2250,14 @@ function drawTdHud() {
     ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(j.sx, j.sy, 48, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(j.sx + (l ? dx / l * m : 0), j.sy + (l ? dy / l * m : 0), 20, 0, Math.PI * 2); ctx.fill();
+  } else if (D.lead.goal) {
+    const g = dproj(D.lead.goal.x, D.lead.goal.y), b = Math.abs(Math.sin(performance.now() / 180)) * 8;
+    ctx.font = `${Math.round(dk * 0.45)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('👇', g.x, g.y - dk * 0.55 - b);
   } else if (!save.td.walked) {
     // first-time hint until the player drags once
     const p = dproj(D.lead.x, D.lead.y), b = Math.sin(performance.now() / 250) * 6;
     ctx.font = '900 14px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
-    const tx = '👆 ลากนิ้วเพื่อเดิน'; ctx.strokeText(tx, p.x, p.y + dk * 0.9 + b); ctx.fillStyle = '#fff'; ctx.fillText(tx, p.x, p.y + dk * 0.9 + b);
+    const tx = '👆 แตะวงกลมให้เป็ดเดินไปซื้อ'; ctx.strokeText(tx, p.x, p.y + dk * 0.9 + b); ctx.fillStyle = '#fff'; ctx.fillText(tx, p.x, p.y + dk * 0.9 + b);
   }
   if (D.joy && D.joy.moved && !save.td.walked) { save.td.walked = true; persist(); }
   if (D.phase === 'wave') {
