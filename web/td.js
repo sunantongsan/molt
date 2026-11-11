@@ -971,35 +971,9 @@ function tdDraw() {
   fitField();
   ctx.save();
   if (D.shake > 0) ctx.translate((Math.random() - 0.5) * 30 * D.shake, (Math.random() - 0.5) * 30 * D.shake);
-  if (ready(IMG.grass)) {
-    if (!tdDraw.pat) { tdDraw.pat = ctx.createPattern(IMG.grass, 'repeat'); }
-    try { tdDraw.pat.setTransform(new DOMMatrix().translate(-camX * dk, -camY * dk * 0.62).scale(Math.max(0.6, dk / 40))); } catch (e) {}
-    ctx.fillStyle = tdDraw.pat; ctx.fillRect(-20, -20, W + 40, H + 40);
-    ctx.fillStyle = 'rgba(70,120,40,.28)'; ctx.fillRect(-20, -20, W + 40, H + 40);
-    const v = ctx.createRadialGradient(W / 2, H * 0.47, Math.min(W, H) * 0.35, W / 2, H * 0.47, Math.max(W, H) * 0.75);
-    v.addColorStop(0, 'rgba(0,30,0,0)'); v.addColorStop(1, 'rgba(0,30,0,.35)');
-    ctx.fillStyle = v; ctx.fillRect(-20, -20, W + 40, H + 40);
-  } else {
-    const g = ctx.createRadialGradient(W / 2, H * 0.47, 10, W / 2, H * 0.47, Math.max(W, H) * 0.7);
-    g.addColorStop(0, '#8ccf5a'); g.addColorStop(0.55, '#5fa73c'); g.addColorStop(1, '#2f6a22');
-    ctx.fillStyle = g; ctx.fillRect(-20, -20, W + 40, H + 40);
-  }
-  // little flowers / grass tufts for a cartoon look
-  // scattered flowers and grass tufts (stable pseudo-random positions)
-  for (let i = 0; i < (ready(IMG.grass) ? 0 : 46); i++) {
-    const rx = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1, ry = Math.abs(Math.sin(i * 78.233) * 12345.678) % 1;
-    const x = rx * W, y = ry * H;
-    if (i % 3 === 0) { ctx.fillStyle = ['#fff6a8', '#ffffff', '#ffb3c7'][i % 9 / 3 | 0]; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x + Math.cos(k * 1.57) * 3, y + Math.sin(k * 1.57) * 2, 2.2, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = '#ffb000'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill(); }
-    else { ctx.strokeStyle = 'rgba(40,110,30,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x - 6, y - 7); ctx.moveTo(x, y); ctx.lineTo(x, y - 9); ctx.moveTo(x + 4, y); ctx.lineTo(x + 6, y - 7); ctx.stroke(); }
-  }
-  {
-    const f = dproj(0, FENCE_Y), yb = H + 20;
-    const g = ctx.createLinearGradient(0, f.y - dk * 0.6, 0, yb);
-    g.addColorStop(0, 'rgba(225,195,135,0)'); g.addColorStop(0.08, 'rgba(232,205,150,.92)'); g.addColorStop(1, 'rgba(215,185,125,.95)');
-    ctx.fillStyle = g; ctx.fillRect(-20, f.y - dk * 0.6, W + 40, yb - f.y + dk * 0.6);
-    // the lane the cats march down
-    ctx.fillStyle = 'rgba(40,90,30,.12)'; for (let i = 0; i < NWALL; i++) if (i % 2) { const a = dproj(wallX(i) - WALL_W / 2, 0); ctx.fillRect(a.x, -20, WALL_W * dk, f.y + 20 - dk * 0.6); }
-  }
+  // background is painted once into an offscreen canvas (no tiles, so no seams), then copied every frame
+  const bg = getBg();
+  if (bg) ctx.drawImage(bg, 0, 0, W, H);
   // range hint for the selected platform
   if (sheetFor && sheetFor.slot !== undefined && platAt(sheetFor.slot)) {
     const p = platAt(sheetFor.slot), q = platPos(p.slot), s = dproj(q.x, q.y), r = WEAPON[p.w].range;
@@ -1067,6 +1041,72 @@ function tdDraw() {
   const pill = $('tdCoins').parentElement;
   pill.style.transform = D.hudPulse > 0 ? `scale(${1 + D.hudPulse})` : '';
   drawTdHud();
+}
+// ---------- painted background: soft garden lawn for the cats, checkered kitchen floor for the ducks ----------
+let bgCache = null;
+function getBg() {
+  const key = `${W}x${H}x${dk.toFixed(2)}`;
+  if (bgCache && bgCache.key === key) return bgCache.cv;
+  if (!(W > 0 && H > 0)) return null;
+  const sc = Math.min(window.devicePixelRatio || 1, 2), cv2 = document.createElement('canvas');
+  cv2.width = Math.round(W * sc); cv2.height = Math.round(H * sc);
+  const g = cv2.getContext('2d'); g.scale(sc, sc);
+  let seed = 1234567; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const fy = dproj(0, FENCE_Y).y;
+  // lawn
+  const lg = g.createLinearGradient(0, 0, 0, fy);
+  lg.addColorStop(0, '#93d466'); lg.addColorStop(1, '#78c04e');
+  g.fillStyle = lg; g.fillRect(0, 0, W, fy + 4);
+  // soft patches of lighter / darker grass
+  for (let i = 0; i < 40; i++) {
+    const x = rnd() * W, y = rnd() * fy, r = 30 + rnd() * 70;
+    const rg = g.createRadialGradient(x, y, 0, x, y, r);
+    const c = rnd() < 0.5 ? '160,220,110' : '90,165,60';
+    rg.addColorStop(0, `rgba(${c},.35)`); rg.addColorStop(1, `rgba(${c},0)`);
+    g.fillStyle = rg; g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0, 0, Math.PI * 2); g.fill();
+  }
+  // grass tufts
+  for (let i = 0; i < 170; i++) {
+    const x = rnd() * W, y = rnd() * fy, s2 = 3 + rnd() * 4;
+    g.strokeStyle = rnd() < 0.5 ? 'rgba(60,130,40,.55)' : 'rgba(170,230,120,.7)'; g.lineWidth = 2; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x - s2, y); g.quadraticCurveTo(x - s2, y - s2, x - s2 * 1.6, y - s2 * 2);
+    g.moveTo(x, y); g.lineTo(x, y - s2 * 2.4); g.moveTo(x + s2, y); g.quadraticCurveTo(x + s2, y - s2, x + s2 * 1.6, y - s2 * 2); g.stroke();
+  }
+  // pebbles and little flowers
+  for (let i = 0; i < 16; i++) { const x = rnd() * W, y = rnd() * fy, r = 3 + rnd() * 5;
+    g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(x + 1, y + 2, r, r * 0.6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#cfc8b8'; g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ebe6da'; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.2, r * 0.4, r * 0.25, 0, 0, Math.PI * 2); g.fill(); }
+  for (let i = 0; i < 34; i++) { const x = rnd() * W, y = rnd() * fy, col = ['#ffffff', '#fff3a0', '#ffb7c9', '#ffd08a'][Math.floor(rnd() * 4)];
+    g.fillStyle = col; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 3, y + Math.sin(a) * 2.2, 2.3, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#ffb000'; g.beginPath(); g.arc(x, y, 1.8, 0, Math.PI * 2); g.fill(); }
+  // gentle shade at the top and the sides
+  const vg = g.createLinearGradient(0, 0, 0, fy * 0.35); vg.addColorStop(0, 'rgba(20,60,10,.25)'); vg.addColorStop(1, 'rgba(20,60,10,0)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, fy * 0.35);
+  for (const [x0, x1] of [[0, W * 0.12], [W, W * 0.88]]) { const sg = g.createLinearGradient(x0, 0, x1, 0); sg.addColorStop(0, 'rgba(20,60,10,.22)'); sg.addColorStop(1, 'rgba(20,60,10,0)'); g.fillStyle = sg; g.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), fy); }
+  // kitchen floor (checkered tiles) behind the fence
+  const ty0 = fy - dk * 0.15, tw = dk * 0.95, th = tw * 0.62;
+  g.fillStyle = '#efe0c2'; g.fillRect(0, ty0, W, H - ty0);
+  const cols = Math.ceil(W / tw) + 2, rows = Math.ceil((H - ty0) / th) + 1, ox = (W / 2) % tw - tw;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    if ((r + c) % 2) continue;
+    g.fillStyle = '#e6c493'; g.fillRect(ox + c * tw, ty0 + r * th, tw, th);
+  }
+  g.strokeStyle = 'rgba(150,110,70,.25)'; g.lineWidth = 1;
+  for (let r = 0; r <= rows; r++) { g.beginPath(); g.moveTo(0, ty0 + r * th); g.lineTo(W, ty0 + r * th); g.stroke(); }
+  for (let c = 0; c <= cols; c++) { g.beginPath(); g.moveTo(ox + c * tw, ty0); g.lineTo(ox + c * tw, H); g.stroke(); }
+  // soft light in the middle of the floor, shadow under the fence
+  const fl = g.createRadialGradient(W / 2, H * 0.88, 10, W / 2, H * 0.88, W * 0.8); fl.addColorStop(0, 'rgba(255,250,230,.35)'); fl.addColorStop(1, 'rgba(255,250,230,0)');
+  g.fillStyle = fl; g.fillRect(0, ty0, W, H - ty0);
+  const sh = g.createLinearGradient(0, ty0, 0, ty0 + dk * 0.9); sh.addColorStop(0, 'rgba(60,40,20,.35)'); sh.addColorStop(1, 'rgba(60,40,20,0)');
+  g.fillStyle = sh; g.fillRect(0, ty0, W, dk * 0.9);
+  // a little round rug in front of the house
+  const hp = dproj(0, HOUSE_Y - 0.1);
+  g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(hp.x, hp.y + 3, dk * 1.55, dk * 0.6, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#d9584a'; g.beginPath(); g.ellipse(hp.x, hp.y, dk * 1.5, dk * 0.56, 0, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#fff3d6'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.ellipse(hp.x, hp.y, dk * 1.3, dk * 0.46, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+  bgCache = { key, cv: cv2 };
+  return cv2;
 }
 let houseTop = 0;
 function drawHouse() {
