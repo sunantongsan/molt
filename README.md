@@ -8,3 +8,5 @@ break barriers, beat red squads and storm the enemy castle. Coins buy permanent 
 
 ## Over-the-air patches
 Every push also publishes `web/` to GitHub Pages (`https://sunantongsan.github.io/molt/`) with a `manifest.json` (build number + file hashes). The Android app checks it on start, downloads only the changed files in the background and shows "🔄 อัปเดตใหม่พร้อมแล้ว" — tap it to reload into the new game, no APK reinstall. Changes to the Android code itself (Java, manifest, ads) still need a new APK.
+
+Sounds: recorded sound effects from the FilmCow Royalty Free SFX Library (filmcow.itch.io/filmcow-sfx).

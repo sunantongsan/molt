@@ -29,6 +29,7 @@ const WEAPONS = [
   { id: 'triple', name: 'ตะเกียบทั้งกำ', icon: '🥢', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, cost: 500 },
   { id: 'egg',    name: 'ไข่ดาวแฟลช',   icon: '🥚', dmg: 1.2, rate: 0.55, range: 7, speed: 9, splash: 1.5, arc: true, cost: 550 },
   { id: 'coffee', name: 'เป็ดชงกาแฟ',   icon: '☕', dmg: 0, rate: 0, range: 0, speed: 1, support: true, cost: 600 },
+  { id: 'camp',   name: 'ค่ายเป็ดทหาร', icon: '🪖', dmg: 1.2, rate: 0, range: 0, speed: 1, support: true, camp: true, cost: 700 },
   { id: 'storm',  name: 'ตะกร้อไฟฟ้า', icon: '⚡', dmg: 2.2, rate: 0.9,  range: 7.5, speed: 22, chain: 2, cost: 650 },
   { id: 'pan',    name: 'กระทะบูมเมอแรง', icon: '🍳', dmg: 2.4, rate: 0.7, range: 7, speed: 9, pierce: true, cost: 750 },
   { id: 'cannon', name: 'หม้อหุงข้าว', icon: '🍙', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, cost: 800 },
@@ -40,7 +41,7 @@ const WEAPONS = [
 for (const w of WEAPONS) { w.range *= 1.8; w.speed *= 1.6; }   // long lane: throw far
 const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 // kitchen look: what each duck holds, and what flies through the air
-const HELD = { egg: null, coffee: 'it_soup', stove: null, fish: 'it_sauce', roller: null, pan: 'it_pan', melon: null, bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_sauce', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_ricecooker' };
+const HELD = { camp: null, egg: null, coffee: 'it_soup', stove: null, fish: 'it_sauce', roller: null, pan: 'it_pan', melon: null, bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_sauce', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_ricecooker' };
 const AMMO = { pan: 'it_pan', bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_chili', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_riceball' };
 // platform looks by level tier: crates -> table & chairs -> cupboard tower -> golden stove fort
 const PLAT_NAME = ['ลังผัก', 'โต๊ะซ้อนเก้าอี้', 'หอตู้กับข้าว', 'ป้อมเตาแก๊สทองคำ'];
@@ -57,7 +58,7 @@ function drawItem(name, x, y, size, rot, flip) {
 function tierOf(lvl) { return lvl >= 10 ? 3 : lvl >= 7 ? 2 : lvl >= 4 ? 1 : 0; }
 const TIER_COL = ['#8a8f99', '#3fb24f', '#4a8cff', '#c06bff'];
 const TIER_GLOW = [null, '#a6ff9a', '#9fd0ff', '#ffd84a'];
-const WCOL = { egg: '#fff6c0', coffee: '#c08a5a', stove: '#ff8a2a', fish: '#9be36a', roller: '#e0b07a', pan: '#e6e6f5', melon: '#ff5a6a', seed: '#ff5a6a', bow: '#ffe27a', xbow: '#d8f4ff', fire: '#ff8a2a', ice: '#9fe8ff', triple: '#ffe27a', storm: '#c8b6ff', cannon: '#ffb347' };
+const WCOL = { camp: '#8a9a6a', egg: '#fff6c0', coffee: '#c08a5a', stove: '#ff8a2a', fish: '#9be36a', roller: '#e0b07a', pan: '#e6e6f5', melon: '#ff5a6a', seed: '#ff5a6a', bow: '#ffe27a', xbow: '#d8f4ff', fire: '#ff8a2a', ice: '#9fe8ff', triple: '#ffe27a', storm: '#c8b6ff', cannon: '#ffb347' };
 // special powers unlocked at Lv5 and Lv10
 const PERKS = {
   bow:    ['พุ่งทีละ 2 คู่', 'จิ้มคริติคอล 25% (x2)'],
@@ -74,6 +75,7 @@ const PERKS = {
   stove:  ['ไฟกว้างเป็นกรวย 3 สาย', 'ไฟสีฟ้า ร้อนกว่า x1.5'],
   fish:   ['แอ่งใหญ่ขึ้น อยู่นานขึ้น', 'กลิ่นแรง! แมวในแอ่งเดินช้า'],
   roller: ['ไม้ใหญ่ขึ้น กวาดกว้าง', 'กลิ้งทีละ 2 อัน'],
+  camp:   ['เป็ดทหาร 3 ตัว', 'เป็ดทหาร 4 ตัว ถือกระทะ'],
 };
 function perkLv(p) { return p.lvl >= 10 ? 2 : p.lvl >= 5 ? 1 : 0; }
 WEAPON.bomb = { speed: 1, range: 0 };
@@ -92,6 +94,7 @@ const T = save.td;
 // leader duck upgrades (ladle damage, speed, coin magnet) and coins already paid into each buy pad
 if (!T.lead) T.lead = { atk: 1, spd: 1, mag: 1 };
 if (!T.pads) T.pads = {};
+if (T.traps === undefined) T.traps = 2;
 const LEAD_R = RING + 2.2;
 function leadSpeed() { return 3.2 + (T.lead.spd - 1) * 0.35; }
 function leadMag() { return 0.9 + (T.lead.mag - 1) * 0.35; }
@@ -132,7 +135,7 @@ function freshField() {
     shooters: new Map(),   // slot -> {cd, aimDx, aimDy, shootT}
     cats: [], shots: [], fx: [], floats: [], queue: [], banner: 0, killed: 0, earned: 0,
     parts: [], coins: [], revived: false, hudPulse: 0, seen: {}, bolts: [],
-    drops: [], pools: [],                                   // coins lying on the ground for the leader to pick up
+    drops: [], pools: [], traps: [], troops: [], campT: {}, trapMode: false,                                   // coins lying on the ground for the leader to pick up
     lead: { x: -1.8, y: 3.4, face: 1, walkT: 0, moving: false, atkCd: 0, swingT: 0, hurtT: 0, happyT: 0 },
     joy: null,                                   // {sx, sy, x, y} while a finger is dragging
     padT: 0,
@@ -166,7 +169,7 @@ function startWave() {
 }
 const INTRO_LINES = {
   cat:    ['ทหารหม้อ', 'ฮ่าๆๆ เป็ดน้อย! เจอกองทัพหม้อของข้าซะ!'],
-  tray:   ['แมวถือถาด', 'ถาดเหล็กกันได้ทุกอย่าง! ตะเกียบเจ้าทำอะไรไม่ได้หรอก!'],
+  tray:   ['แมวหมวกถาด', 'หมวกถาดกับฝาหม้อ! ของที่เจ้าโยนลงมาจากฟ้าเด้งหมด!'],
   ninja:  ['นินจาผ้าแดง', 'นินจาของข้าวิ่งเร็วกว่าตะเกียบเจ้าซะอีก!'],
   knight: ['อัศวินแดง', 'อัศวินแดงของข้ามีโล่ด้วยนะ จะปาอะไรก็ปามา!'],
   cart:   ['รถยิงพริก', 'รถยิงพริก! จะยิงลูกน้องข้าข้ามรั้วไปถึงบ้านเจ้าเลย!'],
@@ -174,7 +177,9 @@ const INTRO_LINES = {
   shadow: ['นินจาเงา', 'นินจาเงา... เจ้าจะไม่มีวันปาโดนมันหรอก!'],
   healer: ['พ่อครัวต้มยำ', 'ต้มยำร้อนๆ! ลูกน้องข้าจะไม่มีวันหมดแรง!'],
   steel:  ['เกราะเหล็กล้วน', 'เกราะเหล็กทั้งตัว! ไหนลองปามาสิ ฮ่าๆ!'],
-  glider: ['ร่มกระชอน', 'ร่มกระชอน! รั้วเจ้าไร้ความหมายแล้ว!'],
+  glider: ['ร่มฝาชี', 'ร่มฝาชี! กระโดดข้ามรั้วเจ้าได้สบายๆ!'],
+  pitcher: ['แมวปาลูกชิ้น', 'มือปาลูกชิ้นของข้า! ปาโดนหัวเป็ดทีเดียวมึนเลย!'],
+  boxer:  ['แมวนักมวย', 'นักมวยถุงมือร้อน! หมัดเดียวรั้วกระจุย!'],
   chief:  ['รองหัวหน้า แมวเชฟ', 'มือขวาของข้า! กระทะเขาฟาดทีเดียวรั้วพัง!'],
   boss:   ['ราชาแมว', 'ข้าเอง! ราชาแมว!! วันนี้ข้าจะลงสนามเองโว้ย!!'],
 };
@@ -243,7 +248,7 @@ function drawCatIntro() {
   if (t > 0.9 && ready(IMG.k_duck_act)) {
     const dx = W * 0.22 + Math.sin(now * 40) * 2, dy = H * 0.82;
     drawFrame('k_duck_act', 2, dx, dy, sh * 0.6, false);
-    ctx.font = '900 18px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText('ก๊าบ!?', dx + sh * 0.45, dy - sh * 0.55); ctx.fillStyle = '#ffe680'; ctx.fillText('ก๊าบ!?', dx + sh * 0.45, dy - sh * 0.55);
+    // (the scared duck just quacks: sound, no text)
   }
   // footer
   ctx.font = '700 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,.8)';
@@ -261,31 +266,35 @@ const CAT_KINDS = {
   tray:   { from: 2, w: 4,  hp: 1.2, v: 0.95, size: 1.1,  name: '🍽️ แมวถือถาดมาแล้ว! ถาดกันของที่ปาได้ 4 ที' },
   cart:   { from: 5, w: 2,  hp: 4,   v: 0.45, size: 1.7,  name: '🌶️ รถยิงพริกมาแล้ว! ยิงหินใส่รั้ว บางทียิงแมวข้ามรั้วมาเลย!' },
   healer: { from: 8, w: 2,  hp: 1.4, v: 0.85, size: 1.1,  name: '🍜 แมวพ่อครัวต้มยำมาแล้ว! ป้อนต้มยำฮีลเพื่อน รีบล้มก่อน' },
+  pitcher: { from: 6, w: 2, hp: 1.1, v: 0.9, size: 1.05, name: 'แมวปาลูกชิ้น' },
+  boxer:  { from: 7, w: 2,  hp: 2,   v: 1.0,  size: 1.15, name: 'แมวนักมวย' },
   glider: { from: 10, w: 3, hp: 1,   v: 1.05, size: 1.05, name: '🪂 แมวร่มกระชอนมาแล้ว! กระโดดข้ามรั้วได้' },
 };
 const OLD_IMG = { knight: 'cat', shadow: 'cat_ninja', steel: 'cat_tank' };
 // what each kitchen cat wears and swings (the plain cats get a random silly outfit)
-const HATS = ['it_pot', 'it_pot', 'it_colander', 'tray', 'it_soup', 'it_steamer', 'it_ricecooker'];
-const WPNS = ['it_spatula', 'it_spatula', 'it_fork', 'it_ladle', 'it_chopsticks', 'it_whisk'];
+const HATS = ['it_pot', 'it_pot', 'it_colander', 'it_mortar'];
+const WPNS = ['it_spatula', 'it_spatula', 'it_pestle', 'it_ladle'];
 function catGear(kind) {
   const r = a => a[Math.floor(Math.random() * a.length)];
   if (kind === 'chief') return { hat: 'it_chefhat', wpn: 'it_pan' };
   if (kind === 'tank') return { hat: 'it_steamer', wpn: 'it_pan' };
-  if (kind === 'ninja') return { hat: 'band', wpn: 'it_ladle' };
-  if (kind === 'tray') return { hat: r(['it_pot', 'it_colander']), wpn: 'it_fork' };
-  if (kind === 'healer') return { hat: 'it_chefhat', wpn: 'it_soup' };
-  if (kind === 'glider') return { hat: 'it_colander', wpn: 'it_chopsticks' };
+  if (kind === 'ninja') return { hat: 'band', wpn: 'it_skewer' };
+  if (kind === 'tray') return { hat: r(['tray', 'lid']), wpn: 'it_fork' };
+  if (kind === 'healer') return { hat: 'it_chefhat', wpn: 'it_soup', apron: true };
+  if (kind === 'glider') return { hat: 'it_foodcover', wpn: 'it_spatula' };
+  if (kind === 'boxer') return { hat: 'band', wpn: 'it_mitt', mitts: true };
+  if (kind === 'pitcher') return { hat: r(['it_pot', 'it_mortar']), wpn: 'it_skewer' };
   return { hat: r(HATS), wpn: r(WPNS) };
 }
 function drawHat(hat, x, y, size, rot) {
-  if (hat === 'tray') {
-    ctx.save(); ctx.translate(x, y + size * 0.15); ctx.rotate(rot || 0);
-    ctx.fillStyle = '#b9c2cc'; ctx.beginPath(); ctx.ellipse(0, 0, size * 0.62, size * 0.2, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#e4eaf0'; ctx.beginPath(); ctx.ellipse(0, -size * 0.03, size * 0.52, size * 0.14, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#2b2b3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, size * 0.62, size * 0.2, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore(); return;
+  if (hat === 'tray' || hat === 'lid') {
+    // a flat tray / pot lid lying on the head: squash the front-view picture into an ellipse
+    ctx.save(); ctx.translate(x, y + size * 0.22); ctx.rotate(rot || 0); ctx.scale(1, 0.36);
+    drawItem(hat === 'tray' ? 'it_tray' : 'it_lid', 0, 0, size * 1.25); ctx.restore(); return;
   }
-  drawItem(hat, x, y, size * (hat === 'it_ricecooker' ? 0.9 : hat === 'it_soup' ? 0.85 : 1), rot);
+  if (hat === 'it_mortar') { drawItem('it_mortar', x, y + size * 0.12, size * 0.95, Math.PI + (rot || 0)); return; }   // upside-down mortar helmet
+  if (hat === 'it_foodcover') { drawItem('it_foodcover', x, y + size * 0.05, size * 1.05, rot); return; }
+  drawItem(hat, x, y, size, rot);
 }
 function pickKind(n) {
   const list = Object.entries(CAT_KINDS).filter(([, k]) => n >= k.from);
@@ -396,9 +405,9 @@ function tdUpdate(dt) {
         c.x += Math.sin(c.fleeT * 11) * 2.2 * sdt;
         for (const o of D.cats) if (o !== c && o.hp > 0 && o.st !== 'flee' && Math.abs(o.x - c.x) < 0.5 && Math.abs(o.y - c.y) < 0.45) {
           const side = o.x >= c.x ? 1 : -1; o.x += side * 0.45; o.hitT = 0.15; o.y += 0.1;
-          if (!o.shoved && Math.random() < 0.35) { o.shoved = true; D.floats.push({ x: o.x, y: o.y - 0.3, t: 0, text: ['เฮ้ย!', 'อะไรวะ?!', 'ขอทาง!!', 'งง'][Math.floor(Math.random() * 4)], color: '#ffffff', small: true }); }
+          if (!o.shoved && Math.random() < 0.35) { o.shoved = true; SFX.play('catHurt'); }
         }
-        if (c.y < dinv(0, 40).y - 0.5) { c.st = 'walk'; D.floats.push({ x: c.x, y: c.y + 1.5, t: 0, text: 'ลองใหม่...', color: '#fff' }); }
+        if (c.y < dinv(0, 40).y - 0.5) { c.st = 'walk'; SFX.play('meow'); }
         continue;
       }
       // soup cook: feeds tom yum to friends nearby
@@ -415,6 +424,12 @@ function tdUpdate(dt) {
         if (u >= 1) { c.st = 'walk'; c.jumped = true; c.jh = 0; addFx('poof', c.x, c.y, '#ffffff'); }
         continue;
       }
+      if (c.st === 'pitch') {
+        c.fireT -= sdt; c.mx = 0; c.my = 1;
+        if (c.fireT <= 0) { c.fireT = 2.4 + Math.random(); c.atk = 0.6; pitchSkewer(c); }
+        c.atk = Math.max(0, (c.atk || 0) - sdt);
+        continue;
+      }
       if (c.st === 'siege') {
         // catapult cart: lob rocks / chillies at the fence or house, sometimes a whole cat over the fence
         c.fireT -= sdt; c.recoil = Math.max(0, (c.recoil || 0) - dt);
@@ -422,8 +437,23 @@ function tdUpdate(dt) {
         continue;
       }
       if (c.st === 'walk') {
-        if (c.kind === 'glider' && !c.jumped && !past && c.y >= FENCE_Y - 0.75) { c.st = 'jump'; c.jt = 0; c.jy0 = c.y; SFX.play('quack'); continue; }
+        if (c.kind === 'glider' && !c.jumped && !past && c.y >= FENCE_Y - 0.75) { c.st = 'jump'; c.jt = 0; c.jy0 = c.y; SFX.play('meow'); continue; }
         if (c.kind === 'cart' && c.y >= -6.5) { c.st = 'siege'; c.fireT = 1.2; continue; }
+        if (c.kind === 'pitcher' && c.y >= -5) { c.st = 'pitch'; c.fireT = 0.8; continue; }
+        // a duck soldier in the way: stop and fight it
+        const foe = !c.boss && c.kind !== 'cart' ? troopNear(c.x, c.y, 0.7) : null;
+        c.fighting = !!foe;
+        if (foe) { c.mx = (foe.x - c.x) * 0.1; c.my = 1; c.atk = (c.atk || 0) + sdt; if (c.atk >= 0.9) { c.atk = 0; foe.hp -= c.kind === 'boxer' || c.kind === 'chief' ? 2 : 1; foe.hitT = 0.2; SFX.play('hit'); } continue; }
+        // a mackerel trap nearby: cats can't resist
+        const bait = !c.boss && c.kind !== 'cart' && c.kind !== 'chief' ? trapNear(c.x, c.y, 3.6) : null;
+        if (bait) {
+          const dx = bait.x - c.x, dy = bait.y - c.y, dd = Math.hypot(dx, dy);
+          c.lured = true;
+          if (dd > 0.45) { c.x += dx / dd * c.v * 1.4 * sdt; c.y += dy / dd * c.v * 1.4 * sdt; c.mx = dx / dd; c.my = dy / dd; }
+          else { c.mx = 0; c.my = 1; }
+          continue;
+        }
+        c.lured = false;
         const hx = 0, hy = HOUSE_TY, dh = Math.hypot(c.x - hx, c.y - hy);
         if (!past && c.y >= FENCE_Y - 0.55 && wall.hp > 0) { c.st = 'wall'; c.atk = 0; }
         else if (past && dh <= HOUSE_R + 0.3) { c.st = 'house'; c.atk = 0; }
@@ -442,7 +472,7 @@ function tdUpdate(dt) {
         if (before < hitAt && c.atk >= hitAt) {
           if (c.boss) bossSlam(c);
           if (c.st === 'wall') {
-            wall.hp -= c.boss ? 8 : c.kind === 'chief' ? 3 : 1; wall.hit = 0.2; SFX.play(c.boss ? 'crack' : 'wood');
+            wall.hp -= c.boss ? 8 : c.kind === 'chief' || c.kind === 'boxer' ? 3 : 1; wall.hit = 0.2; SFX.play(c.boss ? 'crack' : Math.random() < 0.5 ? 'hit' : 'wood');
             for (let i = 0; i < (c.boss ? 10 : 2); i++) splinter(wall.x, FENCE_Y);
             if (wall.hp <= 0) { wall.hp = 0; SFX.play('crack'); addFx('ring', wall.x, FENCE_Y, '#ffcf8a'); for (let i = 0; i < 14; i++) splinter(wall.x, FENCE_Y); toast('รั้วพัง! พาเป็ดหัวหน้าไปยืนวงกลม 🔧 เพื่อซ่อม'); }
           } else {
@@ -454,13 +484,19 @@ function tdUpdate(dt) {
         if (c.atk >= period) c.atk = 0;
       }
     }
+    trapUpdate(dt); troopUpdate(dt);
     // enemy catapult shots in flight
     for (const e of D.eshots || []) {
       e.t += dt; if (e.t < e.dur) continue; e.done = true;
+      if (e.type === 'skewer') {
+        if (e.troop) { if (e.troop.hp > 0) { e.troop.hp -= 2; e.troop.hitT = 0.25; SFX.play('quack'); } }
+        else if (platAt(e.slot)) { const o = shooter(e.slot); o.stunT = 1.5; SFX.play('quack'); burst(e.tx, e.ty, ['#c8a060', '#ffffff'], 5, 2, 1); }
+        continue;
+      }
       if (e.type === 'cat') {
         spawnCatOrig({ a: e.tx, hp: 2 + Math.floor(T.wave / 2), kind: 'cat' });
         const nc = D.cats[D.cats.length - 1]; nc.y = e.ty; nc.mx = 0; nc.my = 1; nc.coward = false; nc.stun = 0.5;
-        D.floats.push({ x: e.tx, y: e.ty - 0.4, t: 0, text: 'ตุ้บ!', color: '#fff' }); addFx('dust', e.tx, e.ty, '#d9c49a'); SFX.play('hit');
+        addFx('dust', e.tx, e.ty, '#d9c49a'); SFX.play('thud'); SFX.play('meow');
       } else if (e.wall && e.wall.hp > 0) {
         e.wall.hp = Math.max(0, e.wall.hp - 2); e.wall.hit = 0.2; SFX.play('crack');
         for (let i = 0; i < 5; i++) splinter(e.tx, e.ty);
@@ -478,6 +514,7 @@ function tdUpdate(dt) {
     for (const p of T.plats) {
       const o = shooter(p.slot), W0 = WEAPON[p.w], pos = platPos(p.slot);
       o.cd -= dt; o.shootT = Math.max(0, o.shootT - dt);
+      if (o.stunT > 0) { o.stunT -= dt; continue; }
       const tier = tierOf(p.lvl);
       if (tier >= 3 && o.arrive <= 0 && (o.rain = (o.rain || 0) - dt) <= 0) {
         const rt = nearestCat(pos.x, pos.y, W0.range + 2);
@@ -487,6 +524,7 @@ function tdUpdate(dt) {
             D.shots.push({ x: tx, y: ty, sx: tx, sy: ty, tx, ty, w: 'bow', dmg: wDmg(p) * 0.9, t: -i * 0.06, dur: 0.5, rain: true, tier }); }
         }
       }
+      if (W0.camp) continue;
       if (W0.support) {
         // coffee duck: brews for the neighbours; at Lv.10 also splashes hot coffee now and then
         if (perkLv(p) >= 2 && o.cd <= 0) { const t2 = nearestCat(pos.x, pos.y, 9); if (t2) { o.cd = 2; o.shootT = 0.3; o.aimDx = t2.x - pos.x; o.aimDy = t2.y - pos.y;
@@ -553,7 +591,7 @@ function tdUpdate(dt) {
       for (const c of D.cats) if (c.hp > 0 && !s.hit.has(c) && Math.abs(c.x - s.x) < rad && Math.abs(c.y - s.y) < (s.flame ? rad : 0.5)) {
         s.hit.add(c); hurtCat(c, s.dmg);
         if (s.flame) { c.burn = Math.max(c.burn, 1.5); c.burnDps = Math.max(c.burnDps || 0, s.dmg * 0.6); }
-        else { if (!c.boss && c.kind !== 'steel') { c.y -= 0.55; if (c.st === 'wall') c.st = 'walk'; c.stun = Math.max(c.stun, 0.3); } burst(c.x, c.y, HIT_COLS.roller, 5, 3, 1); D.floats.push({ x: c.x, y: c.y - 0.3, t: 0, text: 'แบน!', color: '#ffe0b0', small: true }); }
+        else { if (!c.boss && c.kind !== 'steel') { c.y -= 0.55; if (c.st === 'wall') c.st = 'walk'; c.stun = Math.max(c.stun, 0.3); } burst(c.x, c.y, HIT_COLS.roller, 5, 3, 1); SFX.play('bonk'); }
       }
       if (u >= 1) s.done = true;
       continue;
@@ -566,7 +604,7 @@ function tdUpdate(dt) {
       s.x = s.sx + (s.tx - s.sx) * k1; s.y = s.sy + (s.ty - s.sy) * k1;
       for (const c of D.cats) if (c.hp > 0 && !s.hit.has(c) && Math.hypot(c.x - s.x, c.y - s.y) < (s.big ? 0.85 : 0.6)) {
         s.hit.add(c); hurtCat(c, s.dmg); burst(c.x, c.y, ['#ffffff', '#c8c8dc', '#ffe680'], 6, 3, 1);
-        D.floats.push({ x: c.x, y: c.y - 0.3, t: 0, text: 'แป๊ง!', color: '#e6e6ff', small: true }); SFX.play('wood');
+        SFX.play('clang');
       }
       if (u >= 1) s.done = true;
       continue;
@@ -577,7 +615,7 @@ function tdUpdate(dt) {
     if (k < 1) continue;
     s.done = true;
     if (s.bomb) {
-      for (const c of D.cats) if (c.hp > 0 && Math.hypot(c.x - s.tx, c.y - s.ty) < 1.9) hurtCat(c, s.dmg);
+      for (const c of D.cats) if (c.hp > 0 && Math.hypot(c.x - s.tx, c.y - s.ty) < 1.9) hurtCat(c, s.dmg, 'arc');
       addFx('boom', s.tx, s.ty, '#ffb347'); D.shake = 0.35; SFX.play('break');
       continue;
     }
@@ -586,7 +624,7 @@ function tdUpdate(dt) {
   D.shots = D.shots.filter(s => !s.done);
   for (const c of D.cats) if (c.hp <= 0 && (c.boss || c.kind === 'chief') && (c.deadT || 0) > 1.3) {
     c.y -= 0.75 * dt; c.x += Math.sin((c.deadT || 0) * 3) * 0.2 * dt;
-    if (Math.random() < dt * 0.8) D.floats.push({ x: c.x, y: c.y - (c.boss ? 1.5 : 0.8), t: 0, text: ['ฮือๆ...', 'จำไว้นะ!!', 'โอ๊ยๆ', 'ไว้เจอกันใหม่!'][Math.floor(Math.random() * 4)], color: '#ffd0d0', small: true });
+    if (Math.random() < dt * 0.6) SFX.play('catScared');
   }
   D.cats = D.cats.filter(c => c.hp > 0 || (c.deadT = (c.deadT || 0) + dt) < ((c.boss || c.kind === 'chief') ? (c.y > dinv(0, 30).y ? 99 : 0) : 0.6));
   for (const p of D.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.h += p.vh * dt; p.vh -= 14 * dt; p.t += dt; if (p.h < 0) { p.h = 0; p.vh *= -0.3; p.vx *= 0.6; p.vy *= 0.6; } }
@@ -615,11 +653,11 @@ let tdTick = 0;
 function hurtCat(c, dmg, src) {
   if (c.hp <= 0) return;
   if (src !== 'burn') dmg *= c.kind === 'tank' ? 0.7 : c.kind === 'steel' ? 0.6 : c.kind === 'knight' ? 0.85 : 1;
-  if (c.trayHp > 0 && src !== 'burn' && src !== 'lead') {
-    dmg *= 0.25; c.trayHp--; SFX.play('wood'); D.floats.push({ x: c.x, y: c.y - 0.4, t: 0, text: c.trayHp ? 'เคร้ง!' : 'ถาดพัง!', color: '#dfe6f0', small: true });
+  if (c.trayHp > 0 && src === 'arc') {
+    dmg *= 0.25; c.trayHp--; SFX.play(c.trayHp ? 'tray' : 'clang');
     burst(c.x, c.y, ['#dfe6f0', '#ffffff'], 4, 2.5, 1, 'shard');
   }
-  if (c.kind === 'shadow' && src !== 'burn' && src !== 'lead' && Math.random() < 0.2) { D.floats.push({ x: c.x, y: c.y, t: 0, text: 'หลบ!', color: '#c8b6ff', small: true }); return; }
+  if (c.kind === 'shadow' && src !== 'burn' && src !== 'lead' && Math.random() < 0.2) { SFX.play('shoot'); addFx('poof', c.x, c.y, '#c8b6ff'); return; }
   c.hp -= dmg; c.hitT = 0.12;
   D.floats.push({ x: c.x, y: c.y, t: 0, text: '-' + (Math.round(dmg * 10) / 10), color: '#fff', small: true });
   addFx('spark', c.x, c.y, '#fff3b0'); SFX.play('hit');
@@ -647,8 +685,7 @@ function hurtCat(c, dmg, src) {
     if (!c.boss) for (const o of D.cats) {
       if (o.hp > 0 && o.coward && !o.fled && o.st === 'walk' && Math.hypot(o.x - c.x, o.y - c.y) < 3.5 && o.y > FENCE_Y - 3 && o.y < FENCE_Y) {
         o.st = 'flee'; o.fled = true; o.fleeT = 0;
-        D.floats.push({ x: o.x, y: o.y - 0.4, t: 0, text: 'เมี้ยวว!! 😱', color: '#ffe0f0' });
-        if (Math.random() < 0.5) SFX.play('catHurt');
+        SFX.play('catScared');
       }
     }
     // the cat's pot helmet goes flying
@@ -677,7 +714,7 @@ function cartFire(c) {
   if (r < 0.25) {
     const tx = (Math.random() * 2 - 1) * (FIELD_X - 1), ty = 2.4 + Math.random() * 1.2;
     D.eshots.push({ type: 'cat', sx, sy, tx, ty, t: 0, dur: 1.4 });
-    D.floats.push({ x: sx, y: sy - 0.8, t: 0, text: 'เมี้ยววว~!', color: '#ffe0f0', small: true });
+    SFX.play('catScared');
   } else if (r < 0.45) {
     D.eshots.push({ type: Math.random() < 0.5 ? 'chili' : 'rock', sx, sy, tx: (Math.random() - 0.5) * 1.6, ty: HOUSE_Y - 1, t: 0, dur: 1.5 });
   } else {
@@ -687,6 +724,109 @@ function cartFire(c) {
   }
   SFX.play('cannon');
 }
+function trapNear(x, y, r) {
+  let best = null, bd = r;
+  for (const t of D.traps || []) { const d = Math.hypot(t.x - x, t.y - y); if (d < bd) { bd = d; best = t; } }
+  return best;
+}
+function troopNear(x, y, r) {
+  let best = null, bd = r;
+  for (const t of D.troops || []) { if (t.hp <= 0 || t.out < 1) continue; const d = Math.hypot(t.x - x, t.y - y); if (d < bd) { bd = d; best = t; } }
+  return best;
+}
+function pitchSkewer(c) {
+  // aim at a duck soldier outside if there is one, otherwise at a duck archer on its platform
+  const outside = (D.troops || []).filter(t => t.hp > 0 && t.out >= 1);
+  if (outside.length && Math.random() < 0.6) { const t = outside[Math.floor(Math.random() * outside.length)]; D.eshots.push({ type: 'skewer', troop: t, sx: c.x, sy: c.y, tx: t.x, ty: t.y, t: 0, dur: 0.7 }); }
+  else if (T.plats.length) { const p = T.plats[Math.floor(Math.random() * T.plats.length)], q = platPos(p.slot); D.eshots.push({ type: 'skewer', slot: p.slot, sx: c.x, sy: c.y, tx: q.x, ty: q.y, t: 0, dur: 0.9 }); }
+  else return;
+  SFX.play('shoot');
+}
+function placeTrap(x, y) {
+  if ((T.traps || 0) <= 0) { toast('กับดักปลาทูหมดแล้ว ซื้อเพิ่มที่บ้าน 🏠'); SFX.play('gateBad'); return; }
+  T.traps--; persist();
+  D.traps.push({ x, y, t: 0, fuse: 6 });
+  SFX.play('thud'); addFx('dust', x, y, '#d9c49a');
+}
+function trapUpdate(dt) {
+  for (const tr of D.traps) {
+    tr.t += dt;
+    const around = D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - tr.x, c.y - tr.y) < 0.8).length;
+    if (around >= 3 || tr.t >= tr.fuse) {
+      tr.done = true;
+      const dmg = 10 + T.wave * 1.6;
+      for (const c of D.cats) if (c.hp > 0 && Math.hypot(c.x - tr.x, c.y - tr.y) < 2.1) { hurtCat(c, c.boss ? dmg * 0.5 : dmg); if (!c.boss) c.stun = Math.max(c.stun, 0.8); }
+      addFx('boom', tr.x, tr.y, '#ffb347', 1.6); addFx('shock', tr.x, tr.y, '#ffe2a8'); D.shake = Math.max(D.shake, 0.35);
+      burst(tr.x, tr.y, ['#c8a060', '#8a9aa8', '#ffcf6a'], 16, 4.5, 1.3);
+      SFX.play('break'); SFX.play('catScared');
+    }
+  }
+  D.traps = D.traps.filter(t => !t.done);
+}
+// duck soldiers: hop over the fence from their camp, brawl with cats, roll home when beaten
+function troopUpdate(dt) {
+  for (const p of T.plats) {
+    if (p.w !== 'camp') continue;
+    const want = 2 + perkLv(p), mine = D.troops.filter(t => t.slot === p.slot);
+    if (mine.length < want && (D.campT[p.slot] = (D.campT[p.slot] || 0) - dt) <= 0) {
+      D.campT[p.slot] = 1.2; const q = platPos(p.slot);
+      D.troops.push({ slot: p.slot, x: q.x + (Math.random() - 0.5) * 0.6, y: q.y, hp: 5 + p.lvl * 1.5, max: 5 + p.lvl * 1.5, dmg: 1 + p.lvl * 0.45, lvl: p.lvl, out: 0, atkT: 0, walkT: 0, hitT: 0, face: 1, swing: 0 });
+      SFX.play('quack');
+    }
+  }
+  for (const t of D.troops) {
+    t.hitT = Math.max(0, t.hitT - dt); t.swing = Math.max(0, t.swing - dt);
+    if (t.hp <= 0) {
+      // beaten: roll back home, then rest before going out again
+      t.down = (t.down || 0) + dt; const q = platPos(t.slot);
+      t.x += (q.x - t.x) * Math.min(1, dt * 1.5); t.y += (q.y - t.y) * Math.min(1, dt * 1.5);
+      if (t.down > 4) t.gone = true;
+      continue;
+    }
+    if (t.out < 1) { t.out = Math.min(1, t.out + dt * 1.4); const q = platPos(t.slot); t.y = q.y + (FENCE_Y - 0.9 - q.y) * t.out; continue; }   // hop over the fence
+    // go for pitchers first, then the nearest cat in front of the fence
+    let target = null, bd = 6;
+    for (const c of D.cats) { if (c.hp <= 0 || c.y > FENCE_Y + 0.3 || c.kind === 'cart' && Math.random() < 0) continue; const d = Math.hypot(c.x - t.x, c.y - t.y) - (c.kind === 'pitcher' ? 2 : 0); if (d < bd) { bd = d; target = c; } }
+    if (target) {
+      const dx = target.x - t.x, dy = target.y - t.y, d = Math.hypot(dx, dy);
+      t.face = dx >= 0 ? 1 : -1;
+      if (d > 0.6) { t.x += dx / d * 2.3 * dt; t.y += dy / d * 2.3 * dt; t.walkT += dt * 8; }
+      else if ((t.atkT -= dt) <= 0) { t.atkT = 0.6; t.swing = 0.3; hurtCat(target, t.dmg, 'lead'); SFX.play('bonk'); }
+    } else {
+      // idle guard spot just outside the fence
+      const gx = platPos(t.slot).x, gy = FENCE_Y - 1.2, d = Math.hypot(gx - t.x, gy - t.y);
+      if (d > 0.2) { t.x += (gx - t.x) / d * 1.5 * dt; t.y += (gy - t.y) / d * 1.5 * dt; t.walkT += dt * 6; }
+    }
+    t.y = Math.min(t.y, FENCE_Y - 0.5);
+  }
+  D.troops = D.troops.filter(t => !t.gone);
+}
+function drawTroop(t) {
+  const p = dproj(t.x, t.y), h = dk * 0.85, w = h * 0.75, lift = t.out < 1 ? Math.sin(t.out * Math.PI) * dk * 1.4 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.25, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.save(); ctx.translate(p.x + (t.hitT > 0 ? Math.sin(t.hitT * 90) * 2 : 0), p.y - lift);
+  if (t.hp <= 0) { ctx.rotate((t.down || 0) * 10); ctx.globalAlpha = 0.85; }
+  if (t.face < 0) ctx.scale(-1, 1);
+  if (t.hp <= 0) drawFrame('k_duck_act', 2, 0, h * 0.5, h, false);
+  else if (t.swing > 0) drawFrame('k_duck_act', t.swing > 0.15 ? 0 : 1, 0, 0, h, false);
+  else drawFrame('k_duck_walk', Math.floor(t.walkT) % 4, 0, 0, h, false);
+  if (t.hp > 0) {
+    drawItem('it_pot', w * 0.04, -h * 0.95, h * 0.42, 0.1);                       // pot helmet
+    drawItem(t.lvl >= 10 ? 'it_pan' : 'it_ladle', w * 0.42, -h * 0.5, h * 0.5, t.swing > 0 ? (t.swing > 0.15 ? -1.2 : 1.1) : 0.35);
+  }
+  ctx.restore();
+  if (t.hp > 0 && t.hp < t.max) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(p.x - 12, p.y - h * 1.1, 24, 3); ctx.fillStyle = '#5fe06a'; ctx.fillRect(p.x - 12, p.y - h * 1.1, 24 * t.hp / t.max, 3); }
+}
+function drawTrap(tr) {
+  const p = dproj(tr.x, tr.y), k = tr.t / tr.fuse, sz = dk * 0.95 * (1 + Math.sin(tr.t * (6 + k * 20)) * 0.04 * k);
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, sz * 0.45, sz * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+  if (!drawItem('it_fishtrap', p.x, p.y - sz * 0.35, sz)) { ctx.font = `${sz * 0.6}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('🐟', p.x, p.y); }
+  // fuse spark + smell lines that pull the cats in
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffd04a';
+  ctx.beginPath(); ctx.arc(p.x + sz * 0.22, p.y - sz * 0.78, 3 + Math.random() * 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i++) { const yy = p.y - sz * (0.9 + ((tr.t * 0.8 + i / 3) % 1) * 0.9), xx = p.x + (i - 1) * sz * 0.25; ctx.beginPath(); ctx.moveTo(xx, yy); ctx.quadraticCurveTo(xx + 6, yy - 8, xx, yy - 16); ctx.stroke(); }
+}
 function coffeeBuff(slot) {
   let b = 1;
   for (const q of T.plats) if (q.w === 'coffee' && Math.abs(q.slot - slot) === 1) b = Math.max(b, 1 + [0.3, 0.45, 0.6][perkLv(q)]);
@@ -694,10 +834,11 @@ function coffeeBuff(slot) {
 }
 function impact(s) {
   const W0 = WEAPON[s.w] || { splash: 0.8 }, pk = s.pk || 0, big = 1 + (s.tier || 0) * 0.25;
+  const arcSrc = W0.arc || s.w === 'seed' ? 'arc' : undefined;   // lobbed things land on hats (trays/lids block them)
   burst(s.x, s.y, HIT_COLS[s.w] || ['#fff'], 5 + (s.tier || 0) * 3 + (s.w === 'melon' ? 14 : s.w === 'cannon' ? 6 : 0), s.w === 'melon' ? 4 : 2.5, s.w === 'melon' ? 1.4 : 1, s.w === 'ice' ? 'shard' : 'dot');
   if (s.w === 'egg') {
     const r = (pk >= 2 ? 2.3 : 1.5) * (1 + (s.tier || 0) * 0.08);
-    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < r)) { hurtCat(c, s.dmg); if (!c.boss) c.stun = Math.max(c.stun, pk >= 1 ? 1.6 : 1.0); }
+    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < r)) { hurtCat(c, s.dmg, arcSrc); if (!c.boss) c.stun = Math.max(c.stun, pk >= 1 ? 1.6 : 1.0); }
     addFx('flash', s.x, s.y, '#fff6c0', r); addFx('egg', s.x, s.y, '#ffffff'); SFX.play('break');
     return;
   }
@@ -707,13 +848,13 @@ function impact(s) {
     return;
   }
   if (s.w === 'coffee') {
-    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < 1.1)) { hurtCat(c, s.dmg); c.burn = 2; c.burnDps = s.dmg * 0.3; }
+    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < 1.1)) { hurtCat(c, s.dmg, arcSrc); c.burn = 2; c.burnDps = s.dmg * 0.3; }
     addFx('splat', s.x, s.y, '#6a3a1a', 0.7); return;
   }
   if (s.w === 'melon' || s.w === 'seed') {
     const r = s.w === 'seed' ? 0.85 : W0.splash * (1 + (s.tier || 0) * 0.1);
-    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < r)) { hurtCat(c, s.dmg); if (pk >= 2) c.slow = Math.max(c.slow, 1.6); }
-    addFx('boom', s.x, s.y, '#ff5a6a', s.w === 'seed' ? 0.5 : big * 1.2); addFx('splat', s.x, s.y, '#ff4a5a', s.w === 'seed' ? 0.5 : 1);
+    for (const c of D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < r)) { hurtCat(c, s.dmg, arcSrc); if (pk >= 2) c.slow = Math.max(c.slow, 1.6); }
+    addFx('boom', s.x, s.y, '#ff5a6a', s.w === 'seed' ? 0.5 : big * 1.2); SFX.play('squish'); addFx('splat', s.x, s.y, '#ff4a5a', s.w === 'seed' ? 0.5 : 1);
     if (s.w === 'melon') {
       SFX.play('break'); D.shake = Math.max(D.shake, 0.22);
       const nSeed = pk >= 2 ? 6 : pk >= 1 ? 3 : 0;
@@ -726,17 +867,17 @@ function impact(s) {
   const direct = () => s.target && s.target.hp > 0 ? s.target : D.cats.find(c => c.hp > 0 && Math.hypot(c.x - s.x, c.y - s.y) < 0.55);
   if (s.w === 'cannon') {
     const r = pk >= 2 ? 2.6 : W0.splash;
-    for (const c of near(r)) { hurtCat(c, s.dmg); if (pk >= 1 && !c.boss) c.stun = Math.max(c.stun, pk >= 2 ? 1.4 : 0.8); }
+    for (const c of near(r)) { hurtCat(c, s.dmg, arcSrc); if (pk >= 1 && !c.boss) c.stun = Math.max(c.stun, pk >= 2 ? 1.4 : 0.8); }
     addFx('boom', s.x, s.y, s.tier >= 3 ? '#ffe680' : '#ffb347', big * (pk >= 2 ? 1.35 : 1));
     if (s.tier >= 2) addFx('shock', s.x, s.y, '#ffd59a', 0.6);
     SFX.play('break'); D.shake = 0.25;
   } else if (s.w === 'fire') {
     const r = pk >= 2 ? 1.7 : W0.splash;
-    for (const c of near(r)) { hurtCat(c, s.dmg); if (pk >= 1) { c.burn = 2.5; c.burnDps = s.dmg * 0.5; } }
+    for (const c of near(r)) { hurtCat(c, s.dmg, arcSrc); if (pk >= 1) { c.burn = 2.5; c.burnDps = s.dmg * 0.5; } }
     addFx('fire', s.x, s.y, s.tier >= 3 ? '#ffd84a' : '#ff7a2a', big * (pk >= 2 ? 1.5 : 1));
   } else if (s.w === 'ice') {
     const hits = pk >= 1 ? near(1.2) : [direct()].filter(Boolean);
-    for (const c of hits) { hurtCat(c, s.dmg); c.slow = Math.max(c.slow, 2.2); if (pk >= 2 && !c.boss) { c.freeze = true; c.slow = Math.max(c.slow, 1.2); } }
+    for (const c of hits) { hurtCat(c, s.dmg, arcSrc); c.slow = Math.max(c.slow, 2.2); if (pk >= 2 && !c.boss) { c.freeze = true; c.slow = Math.max(c.slow, 1.2); } }
     addFx('frost', s.x, s.y, '#bff4ff', big * (pk >= 1 ? 1.4 : 0.8));
   } else if (s.w === 'storm') {
     let c = direct(); const hitSet = new Set(); let from = { x: s.x, y: s.y };
@@ -858,7 +999,7 @@ function endWave(won) {
     return;
   }
   D.phase = 'build';
-  D.cats = []; D.shots = []; D.queue = []; D.pools = []; D.eshots = [];
+  D.cats = []; D.shots = []; D.queue = []; D.pools = []; D.eshots = []; D.traps = []; D.troops = []; D.trapMode = false;
   collectAll();
   if (won) {
     for (let i = 0; i < 50; i++) confetti((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
@@ -947,6 +1088,13 @@ function tapField(cx, cy) {
   if (D.phase === 'intro') { catIntroNext(); return; }
   if (D.phase === 'victory') { if (D.vicT > 1.5 && D.slowT <= 0) { D.vicT = 99; } return; }
   if (D.phase === 'defeat') return;
+  if (D.phase === 'wave' && Math.hypot(cx - (W - 46), cy - (H - 128)) < 32) { D.trapMode = !D.trapMode; SFX.play('click'); return; }
+  if (D.trapMode && D.phase === 'wave') {
+    const q = dinv(cx, cy); D.trapMode = false;
+    if (q.y < FENCE_Y - 0.6) placeTrap(Math.max(-FIELD_X + 0.4, Math.min(FIELD_X - 0.4, q.x)), q.y);
+    else toast('วางกับดักได้แค่หน้ารั้ว (ฝั่งแมว)');
+    return;
+  }
   const p = dinv(cx, cy);
   // platforms (drawn raised, so test a little above the ground point too)
   for (let s = 0; s < SLOTS; s++) {
@@ -1016,7 +1164,7 @@ function leadUpdate(dt) {
     const t = nearestCat(L.x, L.y, 1.05);
     if (t) {
       L.atkCd = 0.55; L.swingT = 0.3; L.face = t.x > L.x ? 1 : -1;
-      hurtCat(t, leadDmg(), 'lead'); SFX.play('wood');
+      hurtCat(t, leadDmg(), 'lead'); SFX.play('bonk');
       if (!t.boss && t.kind !== 'tank' && t.hp > 0) { const k = Math.hypot(t.x - L.x, t.y - L.y) || 1; t.x += (t.x - L.x) / k * 0.25; t.y += (t.y - L.y) / k * 0.25; }
     }
   }
@@ -1025,7 +1173,7 @@ function leadUpdate(dt) {
     if (c.hp <= 0 || Math.hypot(c.x - L.x, c.y - L.y) > (c.boss ? 1.1 : 0.5)) continue;
     L.hurtT = 1.0; SFX.play('quack');
     L.y = Math.min(HOUSE_Y + 1.0, L.y + 0.9);
-    D.floats.push({ x: L.x, y: L.y, t: 0, text: 'โอ๊ย!', color: '#ffb0a0' });
+    SFX.play('thud');
     break;
   }
   // coins: fall, bounce, then fly to the leader when close
@@ -1121,6 +1269,7 @@ function openHouse() {
   body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; }));
   const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = `🏠 เสริมบ้าน (ทน ${houseMax()}): ไปยืนบนวงกลม 🏠 หน้าบ้าน`; body.appendChild(hh);
   body.appendChild(btn(`🪵 เสริมรั้ว Lv.${T.fence}`, `ทน ${wallMax()}${T.fence < 6 ? ` • Lv.${T.fence < 3 ? 3 : 6} เปลี่ยนรั้ว` : ""} • 🪙${fc}`, save.coins >= fc, () => { save.coins -= fc; T.fence++; for (const w of D.walls) { w.max = wallMax(); w.hp = Math.max(w.hp, Math.min(w.max, w.hp + 18)); } }));
+  body.appendChild(btn(`🐟 กับดักปลาทูระเบิด (มี ${T.traps})`, `ซื้อเพิ่ม 1 อัน • 🪙120`, save.coins >= 120, () => { save.coins -= 120; T.traps++; }));
   body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; }));
   const rp = document.createElement('button'); rp.className = 'sbtn'; rp.style.background = '#6d8fc9'; rp.style.boxShadow = '0 4px 0 #3f62a3';
   rp.innerHTML = '<b>🎬 ดูเรื่องราวตอนต้นอีกครั้ง</b>'; rp.onclick = () => { closeSheet(); playIntro(); }; body.appendChild(rp);
@@ -1156,6 +1305,8 @@ function tdDraw() {
   for (const pl of D.pools) drawPool(pl);
   const list = [[HOUSE_Y, drawHouse]];
   for (const c of D.drops) list.push([c.y, () => drawDrop(c)]);
+  for (const tr of D.traps || []) list.push([tr.y, () => drawTrap(tr)]);
+  for (const tp of D.troops || []) list.push([tp.y, () => drawTroop(tp)]);
   list.push([D.lead.y, drawLeader]);
   for (const w of D.walls) list.push([FENCE_Y, () => drawFence(w)]);
   for (let s = 0; s < SLOTS; s++) { const q = platPos(s); list.push([q.y, () => drawPlatform(s)]); }
@@ -1345,6 +1496,12 @@ const PLAT_W = 1.55, PLAT_DECK = 0.30;   // platform sprite width (m) and deck c
 function drawPlatform(s) {
   const q = platPos(s), p = dproj(q.x, q.y), pl = platAt(s), k = dk;
   if (!pl) return;
+  if (pl.w === 'camp') {
+    const sz = k * (1.4 + tierOf(pl.lvl) * 0.12);
+    if (!drawItem('it_tent', p.x, p.y - sz * 0.4, sz)) { ctx.font = `${sz * 0.6}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('⛺', p.x, p.y); }
+    const o = shooter(s); o.topH = 1;
+    return;
+  }
   if (!pl) {
     ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(p.x, p.y, k * 0.6, k * 0.36, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
@@ -1400,7 +1557,8 @@ function drawPlatform(s) {
     // kitchen duck: wind up, throw, then idle; holds its weapon; dresses up with the platform tier
     const tr2 = tierOf(pl.lvl), fw = h * 0.75;
     ctx.save(); ctx.translate(p.x, dy); if (flip) ctx.scale(-1, 1);
-    if (D.phase === 'victory' && D.cheered) { const hp2 = Math.abs(Math.sin(performance.now() / 160 + s)) * h * 0.25; drawFrame('k_duck_act', 3, 0, -hp2, h, false); }
+    if (o.stunT > 0) { drawFrame('k_duck_act', 2, 0, 0, h, false); ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', Math.cos(performance.now() / 150) * h * 0.2, -h * 1.05); }
+    else if (D.phase === 'victory' && D.cheered) { const hp2 = Math.abs(Math.sin(performance.now() / 160 + s)) * h * 0.25; drawFrame('k_duck_act', 3, 0, -hp2, h, false); }
     else if (o.shootT > 0) drawFrame('k_duck_act', o.shootT > 0.15 ? 0 : 1, 0, 0, h, false);
     else drawFrame('k_duck_walk', 1, 0, Math.sin(performance.now() / 300 + s) * 1.5, h, false);
     if (tr2 >= 1) drawItem('it_apron', fw * 0.08, -h * 0.33, h * 0.4);
@@ -1466,7 +1624,7 @@ function drawCat(c) {
   if (c.kind === 'cart') { drawCart(c, p, h); return; }
   const KC = !c.boss && !OLD_IMG[c.kind] && ready(IMG.k_cat_walk) && ready(IMG.k_cat_act);
   if (c.hp <= 0 && !KC) { ctx.save(); ctx.translate(x, p.y); ctx.rotate((flip ? -1 : 1) * Math.min(1.4, (c.deadT || 0) * 5)); x = 0; }
-  const py = c.hp <= 0 && !KC ? 0 : p.y, atk = c.st !== 'walk' && c.st !== 'flee' && c.st !== 'jump' && c.hp > 0, k = c.atk / 0.9;
+  const py = c.hp <= 0 && !KC ? 0 : p.y, atk = (c.fighting || c.st !== 'walk') && c.st !== 'flee' && c.st !== 'jump' && c.hp > 0, k = (c.atk || 0) / 0.9;
   if (KC) {
     if (c.hp <= 0 && c.kind !== 'chief') ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
@@ -1541,7 +1699,7 @@ function drawCart(c, p, h) {
 }
 function drawEShot(e) {
   const u = Math.min(1, e.t / e.dur), x = e.sx + (e.tx - e.sx) * u, y = e.sy + (e.ty - e.sy) * u;
-  const q = dproj(x, y), lift = Math.sin(u * Math.PI) * dk * (e.type === 'cat' ? 5 : 3.5) + dk * 0.8 * (1 - u);
+  const q = dproj(x, y), lift = Math.sin(u * Math.PI) * dk * (e.type === 'cat' ? 5 : e.type === 'skewer' ? 1.6 : 3.5) + dk * 0.8 * (1 - u) + (e.type === 'skewer' ? dk * 1.4 * u : 0);
   // landing marker so the player can see it coming
   const m = dproj(e.tx, e.ty); ctx.save(); ctx.globalAlpha = 0.35 + u * 0.4; ctx.strokeStyle = '#ff4a3a'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.ellipse(m.x, m.y, dk * 0.45 * (1.4 - u * 0.5), dk * 0.28 * (1.4 - u * 0.5), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
@@ -1549,6 +1707,7 @@ function drawEShot(e) {
   const yy = q.y - lift;
   if (e.type === 'cat' && ready(IMG.k_cat_act)) { ctx.save(); ctx.translate(q.x, yy); ctx.rotate(e.t * 9); drawFrame('k_cat_act', 2, 0, dk * 0.4, dk * 0.8, false); ctx.restore(); }
   else if (e.type === 'chili') drawItem('it_chili', q.x, yy, dk * 0.5, e.t * 10);
+  else if (e.type === 'skewer') drawItem('it_skewer', q.x, yy, dk * 0.55, e.t * 14);
   else { ctx.fillStyle = '#8f8a80'; ctx.beginPath(); ctx.arc(q.x, yy, dk * 0.2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#3a3630'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#b8b2a6'; ctx.beginPath(); ctx.arc(q.x - dk * 0.06, yy - dk * 0.06, dk * 0.07, 0, Math.PI * 2); ctx.fill(); }
 }
 function drawKitchenCat(c, x, py, h, atk, kk, t) {
@@ -1593,7 +1752,7 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
     if (lunge < 0) ctx.scale(1, 1 + lunge / h * 0.6); else if (lunge > 0) ctx.scale(1 + lunge / h * 0.5, 1 - lunge / h * 0.4);
     if (view === 'back') drawItem(wpn, -fw * 0.48, -h * 0.5, ws, -0.4 + sw);       // weapon peeks out at the side
     drawFrame(img, fr, 0, 0, h, false);
-    if (jh > 0) drawItem('it_colander', 0, -h * 1.35, h * 0.9, Math.PI);
+    if (jh > 0) drawItem('it_foodcover', 0, -h * 1.45, h * 1.1);
     else if (cb) drawItem('it_chefhat', 0, -h * 0.97, h * 0.5);
     else if (tk) drawItem('it_steamer', 0, -h * 0.9, h * 0.52);
     else if (c.kind === 'ninja') {
@@ -1601,15 +1760,13 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
       if (view === 'back') { ctx.beginPath(); ctx.moveTo(-fw * 0.04, -h * 0.75); ctx.lineTo(-fw * 0.16 + Math.sin(t * 15) * fw * 0.05, -h * 0.58); ctx.lineTo(fw * 0.02, -h * 0.6); ctx.lineTo(fw * 0.16 + Math.sin(t * 13) * fw * 0.05, -h * 0.58); ctx.lineTo(fw * 0.04, -h * 0.75); ctx.fill(); }
     }
     else drawHat(G.hat, 0, -h * 0.92, h * 0.52);
-    if (view === 'front' && c.trayHp > 0) {
-      // tray held up like a shield
-      ctx.save(); ctx.translate(0, -h * 0.42); ctx.fillStyle = '#c3ccd6'; ctx.beginPath(); ctx.ellipse(0, 0, fw * 0.55, h * 0.3, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#eef3f8'; ctx.beginPath(); ctx.ellipse(-fw * 0.08, -h * 0.05, fw * 0.4, h * 0.2, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#2b2b3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, fw * 0.55, h * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
-      for (let i = 0; i < 4 - c.trayHp; i++) { ctx.beginPath(); ctx.moveTo(-fw * 0.3 + i * fw * 0.2, -h * 0.15); ctx.lineTo(-fw * 0.2 + i * fw * 0.2, h * 0.1); ctx.stroke(); }
-      ctx.restore();
-    }
-    if (view === 'front') {
+    if (G.apron && view === 'front') drawItem('it_catapron', 0, -h * 0.36, h * 0.5);
+    if (G.mitts && view === 'front') {
+      // boxing with oven mitts: jab left / right while attacking
+      const jab = swingA !== null ? Math.max(0, Math.sin(swingA * 2)) : 0;
+      drawItem('it_mitt', -fw * 0.48, -h * 0.5 + jab * h * 0.12, h * 0.4, -0.3);
+      drawItem('it_mitt', fw * 0.48, -h * 0.5 - jab * h * 0.12 + (swingA !== null ? h * 0.1 : 0), h * 0.4, 0.3);
+    } else if (view === 'front') {
       if (swingA !== null && !(tk && !cb)) drawItem(wpn, fw * 0.45 + Math.sin(swingA) * fw * 0.2, -h * 0.55 - Math.cos(swingA) * h * 0.25, ws * 1.1, swingA);
       else if (tk && !cb) drawItem(wpn, 0, -h * 0.38 + (swingA !== null ? lunge * 0.5 : 0), ws);
       else drawItem(wpn, fw * 0.5, -h * 0.45, ws, 0.3 + sw);
@@ -1900,7 +2057,13 @@ function drawTdHud() {
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
     const t1 = `🐱 เหลือ ${alive}`;
     ctx.strokeText(t1, W / 2, 62); ctx.fillStyle = '#fff'; ctx.fillText(t1, W / 2, 62);
-    const bx = W - 46, by = H - 60, r = 28;
+    { const tx = W - 46, ty = H - 128, tr = 28;
+      ctx.fillStyle = D.trapMode ? 'rgba(255,210,80,.75)' : 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(tx, ty, tr, 0, Math.PI * 2); ctx.fill();
+      if (D.trapMode) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); }
+      if (!drawItem('it_fishtrap', tx, ty, tr * 1.5)) { ctx.font = '24px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🐟', tx, ty); }
+      ctx.font = '900 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(T.traps, tx + 20, ty + 18); ctx.fillStyle = '#fff'; ctx.fillText(T.traps, tx + 20, ty + 18); ctx.textBaseline = 'alphabetic';
+      if (D.trapMode) { ctx.font = '900 14px system-ui,sans-serif'; ctx.strokeText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 170); ctx.fillStyle = '#ffe680'; ctx.fillText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 170); } }
+    const bx = W - 46, by = H - 196, r = 28;
     ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
     if (D.bombCd > 0) { ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.moveTo(bx, by); ctx.arc(bx, by, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - D.bombCd / 7)); ctx.fill(); }
     ctx.font = '24px system-ui'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText('🌶️', bx, by + 1);
