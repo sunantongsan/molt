@@ -219,9 +219,9 @@ function drawCatIntro() {
   const inK = Math.min(1, t / 0.5), ex = cx + (1 - inK) * W * 0.5, pose = Math.abs(Math.sin(now * 3)) * 6;
   const fake = { kind, gear: kind === 'boss' ? null : catGear(kind === 'boss' ? 'cat' : kind), hp: 1, max: 1, st: 'walk', mx: 0, my: 1, ph: 0, hitT: 0, stun: 0, atk: 0, x: 0, y: 0, trayHp: kind === 'tray' ? 4 : 0, boss: kind === 'boss' };
   if (!I.gear || I.gearFor !== kind) { I.gear = fake.gear; I.gearFor = kind; } fake.gear = I.gear;
-  if (kind === 'boss') { if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
+  if (kind === 'boss') { if (ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
   else if (kind === 'cart') drawCart(fake, { x: ex, y: cy - pose }, sh * 0.9);
-  else if (OLD_IMG[kind]) drawFrame(OLD_IMG[kind], [0, 1, 5, 1][Math.floor(now * 6) % 4], ex, cy - pose, sh * 0.85, true);
+  else if (OLD_IMG[kind]) drawFrame(OLD_IMG[kind], Math.floor(now * 6) % 4, ex, cy - pose, sh * 0.85, false);
   else drawKitchenCat(fake, ex, cy - pose, sh * (kind === 'chief' ? 1.0 : 0.85), false, 0, now);
   // name card
   if (t > 0.4) {
@@ -236,7 +236,8 @@ function drawCatIntro() {
   }
   // the cat king on the left, bouncing as he gloats (when he is not the one on show)
   const kx = W * 0.2, ky = H * 0.42, talk = Math.abs(Math.sin(now * 9)) * 4;
-  if (kind !== 'boss' && ready(IMG.boss_walk)) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame('boss_walk', 0, 0, 0, sh * 0.95, false); ctx.restore(); }
+  const KW = ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
+  if (kind !== 'boss' && ready(IMG[KW])) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame(KW, 0, 0, 0, sh * 0.95, false); ctx.restore(); }
   // speech bubble with typed text
   const shown = line[1].slice(0, Math.floor(t * 26)), bx = W * 0.05, by = H * 0.13, bw = W * 0.9;
   ctx.font = '800 17px Mitr,system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
@@ -273,7 +274,7 @@ const CAT_KINDS = {
   boxer:  { from: 7, w: 2,  hp: 2,   v: 1.0,  size: 1.15, name: 'แมวนักมวย' },
   glider: { from: 10, w: 3, hp: 1,   v: 1.05, size: 1.05, name: '🪂 แมวร่มกระชอนมาแล้ว! กระโดดข้ามรั้วได้' },
 };
-const OLD_IMG = { knight: 'cat', shadow: 'cat_ninja', steel: 'cat_tank' };
+const OLD_IMG = { knight: 'k_knight', shadow: 'k_shadow', steel: 'k_steel' };
 // what each kitchen cat wears and swings (the plain cats get a random silly outfit)
 const HATS = ['it_pot', 'it_pot', 'it_colander', 'it_mortar'];
 const WPNS = ['it_spatula', 'it_spatula', 'it_pestle', 'it_ladle'];
@@ -1442,61 +1443,70 @@ function tdDraw() {
 // ---------- painted background: soft garden lawn for the cats, checkered kitchen floor for the ducks ----------
 let bgCache = null;
 function getBg() {
-  const key = `${W}x${H}x${dk.toFixed(2)}`;
+  const key = `${W}x${H}x${dk.toFixed(2)}x${ready(IMG.bg_lane) ? 1 : 0}`;
   if (bgCache && bgCache.key === key) return bgCache.cv;
   if (!(W > 0 && H > 0)) return null;
   const sc = Math.min(window.devicePixelRatio || 1, 2), cv2 = document.createElement('canvas');
   cv2.width = Math.round(W * sc); cv2.height = Math.round(H * sc);
   const g = cv2.getContext('2d'); g.scale(sc, sc);
-  let seed = 1234567; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  const fy = dproj(0, FENCE_Y).y;
-  // lawn
-  const lg = g.createLinearGradient(0, 0, 0, fy);
-  lg.addColorStop(0, '#93d466'); lg.addColorStop(1, '#78c04e');
-  g.fillStyle = lg; g.fillRect(0, 0, W, fy + 4);
-  // soft patches of lighter / darker grass
-  for (let i = 0; i < 40; i++) {
-    const x = rnd() * W, y = rnd() * fy, r = 30 + rnd() * 70;
-    const rg = g.createRadialGradient(x, y, 0, x, y, r);
-    const c = rnd() < 0.5 ? '160,220,110' : '90,165,60';
-    rg.addColorStop(0, `rgba(${c},.35)`); rg.addColorStop(1, `rgba(${c},0)`);
-    g.fillStyle = rg; g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0, 0, Math.PI * 2); g.fill();
+  const fy = dproj(0, FENCE_Y).y, bi = IMG.bg_lane;
+  if (ready(bi)) {
+    // painted lawn + kitchen floor; the grass/tile edge (64.1% down the image) sits on the fence line
+    const iw = bi.naturalWidth, ih = bi.naturalHeight, E = 0.641;
+    const s2 = Math.max(W / iw, (H - fy) / (ih * (1 - E)), fy / (ih * E));
+    const dw = iw * s2, dh = ih * s2;
+    g.drawImage(bi, (W - dw) / 2, fy - E * dh, dw, dh);
+  } else {
+    let seed = 1234567; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    // lawn
+    const lg = g.createLinearGradient(0, 0, 0, fy);
+    lg.addColorStop(0, '#93d466'); lg.addColorStop(1, '#78c04e');
+    g.fillStyle = lg; g.fillRect(0, 0, W, fy + 4);
+    // soft patches of lighter / darker grass
+    for (let i = 0; i < 40; i++) {
+      const x = rnd() * W, y = rnd() * fy, r = 30 + rnd() * 70;
+      const rg = g.createRadialGradient(x, y, 0, x, y, r);
+      const c = rnd() < 0.5 ? '160,220,110' : '90,165,60';
+      rg.addColorStop(0, `rgba(${c},.35)`); rg.addColorStop(1, `rgba(${c},0)`);
+      g.fillStyle = rg; g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0, 0, Math.PI * 2); g.fill();
+    }
+    // grass tufts
+    for (let i = 0; i < 170; i++) {
+      const x = rnd() * W, y = rnd() * fy, s2 = 3 + rnd() * 4;
+      g.strokeStyle = rnd() < 0.5 ? 'rgba(60,130,40,.55)' : 'rgba(170,230,120,.7)'; g.lineWidth = 2; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x - s2, y); g.quadraticCurveTo(x - s2, y - s2, x - s2 * 1.6, y - s2 * 2);
+      g.moveTo(x, y); g.lineTo(x, y - s2 * 2.4); g.moveTo(x + s2, y); g.quadraticCurveTo(x + s2, y - s2, x + s2 * 1.6, y - s2 * 2); g.stroke();
+    }
+    // pebbles and little flowers
+    for (let i = 0; i < 16; i++) { const x = rnd() * W, y = rnd() * fy, r = 3 + rnd() * 5;
+      g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(x + 1, y + 2, r, r * 0.6, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#cfc8b8'; g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ebe6da'; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.2, r * 0.4, r * 0.25, 0, 0, Math.PI * 2); g.fill(); }
+    for (let i = 0; i < 34; i++) { const x = rnd() * W, y = rnd() * fy, col = ['#ffffff', '#fff3a0', '#ffb7c9', '#ffd08a'][Math.floor(rnd() * 4)];
+      g.fillStyle = col; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 3, y + Math.sin(a) * 2.2, 2.3, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#ffb000'; g.beginPath(); g.arc(x, y, 1.8, 0, Math.PI * 2); g.fill(); }
+    // gentle shade at the top and the sides
+    const vg = g.createLinearGradient(0, 0, 0, fy * 0.35); vg.addColorStop(0, 'rgba(20,60,10,.25)'); vg.addColorStop(1, 'rgba(20,60,10,0)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, fy * 0.35);
+    for (const [x0, x1] of [[0, W * 0.12], [W, W * 0.88]]) { const sg = g.createLinearGradient(x0, 0, x1, 0); sg.addColorStop(0, 'rgba(20,60,10,.22)'); sg.addColorStop(1, 'rgba(20,60,10,0)'); g.fillStyle = sg; g.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), fy); }
+    // kitchen floor (checkered tiles) behind the fence
+    const ty0 = fy - dk * 0.15, tw = dk * 0.95, th = tw * 0.62;
+    g.fillStyle = '#efe0c2'; g.fillRect(0, ty0, W, H - ty0);
+    const cols = Math.ceil(W / tw) + 2, rows = Math.ceil((H - ty0) / th) + 1, ox = (W / 2) % tw - tw;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if ((r + c) % 2) continue;
+      g.fillStyle = '#e6c493'; g.fillRect(ox + c * tw, ty0 + r * th, tw, th);
+    }
+    g.strokeStyle = 'rgba(150,110,70,.25)'; g.lineWidth = 1;
+    for (let r = 0; r <= rows; r++) { g.beginPath(); g.moveTo(0, ty0 + r * th); g.lineTo(W, ty0 + r * th); g.stroke(); }
+    for (let c = 0; c <= cols; c++) { g.beginPath(); g.moveTo(ox + c * tw, ty0); g.lineTo(ox + c * tw, H); g.stroke(); }
+    // soft light in the middle of the floor, shadow under the fence
+    const fl = g.createRadialGradient(W / 2, H * 0.88, 10, W / 2, H * 0.88, W * 0.8); fl.addColorStop(0, 'rgba(255,250,230,.35)'); fl.addColorStop(1, 'rgba(255,250,230,0)');
+    g.fillStyle = fl; g.fillRect(0, ty0, W, H - ty0);
+    const sh = g.createLinearGradient(0, ty0, 0, ty0 + dk * 0.9); sh.addColorStop(0, 'rgba(60,40,20,.35)'); sh.addColorStop(1, 'rgba(60,40,20,0)');
+    g.fillStyle = sh; g.fillRect(0, ty0, W, dk * 0.9);
+
   }
-  // grass tufts
-  for (let i = 0; i < 170; i++) {
-    const x = rnd() * W, y = rnd() * fy, s2 = 3 + rnd() * 4;
-    g.strokeStyle = rnd() < 0.5 ? 'rgba(60,130,40,.55)' : 'rgba(170,230,120,.7)'; g.lineWidth = 2; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(x - s2, y); g.quadraticCurveTo(x - s2, y - s2, x - s2 * 1.6, y - s2 * 2);
-    g.moveTo(x, y); g.lineTo(x, y - s2 * 2.4); g.moveTo(x + s2, y); g.quadraticCurveTo(x + s2, y - s2, x + s2 * 1.6, y - s2 * 2); g.stroke();
-  }
-  // pebbles and little flowers
-  for (let i = 0; i < 16; i++) { const x = rnd() * W, y = rnd() * fy, r = 3 + rnd() * 5;
-    g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(x + 1, y + 2, r, r * 0.6, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#cfc8b8'; g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#ebe6da'; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.2, r * 0.4, r * 0.25, 0, 0, Math.PI * 2); g.fill(); }
-  for (let i = 0; i < 34; i++) { const x = rnd() * W, y = rnd() * fy, col = ['#ffffff', '#fff3a0', '#ffb7c9', '#ffd08a'][Math.floor(rnd() * 4)];
-    g.fillStyle = col; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 3, y + Math.sin(a) * 2.2, 2.3, 0, Math.PI * 2); g.fill(); }
-    g.fillStyle = '#ffb000'; g.beginPath(); g.arc(x, y, 1.8, 0, Math.PI * 2); g.fill(); }
-  // gentle shade at the top and the sides
-  const vg = g.createLinearGradient(0, 0, 0, fy * 0.35); vg.addColorStop(0, 'rgba(20,60,10,.25)'); vg.addColorStop(1, 'rgba(20,60,10,0)');
-  g.fillStyle = vg; g.fillRect(0, 0, W, fy * 0.35);
-  for (const [x0, x1] of [[0, W * 0.12], [W, W * 0.88]]) { const sg = g.createLinearGradient(x0, 0, x1, 0); sg.addColorStop(0, 'rgba(20,60,10,.22)'); sg.addColorStop(1, 'rgba(20,60,10,0)'); g.fillStyle = sg; g.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), fy); }
-  // kitchen floor (checkered tiles) behind the fence
-  const ty0 = fy - dk * 0.15, tw = dk * 0.95, th = tw * 0.62;
-  g.fillStyle = '#efe0c2'; g.fillRect(0, ty0, W, H - ty0);
-  const cols = Math.ceil(W / tw) + 2, rows = Math.ceil((H - ty0) / th) + 1, ox = (W / 2) % tw - tw;
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-    if ((r + c) % 2) continue;
-    g.fillStyle = '#e6c493'; g.fillRect(ox + c * tw, ty0 + r * th, tw, th);
-  }
-  g.strokeStyle = 'rgba(150,110,70,.25)'; g.lineWidth = 1;
-  for (let r = 0; r <= rows; r++) { g.beginPath(); g.moveTo(0, ty0 + r * th); g.lineTo(W, ty0 + r * th); g.stroke(); }
-  for (let c = 0; c <= cols; c++) { g.beginPath(); g.moveTo(ox + c * tw, ty0); g.lineTo(ox + c * tw, H); g.stroke(); }
-  // soft light in the middle of the floor, shadow under the fence
-  const fl = g.createRadialGradient(W / 2, H * 0.88, 10, W / 2, H * 0.88, W * 0.8); fl.addColorStop(0, 'rgba(255,250,230,.35)'); fl.addColorStop(1, 'rgba(255,250,230,0)');
-  g.fillStyle = fl; g.fillRect(0, ty0, W, H - ty0);
-  const sh = g.createLinearGradient(0, ty0, 0, ty0 + dk * 0.9); sh.addColorStop(0, 'rgba(60,40,20,.35)'); sh.addColorStop(1, 'rgba(60,40,20,0)');
-  g.fillStyle = sh; g.fillRect(0, ty0, W, dk * 0.9);
   // a little round rug in front of the house
   const hp = dproj(0, HOUSE_Y - 0.1);
   g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(hp.x, hp.y + 3, dk * 1.55, dk * 0.6, 0, 0, Math.PI * 2); g.fill();
@@ -1700,7 +1710,7 @@ function drawCat(c) {
     ctx.save(); ctx.globalAlpha = Math.max(0, 1 - Math.max(0, f.t - 0.45) / 0.2);
     ctx.translate(p.x + f.vx * f.t * dk, p.y - Math.max(0, h2) * dk - h * 0.4); ctx.rotate(f.t * f.spin); ctx.scale(sc, sc);
     const im = OLD_IMG[c.kind] ? OLD_IMG[c.kind] : 'k_cat_act';
-    if (ready(IMG[im])) drawFrame(im, OLD_IMG[c.kind] ? 2 : 2, 0, h * 0.5, h, false);
+    if (ready(IMG[im])) drawFrame(im, OLD_IMG[c.kind] ? 1 : 2, 0, h * 0.5, h, false);
     ctx.restore(); ctx.globalAlpha = 1;
     if (f.t > 0.5 && !f.poofed) { f.poofed = true; }
     return;
@@ -1711,6 +1721,32 @@ function drawCat(c) {
   if (KC) {
     if (c.hp <= 0 && c.kind !== 'chief') ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
+  } else if (c.boss && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
+    const bh = h * 1.1;
+    if (c.hp <= 0) {
+      ctx.restore(); ctx.globalAlpha = 1;
+      const dt2 = c.deadT || 0;
+      if (dt2 < 1.3) {
+        // knocked down: sits dizzy, wobbling, stars circling
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.sin(dt2 * 9) * 0.06); drawFrame('k_king_act', 2, 0, 0, bh * 0.9, flip); ctx.restore();
+      } else {
+        // limps away, back turned, little hops, sweat drop
+        ctx.save(); ctx.translate(p.x, p.y - Math.abs(Math.sin(dt2 * 7)) * bh * 0.04); ctx.rotate(Math.sin(dt2 * 7) * 0.08);
+        drawFrame('k_king_act', 3, 0, 0, bh * 0.95, Math.floor(dt2 * 3.5) % 2 === 1); ctx.restore();
+        ctx.font = `${Math.round(bh * 0.18)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', p.x + bh * 0.28, p.y - bh * 0.85 + Math.sin(dt2 * 12) * 3);
+      }
+      ctx.font = `${Math.round(bh * 0.16)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', p.x + Math.cos(dt2 * 5) * bh * 0.18, p.y - bh * 0.98);
+      return;
+    }
+    if (atk) {
+      const kb = c.atk / BOSS_PERIOD, up = kb < 0.55;
+      const sq = up ? 1 + kb * 0.08 : 1 - Math.max(0, 0.25 - (kb - 0.55)) * 0.4;
+      ctx.save(); ctx.translate(x, py); ctx.scale(2 - sq, sq); drawFrame('k_king_act', up ? 0 : 1, 0, 0, bh * 1.08, flip); ctx.restore();
+    } else {
+      const wf = [0, 1, 2, 3][Math.floor(t * 6) % 4], bob = Math.abs(Math.sin(t * 6 * Math.PI / 2)) * bh * 0.03;
+      ctx.save(); ctx.translate(x, py - bob); ctx.rotate(Math.sin(t * 3 * Math.PI) * 0.03); drawFrame('k_king_walk', wf, 0, 0, bh, false); ctx.restore();
+    }
+    if (c.hitT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, py - bh * 0.5, bh * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   } else if (c.boss && ready(IMG.boss_walk)) {
     const bh = h * 1.05;
     if (c.hp <= 0 && ready(IMG.boss_die)) {
@@ -1739,6 +1775,17 @@ function drawCat(c) {
   } else if (c.boss && ready(IMG.boss)) {
     ctx.save(); ctx.translate(x, py); ctx.rotate(atk ? Math.sin(k * Math.PI * 2) * 0.25 : Math.sin(t * 6) * 0.06);
     drawAt(IMG.boss, 0, 0, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight); ctx.restore();
+  } else if (OLD_IMG[c.kind] && ready(IMG[OLD_IMG[c.kind]])) {
+    // redesigned front-walking cats: code-driven lunge for the attack
+    const ci = OLD_IMG[c.kind], wf = Math.floor(t * (c.kind === 'shadow' ? 12 : 8)) % 4;
+    if (atk) {
+      const wind = k < 0.5 ? k / 0.5 : 0, hit = k >= 0.5 && k < 0.75 ? 1 - Math.abs(k - 0.62) / 0.13 : 0;
+      ctx.save(); ctx.translate(x, py + hit * h * 0.1); ctx.scale(1 + wind * 0.08 - hit * 0.05, 1 - wind * 0.1 + hit * 0.12);
+      ctx.rotate((flip ? 1 : -1) * (wind * 0.12 - hit * 0.2));
+      drawFrame(ci, k < 0.5 ? 1 : 2, 0, 0, h, flip); ctx.restore();
+    } else if (c.st === 'flee') {
+      ctx.save(); ctx.translate(x, py - Math.abs(Math.sin(t * 9)) * h * 0.06); ctx.scale(1, 0.95); drawFrame(ci, Math.floor(t * 14) % 4, 0, 0, h, !flip); ctx.restore();
+    } else drawFrame(ci, wf, x, py - Math.abs(Math.sin(t * 7)) * h * 0.05, h, false);
   } else if (c.st === 'flee' && c.hp > 0 && ready(IMG[catImg(c) + '_back'])) {
     const lunge = atk && k > 0.55 && k < 0.8 ? -h * 0.08 : 0;
     drawFrame(catImg(c) + '_back', atk ? (k < 0.55 ? 0 : 3) : Math.floor(t * 9) % 6, x, py + lunge - (atk ? 0 : Math.abs(Math.sin(t * 7)) * h * 0.05), h, !flip);
@@ -1993,9 +2040,43 @@ function drawShot(s) {
   ctx.fillStyle = '#eef'; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-2, -3); ctx.lineTo(-2, 3); ctx.fill();
   ctx.restore();
 }
+// one cell of a 4-cell painted effect sheet, centred at (x, y)
+function fxCell(name, i, x, y, size, rot) {
+  const im = IMG[name], cw = im.naturalWidth / 4, ch = im.naturalHeight;
+  ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
+  ctx.drawImage(im, Math.max(0, Math.min(3, i)) * cw, 0, cw, ch, -size / 2, -size / 2, size, size); ctx.restore();
+}
 function drawFx(f) {
   if (f.type === 'fw') return drawFirework(f);
   const p = dproj(f.x, f.y), k = f.t / 0.5;
+  if (f.rot === undefined) { f.rot = (Math.random() - 0.5) * 0.8; f.cell = [0, 1, 3][Math.floor(Math.random() * 3)]; }
+  // painted effects (fall back to the code-drawn ones below while loading)
+  if ((f.type === 'boom' || f.type === 'fire') && ready(IMG.fx_boom)) {
+    const sz = dk * (f.type === 'boom' ? 3.2 : 1.7) * (f.size || 1) * (0.75 + k * 0.45);
+    ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
+    fxCell('fx_boom', Math.floor(Math.min(0.99, k) * 4), p.x, p.y - sz * 0.32, sz, f.rot * 0.3); ctx.restore(); return;
+  }
+  if ((f.type === 'dust' || f.type === 'poof') && ready(IMG.fx_smoke)) {
+    const sz = dk * (f.type === 'dust' ? 2.8 : 1.2) * (0.7 + k * 0.6);
+    ctx.save(); ctx.globalAlpha = (1 - k) * 0.9;
+    fxCell('fx_smoke', Math.floor(Math.min(0.99, k) * 4), p.x, p.y - dk * (f.type === 'poof' ? 0.5 : 0.2) - k * dk * 0.3, sz, f.rot); ctx.restore(); return;
+  }
+  if (f.type === 'flash' && ready(IMG.fx_hits)) {
+    // big hit: white POW burst that pops in and shrinks away
+    const pop = k < 0.2 ? k / 0.2 : 1 - (k - 0.2) * 0.4, sz = dk * (f.size || 1.5) * 1.5 * pop;
+    ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k) * 2); fxCell('fx_hits', 3, p.x, p.y - dk * 0.5, sz, f.rot * 0.5); ctx.restore(); return;
+  }
+  if (f.type === 'spark' || !f.type) {
+    if (ready(IMG.fx_hits)) {
+      const pop = k < 0.25 ? 0.5 + k * 2 : 1, sz = dk * 0.95 * (f.size || 1) * pop;
+      ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k) * 1.8); fxCell('fx_hits', f.cell, p.x, p.y - dk * 0.6, sz, f.rot + k); ctx.restore(); return;
+    }
+  }
+  if (f.type === 'splat' && f.color === '#ff4a5a' && ready(IMG.fx_hits)) {
+    // red / chili splats use the painted chili splash
+    const sz = dk * 1.4 * (f.size || 1) * (0.6 + k * 0.5);
+    ctx.save(); ctx.globalAlpha = (1 - k) * 0.95; fxCell('fx_hits', 2, p.x, p.y - dk * 0.2, sz, f.rot); ctx.restore(); return;
+  }
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k;
   if (f.type === 'frost') {
     const r = dk * 1.1 * (f.size || 1) * (0.3 + k);
