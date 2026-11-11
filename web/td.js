@@ -219,7 +219,7 @@ function drawCatIntro() {
   const inK = Math.min(1, t / 0.5), ex = cx + (1 - inK) * W * 0.5, pose = Math.abs(Math.sin(now * 3)) * 6;
   const fake = { kind, gear: kind === 'boss' ? null : catGear(kind === 'boss' ? 'cat' : kind), hp: 1, max: 1, st: 'walk', mx: 0, my: 1, ph: 0, hitT: 0, stun: 0, atk: 0, x: 0, y: 0, trayHp: kind === 'tray' ? 4 : 0, boss: kind === 'boss' };
   if (!I.gear || I.gearFor !== kind) { I.gear = fake.gear; I.gearFor = kind; } fake.gear = I.gear;
-  if (kind === 'boss') { if (ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
+  if (kind === 'boss') { if (USE_NEW_KING && ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
   else if (kind === 'cart') drawCart(fake, { x: ex, y: cy - pose }, sh * 0.9);
   else if (OLD_IMG[kind]) drawFrame(OLD_IMG[kind], Math.floor(now * 6) % 4, ex, cy - pose, sh * 0.85, false);
   else drawKitchenCat(fake, ex, cy - pose, sh * (kind === 'chief' ? 1.0 : 0.85), false, 0, now);
@@ -236,7 +236,7 @@ function drawCatIntro() {
   }
   // the cat king on the left, bouncing as he gloats (when he is not the one on show)
   const kx = W * 0.2, ky = H * 0.42, talk = Math.abs(Math.sin(now * 9)) * 4;
-  const KW = ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
+  const KW = USE_NEW_KING && ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
   if (kind !== 'boss' && ready(IMG[KW])) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame(KW, 0, 0, 0, sh * 0.95, false); ctx.restore(); }
   // speech bubble with typed text
   const shown = line[1].slice(0, Math.floor(t * 26)), bx = W * 0.05, by = H * 0.13, bw = W * 0.9;
@@ -282,11 +282,11 @@ function catGear(kind) {
   const r = a => a[Math.floor(Math.random() * a.length)];
   if (kind === 'chief') return { hat: 'it_chefhat', wpn: 'it_pan' };
   if (kind === 'tank') return { hat: 'it_steamer', wpn: 'it_pan' };
-  if (kind === 'ninja') return { hat: 'band', wpn: 'it_skewer' };
+  if (kind === 'ninja') return { hat: 'it_mortar', wpn: 'it_skewer' };
   if (kind === 'tray') return { hat: r(['tray', 'lid']), wpn: 'it_fork' };
   if (kind === 'healer') return { hat: 'it_chefhat', wpn: 'it_soup', apron: true };
   if (kind === 'glider') return { hat: 'it_foodcover', wpn: 'it_spatula' };
-  if (kind === 'boxer') return { hat: 'band', wpn: 'it_mitt', mitts: true };
+  if (kind === 'boxer') return { hat: 'it_mortar', wpn: 'it_mitt', mitts: true };
   if (kind === 'pitcher') return { hat: r(['it_pot', 'it_mortar']), wpn: 'it_skewer' };
   return { hat: r(HATS), wpn: r(WPNS) };
 }
@@ -366,7 +366,7 @@ function spawnCatOrig(c) {
   const hp = c.boss || kind === 'chief' ? c.hp : Math.max(1, Math.round(c.hp * K.hp + (K.hp >= 3 ? 4 : 0)));
   const v = 1.7 * (c.rush ? 1.45 : 1) * (c.boss ? 0.7 : kind === 'chief' ? 0.75 : K.v * (0.85 + Math.random() * 0.35));
   if (c.pat && PATTERNS[c.pat] && PATTERNS[c.pat].name && !D.seen['p_' + c.pat]) { D.seen['p_' + c.pat] = true; toast(PATTERNS[c.pat].name); }
-  D.cats.push({ zig: c.zig || 0, gear: catGear(kind), trayHp: kind === 'tray' ? 4 : 0, coward: !c.boss && kind !== 'chief' && kind !== 'cart' && Math.random() < 0.015, x: c.a, y: topY - (c.dy || 0) - Math.random() * 0.6, sway: Math.random() * 9, hp, max: hp, boss: c.boss, kind,
+  D.cats.push({ zig: c.zig || 0, gear: catGear(kind), trayHp: kind === 'tray' ? 4 : 0, coward: !c.boss && kind !== 'chief' && kind !== 'cart' && Math.random() < 0.05, x: c.a, y: topY - (c.dy || 0) - Math.random() * 0.6, sway: Math.random() * 9, hp, max: hp, boss: c.boss, kind,
     v, st: 'walk', atk: 0, ph: Math.random() * 9, hitT: 0, slow: 0, stun: 0, burn: 0 });
   if (kind === 'chief') SFX.play('bossRoar');
 }
@@ -696,7 +696,7 @@ function hurtCat(c, dmg, src) {
     }
     // a cowardly cat that sees a friend fall nearby turns tail and runs
     if (!c.boss) for (const o of D.cats) {
-      if (o.hp > 0 && o.coward && !o.fled && o.st === 'walk' && Math.hypot(o.x - c.x, o.y - c.y) < 3.5 && o.y > FENCE_Y - 3 && o.y < FENCE_Y) {
+      if (o.hp > 0 && o.coward && !o.fled && o.st === 'walk' && Math.hypot(o.x - c.x, o.y - c.y) < 4.5 && o.y > FENCE_Y - 4.5 && o.y < FENCE_Y) {
         o.st = 'flee'; o.fled = true; o.fleeT = 0;
         SFX.play('catScared');
       }
@@ -1758,7 +1758,7 @@ function drawCat(c) {
   if (KC) {
     if (c.hp <= 0 && c.kind !== 'chief') ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
-  } else if (c.boss && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
+  } else if (c.boss && USE_NEW_KING && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
     const bh = h * 1.1;
     if (c.hp <= 0) {
       ctx.restore(); ctx.globalAlpha = 1;
@@ -2077,6 +2077,7 @@ function drawShot(s) {
   ctx.fillStyle = '#eef'; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-2, -3); ctx.lineTo(-2, 3); ctx.fill();
   ctx.restore();
 }
+var USE_NEW_KING = false, USE_FX_ART = false;   // painted king / effects kept on file but switched off
 // one cell of a 4-cell painted effect sheet, centred at (x, y)
 function fxCell(name, i, x, y, size, rot) {
   const im = IMG[name], cw = im.naturalWidth / 4, ch = im.naturalHeight;
@@ -2087,7 +2088,8 @@ function drawFx(f) {
   if (f.type === 'fw') return drawFirework(f);
   const p = dproj(f.x, f.y), k = f.t / 0.5;
   if (f.rot === undefined) { f.rot = (Math.random() - 0.5) * 0.8; f.cell = [0, 1, 3][Math.floor(Math.random() * 3)]; }
-  // painted effects (fall back to the code-drawn ones below while loading)
+  // painted effects (switched off: the code-drawn ones read better)
+  if (USE_FX_ART) {
   if ((f.type === 'boom' || f.type === 'fire') && ready(IMG.fx_boom)) {
     const sz = dk * (f.type === 'boom' ? 3.2 : 1.7) * (f.size || 1) * (0.75 + k * 0.45);
     ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
@@ -2113,6 +2115,7 @@ function drawFx(f) {
     // red / chili splats use the painted chili splash
     const sz = dk * 1.4 * (f.size || 1) * (0.6 + k * 0.5);
     ctx.save(); ctx.globalAlpha = (1 - k) * 0.95; fxCell('fx_hits', 2, p.x, p.y - dk * 0.2, sz, f.rot); ctx.restore(); return;
+  }
   }
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k;
   if (f.type === 'frost') {
