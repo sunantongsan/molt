@@ -139,7 +139,7 @@ function buildWave(n) {
   const groups = 3 + Math.floor(n * 0.8);
   let t = 0;
   for (let g = 0; g < groups; g++) {
-    const side = Math.random() * Math.PI * 2;
+    const side = -Math.PI / 2 + (Math.random() - 0.5) * 1.7;   // cats only come from the top
     const size = 3 + Math.floor(n * 1.2 + Math.random() * 3);
     // from wave 3 some groups are ninja cats (fast), from wave 6 steel tank cats (tough)
     const r = Math.random();
@@ -148,15 +148,15 @@ function buildWave(n) {
     for (let i = 0; i < cnt; i++) q.push({ t: t + i * (kind === 'ninja' ? 0.22 : 0.35), a: side + (Math.random() - 0.5) * 0.7, hp: 2 + Math.floor(n / 2), boss: false, kind });
     t += Math.max(3.5, 8 - n * 0.3);
   }
-  if (n % 5 === 0) q.push({ t: t + 2, a: Math.random() * Math.PI * 2, hp: 60 + n * 18, boss: true });
+  if (n % 5 === 0) q.push({ t: t + 2, a: -Math.PI / 2 + (Math.random() - 0.5) * 0.8, hp: 60 + n * 18, boss: true });
   return q;
 }
 function spawnCatOrig(c) {
-  const rx = Math.max(W / 2 / dk + 1, RING + 4), ry = Math.max(RING + 4, Math.min(H * 0.55 / (dk * 0.62) + 1, RING + 7));
+  const rx = Math.max(W / 2 / dk + 1, RING + 4), ry = Math.max(RING + 4, Math.min(H * 0.55 / (dk * 0.62) + 1, RING + 5.5));
   const kind = c.kind || 'cat';
   const hp = kind === 'ninja' ? Math.max(1, Math.round(c.hp * 0.6)) : kind === 'tank' ? c.hp * 3 + 4 : c.hp;
   const v = c.boss ? 0.7 : kind === 'ninja' ? 1.8 + Math.random() * 0.5 : kind === 'tank' ? 0.55 + Math.random() * 0.15 : 0.9 + Math.random() * 0.5;
-  D.cats.push({ x: Math.cos(c.a) * rx, y: Math.sin(c.a) * ry, hp, max: hp, boss: c.boss, kind,
+  D.cats.push({ coward: !c.boss && Math.random() < 0.02, x: Math.cos(c.a) * rx, y: Math.sin(c.a) * ry, hp, max: hp, boss: c.boss, kind,
     v, st: 'walk', atk: 0, ph: Math.random() * 9, hitT: 0, slow: 0, stun: 0, burn: 0 });
   if (!c.boss && kind !== 'cat' && !D.seen[kind]) {
     D.seen[kind] = true;
@@ -192,6 +192,12 @@ function tdUpdate(dt) {
       const sdt = c.slow > 0 ? dt * (c.freeze ? 0 : 0.5) : dt;
       if (c.slow <= 0) c.freeze = false;
       const dist = Math.hypot(c.x, c.y), wall = wallFor(c);
+      if (c.st === 'flee') {
+        // run back out fast, then turn around and come again
+        c.fleeT += dt; c.x += c.x / dist * c.v * 3.2 * sdt; c.y += c.y / dist * c.v * 3.2 * sdt;
+        if (dist > RING + 6) { c.st = 'walk'; D.floats.push({ x: c.x, y: c.y + 0.6, t: 0, text: 'ลองใหม่...', color: '#fff' }); }
+        continue;
+      }
       if (c.st === 'walk') {
         if (dist <= RING + 0.5 && wall.hp > 0) { c.st = 'wall'; c.atk = 0; }
         else if (dist <= HOUSE_R + 0.5) { c.st = 'house'; c.atk = 0; }
@@ -309,7 +315,20 @@ function hurtCat(c, dmg, src) {
       for (let i = 0; i < 3; i++) D.parts.push({ x: c.x, y: c.y, h: 1.0, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 1.2, vh: 3 + Math.random() * 2, t: 0, life: 0.7, kind: 'star' });
     }
     const co = c.boss ? 150 : c.kind === 'tank' ? 6 + Math.floor(T.wave / 2) : (Math.random() < 0.7 ? 2 + Math.floor(T.wave / 2) : 0);
-    if (co) dropCoins(c.x, c.y, co);
+    if (co) {
+      save.coins += co; D.earned += co;
+      D.floats.push({ x: c.x, y: c.y - 0.6, t: 0, text: '+' + co + '🪙', color: '#ffd84a' });
+      const n = c.boss ? 14 : Math.min(4, 1 + Math.floor(co / 3));
+      for (let i = 0; i < n; i++) flyCoin(c.x, c.y, i * 0.05);
+    }
+    // a cowardly cat that sees a friend fall nearby turns tail and runs
+    if (!c.boss) for (const o of D.cats) {
+      if (o.hp > 0 && o.coward && !o.fled && o.st === 'walk' && Math.hypot(o.x - c.x, o.y - c.y) < 3.5 && Math.hypot(o.x, o.y) < RING + 2.2) {
+        o.st = 'flee'; o.fled = true; o.fleeT = 0;
+        D.floats.push({ x: o.x, y: o.y - 0.4, t: 0, text: 'เมี้ยวว!! 😱', color: '#ffe0f0' });
+        if (Math.random() < 0.5) SFX.play('catHurt');
+      }
+    }
     // the cat's pot helmet goes flying
     if (!c.boss) D.parts.push({ x: c.x, y: c.y, h: 1.0, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 2, vh: 5 + Math.random() * 2, t: 0, life: 0.9, kind: 'item', img: c.kind === 'tank' ? 'it_steamer' : c.kind === 'ninja' ? 'it_ladle' : 'it_pot', r: 0 });
   }
@@ -645,11 +664,10 @@ function openHouse() {
   info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • เป็ดยิง ${T.plats.length} ตัว • คลื่นถัดไป ${T.wave}`;
   body.appendChild(info);
   const fc = 50 * T.fence, bc = 60 * T.bomb;
-  const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = '🦆 <b>เป็ดหัวหน้า</b> (ลากนิ้วบนจอเพื่อเดิน เก็บเหรียญ และฟาดแมวด้วยทัพพี)'; body.appendChild(lh);
+  const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = '🦆 <b>เป็ดหัวหน้า</b> (ลากนิ้วบนจอเพื่อเดินไปวงกลมซื้อของ และฟาดแมวด้วยทัพพี)'; body.appendChild(lh);
   const la = 70 * T.lead.atk, ls = 60 * T.lead.spd, lm = 50 * T.lead.mag;
   body.appendChild(btn(`🥄 ทัพพี Lv.${T.lead.atk}${T.lead.atk >= 5 ? ' → กระทะ' : ''}`, `ฟาดแรง ${leadDmg().toFixed(1)} • 🪙${la}`, save.coins >= la, () => { save.coins -= la; T.lead.atk++; if (T.lead.atk === 5) toast('ได้กระทะ! ฟาดแรงขึ้น 🍳'); }));
   body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; }));
-  body.appendChild(btn(`🧲 ดูดเหรียญ Lv.${T.lead.mag}`, `ระยะ ${leadMag().toFixed(1)} • 🪙${lm}`, save.coins >= lm, () => { save.coins -= lm; T.lead.mag++; }));
   const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = `🏠 เสริมบ้าน (ทน ${houseMax()}): ไปยืนบนวงกลม 🏠 หน้าบ้าน`; body.appendChild(hh);
   body.appendChild(btn(`🪵 เสริมรั้ว Lv.${T.fence}`, `ทน ${wallMax()}${T.fence < 6 ? ` • Lv.${T.fence < 3 ? 3 : 6} เปลี่ยนรั้ว` : ""} • 🪙${fc}`, save.coins >= fc, () => { save.coins -= fc; T.fence++; for (const w of D.walls) { w.max = wallMax(); w.hp = Math.max(w.hp, Math.min(w.max, w.hp + 18)); } }));
   body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; }));
@@ -1003,7 +1021,7 @@ function drawCat(c) {
   let x = p.x + (c.hitT > 0 ? Math.sin(c.hitT * 120) * 3 : 0);
   const KC = ready(IMG.k_cat_walk) && ready(IMG.k_cat_act);
   if (c.hp <= 0 && !KC) { ctx.save(); ctx.translate(x, p.y); ctx.rotate((flip ? -1 : 1) * Math.min(1.4, (c.deadT || 0) * 5)); x = 0; }
-  const py = c.hp <= 0 && !KC ? 0 : p.y, atk = c.st !== 'walk' && c.hp > 0, k = c.atk / 0.9;
+  const py = c.hp <= 0 && !KC ? 0 : p.y, atk = c.st !== 'walk' && c.st !== 'flee' && c.hp > 0, k = c.atk / 0.9;
   if (KC) {
     if (c.hp <= 0) ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - (c.boss ? 1.6 : 0.25)) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
@@ -1058,17 +1076,18 @@ function drawCat(c) {
 }
 function drawKitchenCat(c, x, py, h, atk, kk, t) {
   // the kitchen cat sprites face RIGHT; cats on the right side walk left, so mirror those
-  const flip = c.x > 0, w = h * 0.76, dead = c.hp <= 0;
-  let img = 'k_cat_walk', fr = Math.floor(t * (c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
+  const flee = c.st === 'flee', flip = flee ? c.x < 0 : c.x > 0, w = h * 0.76, dead = c.hp <= 0;
+  let img = 'k_cat_walk', fr = Math.floor(t * (flee ? 16 : c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
   let swing = -1, view = 'side';
   // walking mostly up or down the screen: show the cat from the back or the front
   if (!dead && !atk && !(c.hitT > 0 || c.stun > 0)) {
     const sy = Math.abs(c.y) * 0.62, sx = Math.abs(c.x);
-    if (sy > sx * 1.1) { view = c.y > 0 ? 'back' : 'front'; img = view === 'back' ? 'k_cat_back' : 'k_cat_front'; if (!ready(IMG[img])) { img = 'k_cat_walk'; view = 'side'; } }
+    if (sy > sx * 1.1) { view = (c.y > 0) !== flee ? 'back' : 'front'; img = view === 'back' ? 'k_cat_back' : 'k_cat_front'; if (!ready(IMG[img])) { img = 'k_cat_walk'; view = 'side'; } }
   }
   if (dead) { img = 'k_cat_act'; fr = 3; bob = 0; }
   else if (atk) { const kb = c.boss ? c.atk / BOSS_PERIOD : kk; img = 'k_cat_act'; fr = kb < 0.55 ? 0 : 1; swing = fr; bob = 0; }
   else if (c.hitT > 0 || c.stun > 0) { img = 'k_cat_act'; fr = 2; bob = 0; }
+  if (flee && !dead) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', x + h * 0.3, py - h * 1.0 + Math.sin(t * 20) * 3); }
   if (view !== 'side') {
     // front / back views are symmetric: no mirroring, gear centred
     const fw = h * 0.7, tk = c.kind === 'tank', wpn = c.boss || tk ? 'it_pan' : c.kind === 'ninja' ? 'it_ladle' : 'it_spatula';
@@ -1252,7 +1271,7 @@ function drawLeader() {
   const lean = L.moving ? Math.sin(L.walkT * Math.PI / 2) * 0.06 : 0; ctx.rotate(lean);
   drawFrame(img, fr, 0, 0, h, false);
   drawItem('it_apron', w * 0.08, -h * 0.33, h * 0.42);
-  if (T.lead.atk + T.lead.spd + T.lead.mag >= 8) drawItem('it_chefhat', w * 0.02, -h * 0.98, h * 0.42);
+  if (T.lead.atk + T.lead.spd >= 7) drawItem('it_chefhat', w * 0.02, -h * 0.98, h * 0.42);
   // ladle (or frying pan once upgraded) in the front wing
   const big = T.lead.atk >= 5, sw = L.swingT > 0 ? (L.swingT > 0.18 ? -1.3 : 1.1) : 0.35 + Math.sin(L.walkT * 2) * 0.1;
   drawItem(big ? 'it_pan' : 'it_ladle', w * 0.42, -h * 0.5, h * (big ? 0.5 : 0.55), sw, false);
@@ -1286,7 +1305,7 @@ function drawTdHud() {
   if (D.banner > 0) {
     ctx.globalAlpha = Math.min(1, D.banner);
     ctx.font = '900 30px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(80,0,0,.75)';
-    const txt = D.bossBanner ? 'ราชาแมวมาแล้ว!! 👑' : 'แมวบุกรอบทิศ!';
+    const txt = D.bossBanner ? 'ราชาแมวมาแล้ว!! 👑' : 'แมวบุกมาแล้ว!';
     ctx.strokeText(txt, W / 2, H * 0.2); ctx.fillStyle = '#ff6a5a'; ctx.fillText(txt, W / 2, H * 0.2);
     ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
   }
