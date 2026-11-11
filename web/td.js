@@ -284,7 +284,7 @@ function tdUpdate(dt) {
   if (D.slowT > 0) { D.slowT -= dt; dt *= D.slowT > 0.25 ? 0.22 : 0.6; }
   D.t += dt; D.banner -= dt;
   for (const p of T.plats) { const o = shooter(p.slot); o.arrive = Math.max(0, o.arrive - dt); }
-  if (D.phase === 'wave' || D.phase === 'build') leadUpdate(dt);
+  if (D.phase === 'wave' || D.phase === 'build' || D.phase === 'victory') leadUpdate(dt);
   camFollow(dt);
   if (D.phase === 'wave') {
     while (D.queue.length && D.queue[0].t <= D.t - 1.2) spawnCat(D.queue.shift());
@@ -357,7 +357,7 @@ function tdUpdate(dt) {
           } else {
             D.houseHp -= c.boss ? 4 : c.kind === 'chief' ? 2 : 1; D.shake = Math.max(D.shake, 0.15); SFX.play('hit');
             D.floats.push({ x: c.x, y: c.y, t: 0, text: c.boss ? '-4❤️' : '-1❤️', color: '#ff7a6a' });
-            if (D.houseHp <= 0) endWave(false);
+            if (D.houseHp <= 0) startDefeat();
           }
         }
         if (c.atk >= period) c.atk = 0;
@@ -379,7 +379,7 @@ function tdUpdate(dt) {
         D.houseHp -= 1; D.shake = Math.max(D.shake, 0.2); SFX.play('hit');
         addFx(e.type === 'chili' ? 'fire' : 'dust', e.tx, e.ty, '#ff7a3a');
         D.floats.push({ x: e.tx, y: e.ty, t: 0, text: '-1❤️', color: '#ff7a6a' });
-        if (D.houseHp <= 0) { endWave(false); break; }
+        if (D.houseHp <= 0) { startDefeat(); break; }
       }
     }
     if (D.eshots) D.eshots = D.eshots.filter(e => !e.done);
@@ -505,13 +505,15 @@ function tdUpdate(dt) {
   D.hudPulse = Math.max(0, D.hudPulse - dt);
   for (const p of T.plats) { const o = shooter(p.slot); if (o.flash > 0) o.flash -= dt; }
   for (const f of D.fx) f.t += dt;
-  D.fx = D.fx.filter(f => f.t < 0.5);
+  D.fx = D.fx.filter(f => f.t < (f.life || 0.5));
   D.fx.forEach(f => { if ((f.type === 'dust' || f.type === 'shock') && f.t > 0.45) f.t = 0.5; });
   for (const f of D.floats) f.t += dt;
   D.floats = D.floats.filter(f => f.t < 1.1);
   for (const w of D.walls) w.hit = Math.max(0, w.hit - dt);
   D.shake = Math.max(0, D.shake - dt);
-  if (D.phase === 'wave' && !D.queue.length && !D.cats.some(c => c.hp > 0)) endWave(true);
+  if (D.phase === 'wave' && !D.queue.length && !D.cats.some(c => c.hp > 0)) startVictory();
+  if (D.phase === 'victory') victoryUpdate(dt);
+  if (D.phase === 'defeat') defeatUpdate(dt);
   if ((tdTick += dt) > 0.5) { tdTick = 0; renderTdHud(); }
 }
 let tdTick = 0;
@@ -680,6 +682,76 @@ function flyCoin(x, y, delay) {
   const el = $('tdCoins').getBoundingClientRect();
   D.coins.push({ sx: p.x + (Math.random() - 0.5) * 20, sy: p.y - dk * 0.8, tx: el.left + 4, ty: el.top + el.height / 2, t: -delay, dur: 0.75 + Math.random() * 0.2, wob: (Math.random() - 0.5) * 120 });
 }
+// ---------- end-of-wave show ----------
+function waveStars() { const r = D.houseHp / D.houseMax; return r >= 0.8 ? 3 : r >= 0.4 ? 2 : 1; }
+function startVictory() {
+  D.phase = 'victory'; D.vicT = 0; D.vicStars = waveStars(); D.vicShown = 0; D.fwT = 0;
+  D.shots = []; D.eshots = [];
+}
+function victoryUpdate(dt) {
+  // timeline: let the slow-mo / last kill play out, then cheer, fireworks and stars, then the result panel
+  const real = dt; D.vicT += real;
+  const T0 = D.slowT > 0 ? 99 : 0;   // wait while still in slow motion
+  if (D.slowT > 0) { D.vicT = Math.min(D.vicT, 0.3); return; }
+  if (D.vicT > 0.6 && !D.cheered) {
+    D.cheered = true; SFX.play('win'); D.banner = 3; D.bannerTxt = `ชนะแล้ว!! คลื่นที่ ${T.wave} 🎉`;
+    D.lead.happyT = 2.5;
+    for (let i = 0; i < 60; i++) confetti((Math.random() - 0.5) * 8, FENCE_Y - Math.random() * 6);
+  }
+  if (D.vicT > 0.6 && D.vicT < 3.4 && (D.fwT -= real) <= 0) {
+    D.fwT = 0.22 + Math.random() * 0.2;
+    D.fx.push({ type: 'fw', x: (Math.random() - 0.5) * 8, y: -3 - Math.random() * 9, t: 0, life: 1.1, color: ['#ffd84a', '#ff6a8a', '#6ad0ff', '#9bff7a', '#ffffff', '#c89bff'][Math.floor(Math.random() * 6)], size: 0.8 + Math.random() * 0.6 });
+    if (Math.random() < 0.6) SFX.play('poof');
+  }
+  for (let i = 1; i <= 3; i++) if (D.vicT > 1.2 + i * 0.4 && D.vicShown < i) { D.vicShown = i; SFX.play(i <= D.vicStars ? 'gateGood' : 'click'); D.shake = i <= D.vicStars ? 0.12 : 0; }
+  if (D.vicT > 4.2) { D.phase = 'wave'; D.cheered = false; endWave(true); }
+}
+function startDefeat() {
+  if (D.phase !== 'wave') return;
+  D.phase = 'defeat'; D.defT = 0; D.shake = 0.6; SFX.play('crack');
+  D.banner = 2.5; D.bannerTxt = 'บ้านพังแล้ว!! 😿';
+}
+function defeatUpdate(dt) {
+  D.defT += dt;
+  if (Math.random() < dt * 14) addFx('dust', (Math.random() - 0.5) * 2.4, HOUSE_Y - 1 - Math.random(), '#9a9080');
+  // the cats dance around
+  for (const c of D.cats) if (c.hp > 0) { c.hitT = 0; c.dance = (c.dance || 0) + dt; }
+  if (D.defT > 2) { D.phase = 'wave'; endWave(false); }
+}
+function drawFirework(f) {
+  const p = dproj(f.x, f.y), k = f.t / f.life, r = dk * 2.2 * f.size * Math.sqrt(k), n = 18;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  if (k < 0.15) { ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, dk * 0.3 * (1 - k / 0.15), 0, Math.PI * 2); ctx.fill(); }
+  ctx.globalAlpha = Math.max(0, 1 - k);
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r * 0.85 + k * k * dk * 1.2;
+    ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(x, y, 2.6 * (1 - k * 0.5), 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = f.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(p.x + Math.cos(a) * r * 0.75, p.y + Math.sin(a) * r * 0.64 + k * k * dk); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawVictoryStars() {
+  if (D.phase !== 'victory' || !D.vicShown) return;
+  const cx = W / 2, cy = H * 0.38, gap = 74;
+  ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 1; i <= 3; i++) {
+    if (D.vicShown < i) continue;
+    const age = D.vicT - (1.2 + i * 0.4), pop = age < 0.25 ? 0.4 + age / 0.25 * 0.9 : Math.max(1, 1.3 - (age - 0.25) * 1.2);
+    const x = cx + (i - 2) * gap, y = cy + (i === 2 ? -14 : 0), on = i <= D.vicStars;
+    ctx.save(); ctx.translate(x, y); ctx.scale(pop, pop); ctx.rotate((i - 2) * 0.15);
+    if (on) { const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 46); g.addColorStop(0, 'rgba(255,230,120,.7)'); g.addColorStop(1, 'rgba(255,230,120,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 46, 0, Math.PI * 2); ctx.fill(); }
+    ctx.font = `${on ? 56 : 48}px system-ui`; ctx.globalAlpha = on ? 1 : 0.45; ctx.fillText(on ? '⭐' : '☆', 0, 0);
+    ctx.restore();
+  }
+  if (D.vicShown >= 3) {
+    ctx.font = '900 18px system-ui,sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
+    const tx = `ล้มแมว ${D.killed} ตัว • 🪙 +${Math.floor(D.earned)}`;
+    ctx.strokeText(tx, cx, cy + 56); ctx.fillStyle = '#fff'; ctx.fillText(tx, cx, cy + 56);
+    ctx.font = '700 12px system-ui,sans-serif'; ctx.globalAlpha = 0.8 + Math.sin(performance.now() / 200) * 0.2;
+    ctx.strokeText('แตะเพื่อไปต่อ', cx, cy + 82); ctx.fillText('แตะเพื่อไปต่อ', cx, cy + 82);
+  }
+  ctx.restore();
+}
 function endWave(won) {
   if (D.phase !== 'wave') return;
   if (!won) {
@@ -695,7 +767,7 @@ function endWave(won) {
   collectAll();
   if (won) {
     for (let i = 0; i < 50; i++) confetti((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
-    const bonus = 40 + T.wave * 15;
+    const st = D.vicStars || 3, bonus = Math.round((40 + T.wave * 15) * (0.6 + st * 0.2));
     save.coins += bonus; D.earned += bonus;
     SFX.play('win');
     showWaveResult(true, bonus);
@@ -711,7 +783,7 @@ function endWave(won) {
 }
 function showWaveResult(won, bonus) {
   const earned = D.earned;
-  $('rTitle').textContent = won ? `ผ่านคลื่นที่ ${T.wave}! 🛡️` : 'บ้านพัง! 😿';
+  $('rTitle').textContent = won ? `ผ่านคลื่นที่ ${T.wave}! ${'⭐'.repeat(D.vicStars || 3)}` : 'บ้านพัง! 😿';
   $('rTitle').style.color = won ? '#ffd84a' : '#ff7a7a';
   $('rInfo').textContent = won ? `ล้มแมว ${D.killed} ตัว • โบนัส 🪙${bonus}` : `ล้มแมวได้ ${D.killed} ตัว • ยังเหลือแมวอีก ${D.cats.filter(c => c.hp > 0).length + D.queue.length} ตัว`;
   $('rCoins').textContent = earned;
@@ -744,7 +816,7 @@ function revive() {
   // knock every cat back out past the fence
   for (const c of D.cats) {
     if (c.hp <= 0) continue;
-    c.y = Math.min(c.y, FENCE_Y - 3); c.st = 'walk'; c.atk = 0;
+    c.y = Math.min(c.y, FENCE_Y - 3); c.st = 'walk'; c.atk = 0; c.dance = 0;
   }
   addFx('shock', 0, FENCE_Y, '#bfe6ff'); addFx('shock2', 0, FENCE_Y, '#ffffff'); D.shake = 0.3;
   hide('result'); show('tdUi'); state = 'td';
@@ -777,6 +849,8 @@ function joyEnd(e) {
 cv.addEventListener('pointerup', joyEnd);
 cv.addEventListener('pointercancel', joyEnd);
 function tapField(cx, cy) {
+  if (D.phase === 'victory') { if (D.vicT > 1.5 && D.slowT <= 0) { D.vicT = 99; } return; }
+  if (D.phase === 'defeat') return;
   const p = dinv(cx, cy);
   // platforms (drawn raised, so test a little above the ground point too)
   for (let s = 0; s < SLOTS; s++) {
@@ -1228,7 +1302,8 @@ function drawPlatform(s) {
     // kitchen duck: wind up, throw, then idle; holds its weapon; dresses up with the platform tier
     const tr2 = tierOf(pl.lvl), fw = h * 0.75;
     ctx.save(); ctx.translate(p.x, dy); if (flip) ctx.scale(-1, 1);
-    if (o.shootT > 0) drawFrame('k_duck_act', o.shootT > 0.15 ? 0 : 1, 0, 0, h, false);
+    if (D.phase === 'victory' && D.cheered) { const hp2 = Math.abs(Math.sin(performance.now() / 160 + s)) * h * 0.25; drawFrame('k_duck_act', 3, 0, -hp2, h, false); }
+    else if (o.shootT > 0) drawFrame('k_duck_act', o.shootT > 0.15 ? 0 : 1, 0, 0, h, false);
     else drawFrame('k_duck_walk', 1, 0, Math.sin(performance.now() / 300 + s) * 1.5, h, false);
     if (tr2 >= 1) drawItem('it_apron', fw * 0.08, -h * 0.33, h * 0.4);
     if (tr2 >= 2) drawItem('it_chefhat', fw * 0.02, -h * 0.98, h * (tr2 >= 3 ? 0.48 : 0.4));
@@ -1406,7 +1481,8 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
     // front / back views are symmetric: no mirroring, gear centred
     const fw = h * 0.7, tk = c.kind === 'tank', wpn = G.wpn;
     const ws = h * (cb ? 0.55 : tk ? 0.5 : 0.45), sw = Math.sin(t * 7) * 0.12;
-    ctx.save(); ctx.translate(x, py - bob + lunge);
+    if (c.dance) bob += Math.abs(Math.sin(c.dance * 10 + c.ph)) * h * 0.15;
+  ctx.save(); ctx.translate(x, py - bob + lunge);
     if (lunge < 0) ctx.scale(1, 1 + lunge / h * 0.6); else if (lunge > 0) ctx.scale(1 + lunge / h * 0.5, 1 - lunge / h * 0.4);
     if (view === 'back') drawItem(wpn, -fw * 0.48, -h * 0.5, ws, -0.4 + sw);       // weapon peeks out at the side
     drawFrame(img, fr, 0, 0, h, false);
@@ -1566,6 +1642,7 @@ function drawShot(s) {
   ctx.restore();
 }
 function drawFx(f) {
+  if (f.type === 'fw') return drawFirework(f);
   const p = dproj(f.x, f.y), k = f.t / 0.5;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k;
   if (f.type === 'frost') {
@@ -1694,6 +1771,7 @@ function drawLeader() {
   ctx.restore();
 }
 function drawTdHud() {
+  drawVictoryStars();
   if (D.flashT > 0) { D.flashT -= 1 / 60; ctx.fillStyle = `rgba(255,250,220,${Math.max(0, D.flashT) * 1.6})`; ctx.fillRect(0, 0, W, H); }
   if (D.slowT > 0) { const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(40,20,0,.35)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
   if (D.joy && D.joy.moved) {
