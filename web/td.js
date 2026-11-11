@@ -29,7 +29,6 @@ const WEAPONS = [
   { id: 'triple', name: 'ตะเกียบทั้งกำ', icon: '🥢', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, cost: 500 },
   { id: 'egg',    name: 'ไข่ดาวแฟลช',   icon: '🥚', dmg: 1.2, rate: 0.55, range: 7, speed: 9, splash: 1.5, arc: true, cost: 550 },
   { id: 'coffee', name: 'เป็ดชงกาแฟ',   icon: '☕', dmg: 0, rate: 0, range: 0, speed: 1, support: true, cost: 600 },
-  { id: 'camp',   name: 'ค่ายเป็ดทหาร', icon: '🪖', dmg: 1.2, rate: 0, range: 0, speed: 1, support: true, camp: true, cost: 700 },
   { id: 'storm',  name: 'ตะกร้อไฟฟ้า', icon: '⚡', dmg: 2.2, rate: 0.9,  range: 7.5, speed: 22, chain: 2, cost: 650 },
   { id: 'pan',    name: 'กระทะบูมเมอแรง', icon: '🍳', dmg: 2.4, rate: 0.7, range: 7, speed: 9, pierce: true, cost: 750 },
   { id: 'cannon', name: 'หม้อหุงข้าว', icon: '🍙', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, cost: 800 },
@@ -75,7 +74,6 @@ const PERKS = {
   stove:  ['ไฟกว้างเป็นกรวย 3 สาย', 'ไฟสีฟ้า ร้อนกว่า x1.5'],
   fish:   ['แอ่งใหญ่ขึ้น อยู่นานขึ้น', 'กลิ่นแรง! แมวในแอ่งเดินช้า'],
   roller: ['ไม้ใหญ่ขึ้น กวาดกว้าง', 'กลิ้งทีละ 2 อัน'],
-  camp:   ['เป็ดทหาร 3 ตัว', 'เป็ดทหาร 4 ตัว ถือกระทะ'],
 };
 function perkLv(p) { return p.lvl >= 10 ? 2 : p.lvl >= 5 ? 1 : 0; }
 WEAPON.bomb = { speed: 1, range: 0 };
@@ -95,12 +93,17 @@ const T = save.td;
 if (!T.lead) T.lead = { atk: 1, spd: 1, mag: 1 };
 if (!T.pads) T.pads = {};
 if (T.traps === undefined) T.traps = 2;
+if (!T.camps) T.camps = [null, null];
 const LEAD_R = RING + 2.2;
 function leadSpeed() { return 3.2 + (T.lead.spd - 1) * 0.35; }
 function leadMag() { return 0.9 + (T.lead.mag - 1) * 0.35; }
 function leadDmg() { return 1 + (T.lead.atk - 1) * 0.8; }
 function platAt(s) { return T.plats.find(p => p.slot === s); }
 function platPos(s) { return { x: SLOT_X[s] || 0, y: PLAT_Y }; }
+// two tent spots for the duck soldiers, on the open floor either side of the house
+const CAMP_POS = [{ x: -2.55, y: HOUSE_Y - 1.05 }, { x: 2.55, y: HOUSE_Y - 1.05 }];
+for (const p of T.plats.filter(p => p.w === 'camp')) { const i = T.camps.findIndex(c => !c); if (i >= 0) T.camps[i] = { lvl: p.lvl }; }
+T.plats = T.plats.filter(p => p.w !== 'camp');
 // old saves had 8 ring slots: keep the best platforms and give them the new row slots
 if (T.plats.some(p => p.slot >= SLOTS) || T.plats.length > SLOTS) {
   T.plats.sort((a, b) => b.lvl - a.lvl); T.plats = T.plats.slice(0, SLOTS); T.plats.forEach((p, i) => p.slot = i); T.pads = {};
@@ -524,7 +527,6 @@ function tdUpdate(dt) {
             D.shots.push({ x: tx, y: ty, sx: tx, sy: ty, tx, ty, w: 'bow', dmg: wDmg(p) * 0.9, t: -i * 0.06, dur: 0.5, rain: true, tier }); }
         }
       }
-      if (W0.camp) continue;
       if (W0.support) {
         // coffee duck: brews for the neighbours; at Lv.10 also splashes hot coffee now and then
         if (perkLv(p) >= 2 && o.cd <= 0) { const t2 = nearestCat(pos.x, pos.y, 9); if (t2) { o.cd = 2; o.shootT = 0.3; o.aimDx = t2.x - pos.x; o.aimDy = t2.y - pos.y;
@@ -731,12 +733,12 @@ function trapNear(x, y, r) {
 }
 function troopNear(x, y, r) {
   let best = null, bd = r;
-  for (const t of D.troops || []) { if (t.hp <= 0 || t.out < 1) continue; const d = Math.hypot(t.x - x, t.y - y); if (d < bd) { bd = d; best = t; } }
+  for (const t of D.troops || []) { if (t.hp <= 0 || t.st !== 'fight') continue; const d = Math.hypot(t.x - x, t.y - y); if (d < bd) { bd = d; best = t; } }
   return best;
 }
 function pitchSkewer(c) {
   // aim at a duck soldier outside if there is one, otherwise at a duck archer on its platform
-  const outside = (D.troops || []).filter(t => t.hp > 0 && t.out >= 1);
+  const outside = (D.troops || []).filter(t => t.hp > 0 && t.st === 'fight');
   if (outside.length && Math.random() < 0.6) { const t = outside[Math.floor(Math.random() * outside.length)]; D.eshots.push({ type: 'skewer', troop: t, sx: c.x, sy: c.y, tx: t.x, ty: t.y, t: 0, dur: 0.7 }); }
   else if (T.plats.length) { const p = T.plats[Math.floor(Math.random() * T.plats.length)], q = platPos(p.slot); D.eshots.push({ type: 'skewer', slot: p.slot, sx: c.x, sy: c.y, tx: q.x, ty: q.y, t: 0, dur: 0.9 }); }
   else return;
@@ -763,59 +765,110 @@ function trapUpdate(dt) {
   }
   D.traps = D.traps.filter(t => !t.done);
 }
-// duck soldiers: hop over the fence from their camp, brawl with cats, roll home when beaten
+// duck soldiers: march from their tent to the fence, hop over, then fight cats up close
 function troopUpdate(dt) {
-  for (const p of T.plats) {
-    if (p.w !== 'camp') continue;
-    const want = 2 + perkLv(p), mine = D.troops.filter(t => t.slot === p.slot);
-    if (mine.length < want && (D.campT[p.slot] = (D.campT[p.slot] || 0) - dt) <= 0) {
-      D.campT[p.slot] = 1.2; const q = platPos(p.slot);
-      D.troops.push({ slot: p.slot, x: q.x + (Math.random() - 0.5) * 0.6, y: q.y, hp: 5 + p.lvl * 1.5, max: 5 + p.lvl * 1.5, dmg: 1 + p.lvl * 0.45, lvl: p.lvl, out: 0, atkT: 0, walkT: 0, hitT: 0, face: 1, swing: 0 });
+  T.camps.forEach((cm, i) => {
+    if (!cm) return;
+    const want = 2 + (cm.lvl >= 5 ? 1 : 0) + (cm.lvl >= 10 ? 1 : 0), mine = D.troops.filter(t => t.camp === i);
+    if (mine.length < want && (D.campT[i] = (D.campT[i] || 0) - dt) <= 0) {
+      D.campT[i] = 1.2; const cp = CAMP_POS[i];
+      D.troops.push({ camp: i, x: cp.x + (Math.random() - 0.5) * 0.5, y: cp.y + 0.2, hp: 5 + cm.lvl * 1.6, max: 5 + cm.lvl * 1.6, dmg: 1 + cm.lvl * 0.45, lvl: cm.lvl,
+        st: 'march', gx: Math.max(-FIELD_X + 0.6, Math.min(FIELD_X - 0.6, cp.x * 0.8 + (Math.random() - 0.5) * 2)), hop: 0, atkT: 0.3, ph: 0, walkT: 0, hitT: 0, face: 1, lunge: 0 });
       SFX.play('quack');
     }
-  }
+  });
   for (const t of D.troops) {
-    t.hitT = Math.max(0, t.hitT - dt); t.swing = Math.max(0, t.swing - dt);
-    if (t.hp <= 0) {
-      // beaten: roll back home, then rest before going out again
-      t.down = (t.down || 0) + dt; const q = platPos(t.slot);
-      t.x += (q.x - t.x) * Math.min(1, dt * 1.5); t.y += (q.y - t.y) * Math.min(1, dt * 1.5);
-      if (t.down > 4) t.gone = true;
+    t.hitT = Math.max(0, t.hitT - dt);
+    if (t.hp <= 0 && t.st !== 'down') { t.st = 'down'; t.down = 0; SFX.play('quack'); }
+    if (t.st === 'down') {
+      // beaten: tumble back to the tent, rest, then come out again
+      t.down += dt; const cp = CAMP_POS[t.camp];
+      if (t.y < FENCE_Y + 0.4) { t.y += dt * 3; t.hopLift = Math.sin(Math.min(1, (t.y - (FENCE_Y - 0.9)) / 1.3) * Math.PI) * 1.2; }
+      else { t.hopLift = 0; t.x += (cp.x - t.x) * Math.min(1, dt * 2); t.y += (cp.y + 0.2 - t.y) * Math.min(1, dt * 2); }
+      if (t.down > 4.5) t.gone = true;
       continue;
     }
-    if (t.out < 1) { t.out = Math.min(1, t.out + dt * 1.4); const q = platPos(t.slot); t.y = q.y + (FENCE_Y - 0.9 - q.y) * t.out; continue; }   // hop over the fence
-    // go for pitchers first, then the nearest cat in front of the fence
-    let target = null, bd = 6;
-    for (const c of D.cats) { if (c.hp <= 0 || c.y > FENCE_Y + 0.3 || c.kind === 'cart' && Math.random() < 0) continue; const d = Math.hypot(c.x - t.x, c.y - t.y) - (c.kind === 'pitcher' ? 2 : 0); if (d < bd) { bd = d; target = c; } }
+    if (t.st === 'march') {
+      // walk up the kitchen floor to the fence
+      const ty = FENCE_Y + 0.75, dx = t.gx - t.x, dy = ty - t.y, d = Math.hypot(dx, dy);
+      if (d > 0.1) { t.x += dx / d * 2.6 * dt; t.y += dy / d * 2.6 * dt; t.walkT += dt * 9; t.face = dx >= 0 ? 1 : -1; }
+      else { t.st = 'hop'; t.hop = 0; SFX.play('shoot'); }
+      continue;
+    }
+    if (t.st === 'hop') {
+      t.hop = Math.min(1, t.hop + dt * 1.6);
+      t.y = FENCE_Y + 0.75 + (FENCE_Y - 0.9 - (FENCE_Y + 0.75)) * t.hop; t.hopLift = Math.sin(t.hop * Math.PI) * 1.5;
+      if (t.hop >= 1) { t.st = 'fight'; t.hopLift = 0; addFx('dust', t.x, t.y, '#d9c49a'); }
+      continue;
+    }
+    // fight: pitchers first, then the nearest cat on the lawn
+    let target = null, bd = 7;
+    for (const c of D.cats) { if (c.hp <= 0 || c.y > FENCE_Y + 0.2) continue; const d = Math.hypot(c.x - t.x, c.y - t.y) - (c.kind === 'pitcher' ? 2.5 : 0); if (d < bd) { bd = d; target = c; } }
+    t.lunge = Math.max(0, t.lunge - dt * 4);
     if (target) {
-      const dx = target.x - t.x, dy = target.y - t.y, d = Math.hypot(dx, dy);
-      t.face = dx >= 0 ? 1 : -1;
-      if (d > 0.6) { t.x += dx / d * 2.3 * dt; t.y += dy / d * 2.3 * dt; t.walkT += dt * 8; }
-      else if ((t.atkT -= dt) <= 0) { t.atkT = 0.6; t.swing = 0.3; hurtCat(target, t.dmg, 'lead'); SFX.play('bonk'); }
+      // stand just below the cat (between it and the fence), slightly to one side
+      const side = t.x <= target.x ? -1 : 1, sx = target.x + side * 0.25, sy = target.y + 0.55;
+      const dx = sx - t.x, dy = sy - t.y, d = Math.hypot(dx, dy);
+      t.face = target.x >= t.x ? 1 : -1;
+      if (d > 0.12 && t.ph === 0) { const sp = Math.min(d, 2.4 * dt); t.x += dx / d * sp; t.y += dy / d * sp; t.walkT += dt * 9; }
+      // attack cycle: wind up -> lunge & smack -> recover
+      if (d < 0.5) {
+        t.atkT -= dt;
+        if (t.ph === 0 && t.atkT <= 0) { t.ph = 1; t.atkT = 0.22; }                          // wind up
+        else if (t.ph === 1 && t.atkT <= 0) {                                                 // smack
+          t.ph = 2; t.atkT = 0.14; t.lunge = 1;
+          hurtCat(target, t.dmg, 'lead'); SFX.play('bonk');
+          if (!target.boss && target.kind !== 'steel' && target.kind !== 'cart') target.y -= 0.12;
+          addFx('spark', target.x, target.y, '#ffffff', 1.1);
+        } else if (t.ph === 2 && t.atkT <= 0) { t.ph = 0; t.atkT = 0.35 + Math.random() * 0.15; }   // recover
+      } else if (t.ph !== 0 && t.atkT <= 0) t.ph = 0;
     } else {
-      // idle guard spot just outside the fence
-      const gx = platPos(t.slot).x, gy = FENCE_Y - 1.2, d = Math.hypot(gx - t.x, gy - t.y);
-      if (d > 0.2) { t.x += (gx - t.x) / d * 1.5 * dt; t.y += (gy - t.y) / d * 1.5 * dt; t.walkT += dt * 6; }
+      t.ph = 0;
+      // guard spot on the lawn just outside the fence
+      const gx = t.gx, gy = FENCE_Y - 1.3, d = Math.hypot(gx - t.x, gy - t.y);
+      if (d > 0.2) { t.x += (gx - t.x) / d * 1.6 * dt; t.y += (gy - t.y) / d * 1.6 * dt; t.walkT += dt * 7; }
     }
     t.y = Math.min(t.y, FENCE_Y - 0.5);
+  }
+  // keep soldiers from standing inside each other
+  for (let i = 0; i < D.troops.length; i++) for (let j = i + 1; j < D.troops.length; j++) {
+    const a = D.troops[i], b2 = D.troops[j]; if (a.st !== 'fight' || b2.st !== 'fight') continue;
+    const dx = b2.x - a.x, dy = b2.y - a.y, d = Math.hypot(dx, dy) || 0.01;
+    if (d < 0.45) { const k = (0.45 - d) / 2; a.x -= dx / d * k; a.y -= dy / d * k; b2.x += dx / d * k; b2.y += dy / d * k; }
   }
   D.troops = D.troops.filter(t => !t.gone);
 }
 function drawTroop(t) {
-  const p = dproj(t.x, t.y), h = dk * 0.85, w = h * 0.75, lift = t.out < 1 ? Math.sin(t.out * Math.PI) * dk * 1.4 : 0;
+  const p = dproj(t.x, t.y), h = dk * 0.85, w = h * 0.75, lift = (t.hopLift || 0) * dk;
   ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.25, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.save(); ctx.translate(p.x + (t.hitT > 0 ? Math.sin(t.hitT * 90) * 2 : 0), p.y - lift);
-  if (t.hp <= 0) { ctx.rotate((t.down || 0) * 10); ctx.globalAlpha = 0.85; }
+  const lx = t.lunge * h * 0.22 * t.face, ly = -t.lunge * h * 0.12;     // lean into the hit
+  ctx.save(); ctx.translate(p.x + lx + (t.hitT > 0 ? Math.sin(t.hitT * 90) * 2 : 0), p.y - lift + ly);
+  if (t.st === 'down') { ctx.rotate(t.down * 9); ctx.globalAlpha = 0.9; }
   if (t.face < 0) ctx.scale(-1, 1);
-  if (t.hp <= 0) drawFrame('k_duck_act', 2, 0, h * 0.5, h, false);
-  else if (t.swing > 0) drawFrame('k_duck_act', t.swing > 0.15 ? 0 : 1, 0, 0, h, false);
-  else drawFrame('k_duck_walk', Math.floor(t.walkT) % 4, 0, 0, h, false);
-  if (t.hp > 0) {
-    drawItem('it_pot', w * 0.04, -h * 0.95, h * 0.42, 0.1);                       // pot helmet
-    drawItem(t.lvl >= 10 ? 'it_pan' : 'it_ladle', w * 0.42, -h * 0.5, h * 0.5, t.swing > 0 ? (t.swing > 0.15 ? -1.2 : 1.1) : 0.35);
+  const weapon = t.lvl >= 10 ? 'it_pan' : 'it_ladle';
+  if (t.st === 'down') { drawFrame('k_duck_act', 2, 0, h * 0.5, h, false); ctx.restore(); return; }
+  if (t.ph === 1) {
+    ctx.rotate(-0.12);                                                     // lean back, weapon high behind the head
+    drawItem(weapon, -w * 0.2, -h * 1.0, h * 0.55, -0.9);
+    drawFrame('k_duck_act', 0, 0, 0, h, false);
+  } else if (t.ph === 2) {
+    ctx.rotate(0.15);
+    drawFrame('k_duck_act', 1, 0, 0, h, false);
+    drawItem(weapon, w * 0.6, -h * 0.55, h * 0.55, 1.6);                   // weapon swung down onto the cat
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(w * 0.1, -h * 0.7, h * 0.6, -1.4, 0.4); ctx.stroke();
+  } else {
+    const moving = t.st !== 'fight' || t.walkT % 4 !== 0;
+    drawFrame('k_duck_walk', moving ? Math.floor(t.walkT) % 4 : 1, 0, 0, h, false);
+    drawItem(weapon, w * 0.42, -h * 0.55, h * 0.5, 0.5);
   }
+  drawItem('it_pot', w * 0.04, -h * 0.95, h * 0.42, 0.1);                 // pot helmet
   ctx.restore();
-  if (t.hp > 0 && t.hp < t.max) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(p.x - 12, p.y - h * 1.1, 24, 3); ctx.fillStyle = '#5fe06a'; ctx.fillRect(p.x - 12, p.y - h * 1.1, 24 * t.hp / t.max, 3); }
+  if (t.hp > 0 && t.hp < t.max) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(p.x - 12, p.y - h * 1.15, 24, 3); ctx.fillStyle = '#5fe06a'; ctx.fillRect(p.x - 12, p.y - h * 1.15, 24 * t.hp / t.max, 3); }
+}
+function drawCamp(i) {
+  const cm = T.camps[i]; if (!cm) return;
+  const cp = CAMP_POS[i], p = dproj(cp.x, cp.y), sz = dk * (1.45 + Math.min(3, Math.floor(cm.lvl / 4)) * 0.12);
+  if (!drawItem('it_tent', p.x, p.y - sz * 0.38, sz)) { ctx.font = `${sz * 0.6}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('⛺', p.x, p.y); }
 }
 function drawTrap(tr) {
   const p = dproj(tr.x, tr.y), k = tr.t / tr.fuse, sz = dk * 0.95 * (1 + Math.sin(tr.t * (6 + k * 20)) * 0.04 * k);
@@ -1121,7 +1174,12 @@ function padList() {
       if (after > before) { toast(`แท่นใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); const q = platPos(s); for (let i = 0; i < 30; i++) confetti(q.x, q.y); addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('win'); }
     } });
   }
-  L.push({ id: 'house', x: 1.75, y: HOUSE_Y - 0.1, icon: '🏠', label: `บ้าน Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
+  CAMP_POS.forEach((cp, i) => {
+    const cm = T.camps[i], x = cp.x, y = cp.y + 1.05;
+    if (!cm) L.push({ id: 'cb' + i, x, y, icon: '⛺', label: 'ค่ายเป็ดทหาร', cost: 500, apply: () => { T.camps[i] = { lvl: 1 }; toast('ตั้งค่ายแล้ว! เป็ดทหารพร้อมออกรบ 🪖'); SFX.play('quack'); } });
+    else if (cm.lvl < 10) L.push({ id: 'cu' + i, x, y, icon: '🪖', label: `ค่าย Lv.${cm.lvl + 1}`, cost: Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4), apply: () => { cm.lvl++; if (cm.lvl === 5 || cm.lvl === 10) toast(cm.lvl === 5 ? 'ค่ายได้เป็ดทหารเพิ่ม 1 ตัว!' : 'เป็ดทหารได้กระทะ + เพิ่มอีกตัว!'); } });
+  });
+  L.push({ id: 'house', x: 1.2, y: HOUSE_Y + 0.55, icon: '🏠', label: `บ้าน Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
   for (const w of D.walls) if (w.hp < w.max) {
     const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
     L.push({ id: 'w' + w.i, x: w.x, y: FENCE_Y + 0.85, icon: '🔧', label: 'ซ่อมรั้ว', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
@@ -1307,6 +1365,7 @@ function tdDraw() {
   for (const c of D.drops) list.push([c.y, () => drawDrop(c)]);
   for (const tr of D.traps || []) list.push([tr.y, () => drawTrap(tr)]);
   for (const tp of D.troops || []) list.push([tp.y, () => drawTroop(tp)]);
+  for (let i = 0; i < CAMP_POS.length; i++) list.push([CAMP_POS[i].y, () => drawCamp(i)]);
   list.push([D.lead.y, drawLeader]);
   for (const w of D.walls) list.push([FENCE_Y, () => drawFence(w)]);
   for (let s = 0; s < SLOTS; s++) { const q = platPos(s); list.push([q.y, () => drawPlatform(s)]); }
@@ -1496,12 +1555,6 @@ const PLAT_W = 1.55, PLAT_DECK = 0.30;   // platform sprite width (m) and deck c
 function drawPlatform(s) {
   const q = platPos(s), p = dproj(q.x, q.y), pl = platAt(s), k = dk;
   if (!pl) return;
-  if (pl.w === 'camp') {
-    const sz = k * (1.4 + tierOf(pl.lvl) * 0.12);
-    if (!drawItem('it_tent', p.x, p.y - sz * 0.4, sz)) { ctx.font = `${sz * 0.6}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('⛺', p.x, p.y); }
-    const o = shooter(s); o.topH = 1;
-    return;
-  }
   if (!pl) {
     ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(p.x, p.y, k * 0.6, k * 0.36, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
