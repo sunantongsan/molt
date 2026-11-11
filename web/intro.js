@@ -69,12 +69,12 @@ function introDraw() {
     ctx.fillStyle = `rgba(0,0,0,${Math.min(0.4, lt)})`; ctx.fillRect(0, 0, W, H);
     const p = Math.min(1, lt / 0.5), s = 0.4 + 0.6 * p + Math.sin(p * Math.PI) * 0.15;
     ctx.save(); ctx.translate(W / 2, H * 0.4); ctx.scale(s, s);
-    ctx.font = `900 ${Math.round(Math.min(W / 4.5, 96))}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${Math.round(Math.min(W / 4.5, 96))}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 14; ctx.strokeStyle = '#7a3f00'; ctx.strokeText('MOLT', 0, 0);
     ctx.fillStyle = '#ffd84a'; ctx.fillText('MOLT', 0, 0);
-    ctx.font = `800 ${Math.round(Math.min(W / 17, 22))}px system-ui,sans-serif`; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,.7)';
+    ctx.font = `800 ${Math.round(Math.min(W / 17, 22))}px Mitr,system-ui,sans-serif`; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,.7)';
     ctx.strokeText('ปกป้องไข่ทองคำของ Serจ่อย!', 0, 70); ctx.fillStyle = '#fff'; ctx.fillText('ปกป้องไข่ทองคำของ Serจ่อย!', 0, 70);
-    if (lt > 1) { ctx.globalAlpha = 0.6 + 0.4 * Math.sin(lt * 5); ctx.font = '800 16px system-ui,sans-serif'; ctx.fillText('แตะเพื่อเริ่มเล่น', 0, 120); ctx.globalAlpha = 1; }
+    if (lt > 1) { ctx.globalAlpha = 0.6 + 0.4 * Math.sin(lt * 5); ctx.font = '800 16px Mitr,system-ui,sans-serif'; ctx.fillText('แตะเพื่อเริ่มเล่น', 0, 120); ctx.globalAlpha = 1; }
     ctx.restore(); ctx.textBaseline = 'alphabetic';
   }
   // progress bar
@@ -84,7 +84,7 @@ function introDraw() {
 }
 function caption(text, a) {
   const fs = Math.round(Math.min(W / 17, 24));
-  ctx.font = `800 ${fs}px system-ui,sans-serif`;
+  ctx.font = `800 ${fs}px Mitr,system-ui,sans-serif`;
   const lines = text.split('\n'), bw = Math.min(W - 32, Math.max(...lines.map(l => ctx.measureText(l).width)) + 36), bh = lines.length * fs * 1.45 + 22;
   const bx = W / 2 - bw / 2, by = H * 0.07;
   ctx.globalAlpha = a;
@@ -114,16 +114,16 @@ function drawEgg(x, y, r, t) {
 function bubble(text, x, y, a, who, red) {
   if (a <= 0) return;
   const fs = Math.round(Math.min(W / 17, 23));
-  ctx.font = `800 ${fs}px system-ui,sans-serif`;
+  ctx.font = `800 ${fs}px Mitr,system-ui,sans-serif`;
   const lines = text.split('\n'), bw = Math.min(W - 30, Math.max(...lines.map(l => ctx.measureText(l).width)) + 40), bh = lines.length * fs * 1.4 + 40;
   ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(0.85 + 0.15 * a, 0.85 + 0.15 * a);
   ctx.fillStyle = red ? '#ffe9e4' : '#ffffff'; ctx.strokeStyle = red ? '#9a1d10' : '#2b2216'; ctx.lineWidth = 3;
   roundRect(-bw / 2, 0, bw, bh, 18); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(-12, bh - 1); ctx.lineTo(0, bh + 18); ctx.lineTo(12, bh - 1); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(-12, bh); ctx.lineTo(0, bh + 18); ctx.lineTo(12, bh); ctx.stroke();
-  ctx.font = `900 ${Math.round(fs * 0.7)}px system-ui,sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.font = `900 ${Math.round(fs * 0.7)}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillStyle = red ? '#c22a2a' : '#c77d00'; ctx.fillText(who, -bw / 2 + 14, 8);
-  ctx.font = `800 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#2b2216';
+  ctx.font = `800 ${fs}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#2b2216';
   lines.forEach((l, i) => ctx.fillText(l, 0, 8 + fs * 0.9 + i * fs * 1.4));
   ctx.restore(); ctx.textBaseline = 'alphabetic';
 }

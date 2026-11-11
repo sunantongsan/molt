@@ -6,8 +6,13 @@
 <meta name="theme-color" content="#2b7fd6">
 <title>MOLT</title>
 <style>
+  @font-face{font-family:Mitr;font-weight:500;font-display:swap;src:url(fonts/mitr-thai-500-normal.woff2) format('woff2');unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+  @font-face{font-family:Mitr;font-weight:500;font-display:swap;src:url(fonts/mitr-latin-500-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+2000-206F,U+20AC}
+  @font-face{font-family:Mitr;font-weight:600 900;font-display:swap;src:url(fonts/mitr-thai-700-normal.woff2) format('woff2');unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+  @font-face{font-family:Mitr;font-weight:600 900;font-display:swap;src:url(fonts/mitr-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+2000-206F,U+20AC}
+
   html,body{margin:0;height:100%;background:#1d5fa8;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;
-    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Thai",Tahoma,sans-serif}
+    font-family:Mitr,system-ui,-apple-system,"Segoe UI","Noto Sans Thai",Tahoma,sans-serif}
   canvas{display:block;width:100vw;height:100vh;height:100dvh}
   .ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;gap:12px;overflow-y:auto;-webkit-overflow-scrolling:touch;
     background:linear-gradient(180deg,rgba(10,30,70,.55),rgba(10,30,70,.85));color:#fff;text-align:center;padding:62px 14px 24px;box-sizing:border-box}
@@ -31,18 +36,18 @@
   .big{font-size:56px;font-weight:900;color:#ffd84a}
   .lvls{display:flex;gap:8px;overflow-x:auto;width:100%;max-width:420px;padding:6px 4px 10px;box-sizing:border-box;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
   .lvls::-webkit-scrollbar{display:none}
-  .lvb{flex:0 0 52px;height:52px;scroll-snap-align:center;border-radius:14px;border:0;font:900 20px system-ui,sans-serif;color:#fff;background:#3f6fb5;box-shadow:0 4px 0 #23467d;cursor:pointer}
+  .lvb{flex:0 0 52px;height:52px;scroll-snap-align:center;border-radius:14px;border:0;font:900 20px Mitr,system-ui,sans-serif;color:#fff;background:#3f6fb5;box-shadow:0 4px 0 #23467d;cursor:pointer}
   .lvb.done{background:#2fa84a;box-shadow:0 4px 0 #1b6e2d}
   .lvb.sel{outline:3px solid #ffd84a;outline-offset:2px}
   .lvb.lock{background:#555d6b;box-shadow:0 4px 0 #383e48;opacity:.7}
   .lvb.siege{background:#8a3fb5;box-shadow:0 4px 0 #5a2378}
   .lvname{font-weight:900;font-size:18px;color:#bfe3ff;margin-top:-4px}
   #tdUi .hud{position:fixed;top:10px;left:58px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;z-index:4}
-  #tdUi .hud span{background:rgba(0,0,0,.5);color:#fff;border-radius:12px;padding:6px 9px;font:800 13px system-ui,sans-serif;white-space:nowrap}
+  #tdUi .hud span{background:rgba(0,0,0,.5);color:#fff;border-radius:12px;padding:6px 9px;font:800 13px Mitr,system-ui,sans-serif;white-space:nowrap}
   #tdUi .hud b{color:#ffd84a}
   #tdUi .raid{position:fixed;left:0;right:0;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4;pointer-events:none}
   #tdUi .raid .btn{pointer-events:auto;padding:12px 34px;font-size:22px;background:linear-gradient(#ff7a4a,#d8452a);box-shadow:0 6px 0 #8f2a17,0 10px 20px rgba(0,0,0,.35)}
-  #tdUi .rsub{color:#fff;font:700 12px system-ui,sans-serif;text-shadow:0 1px 3px #000}
+  #tdUi .rsub{color:#fff;font:700 12px Mitr,system-ui,sans-serif;text-shadow:0 1px 3px #000}
   #sheet{position:fixed;left:8px;right:8px;bottom:8px;max-height:58vh;overflow-y:auto;background:#fffaf0;border-radius:20px;padding:12px 12px 14px;z-index:6;box-shadow:0 -6px 24px rgba(0,0,0,.4);color:#2b2216}
   .shead{display:flex;justify-content:space-between;align-items:center;font-size:19px;margin-bottom:8px}
   .shead button{border:0;background:#e9dcc4;border-radius:10px;width:34px;height:34px;font-size:16px;cursor:pointer}
@@ -52,32 +57,32 @@
   .sbtn.off{background:#b8ad9a;box-shadow:0 4px 0 #8c8371}
   #tdUi .raid .btn.small{padding:8px 20px;font-size:15px;background:linear-gradient(#6d8fc9,#3f62a3);box-shadow:0 4px 0 #26406e}
   .roundbtn{position:fixed;left:12px;bottom:26px;z-index:5;width:66px;height:66px;border-radius:20px;border:0;background:linear-gradient(#ffd84a,#f0a400);box-shadow:0 5px 0 #a86a00,0 8px 16px rgba(0,0,0,.35);font-size:28px;line-height:1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:inherit}
-  .roundbtn small{font:800 11px system-ui,sans-serif;color:#5a3a00;margin-top:2px}
+  .roundbtn small{font:800 11px Mitr,system-ui,sans-serif;color:#5a3a00;margin-top:2px}
   .roundbtn.raidb{left:12px;bottom:104px;background:linear-gradient(#9fb6e8,#5a78c0);box-shadow:0 5px 0 #34508a,0 8px 16px rgba(0,0,0,.35)}
   .roundbtn.raidb small{color:#0e2350}
   .roundbtn.help{left:auto;right:12px;background:linear-gradient(#8fd0ff,#4a9be0);box-shadow:0 5px 0 #2b6aa8,0 8px 16px rgba(0,0,0,.35)}
   .roundbtn.help small{color:#0c3560}
   #tut{position:fixed;inset:0;z-index:30}
   #introUi{position:fixed;inset:0;z-index:25}
-  #introSkip{position:absolute;right:12px;top:12px;border:0;border-radius:14px;padding:9px 16px;background:rgba(0,0,0,.55);color:#fff;font:800 15px system-ui,sans-serif;cursor:pointer}
-  .introHint{position:absolute;left:0;right:0;bottom:54px;text-align:center;color:rgba(255,255,255,.85);font:700 13px system-ui,sans-serif;text-shadow:0 1px 3px #000}
+  #introSkip{position:absolute;right:12px;top:12px;border:0;border-radius:14px;padding:9px 16px;background:rgba(0,0,0,.55);color:#fff;font:800 15px Mitr,system-ui,sans-serif;cursor:pointer}
+  .introHint{position:absolute;left:0;right:0;bottom:54px;text-align:center;color:rgba(255,255,255,.85);font:700 13px Mitr,system-ui,sans-serif;text-shadow:0 1px 3px #000}
   #tutSpot{position:fixed;border-radius:50%;box-shadow:0 0 0 200vmax rgba(0,0,0,.62);transition:all .35s ease;pointer-events:none;border:3px solid #ffd84a}
   #tutHand{position:fixed;font-size:44px;pointer-events:none;animation:tap 1s ease-in-out infinite;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))}
   @keyframes tap{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-4px,-14px) scale(1.08)}}
-  #tutBox{position:fixed;left:16px;right:16px;background:#fffaf0;color:#2b2216;border-radius:20px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.45);font:700 17px/1.45 system-ui,sans-serif;white-space:pre-line}
+  #tutBox{position:fixed;left:16px;right:16px;background:#fffaf0;color:#2b2216;border-radius:20px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.45);font:700 17px/1.45 Mitr,system-ui,sans-serif;white-space:pre-line}
   .tutBtns{display:flex;justify-content:space-between;margin-top:12px}
-  .tutBtns button{border:0;border-radius:12px;padding:10px 18px;font:800 15px system-ui,sans-serif;cursor:pointer}
+  .tutBtns button{border:0;border-radius:12px;padding:10px 18px;font:800 15px Mitr,system-ui,sans-serif;cursor:pointer}
   #tutNext{background:#4fb35b;color:#fff;box-shadow:0 4px 0 #2d7a36}
   #tutSkip{background:#e9dcc4;color:#6b5a40}
   #tutDots{text-align:center;margin-top:8px;font-size:10px;letter-spacing:4px;color:#c9b48c}
-  #defHint{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:8px 14px;border-radius:12px;font:700 13px system-ui,sans-serif;white-space:nowrap;z-index:4;pointer-events:none}
+  #defHint{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:8px 14px;border-radius:12px;font:700 13px Mitr,system-ui,sans-serif;white-space:nowrap;z-index:4;pointer-events:none}
   .wrow{background:#f3e8d3;border-radius:14px;padding:8px 10px;margin:8px 0}
   .wname b{font-size:15px}.wname span{font-size:12px;color:#8a6a3a;margin-left:4px}.wname small{display:block;font-size:11px;color:#6b5a40;margin-top:2px}
   .wbtns{display:flex;gap:6px}.wbtns .sbtn{margin:6px 0 0;padding:8px 10px}
   .btn.ad{background:linear-gradient(#ffcf3a,#f59a00);box-shadow:0 6px 0 #a35f00,0 10px 20px rgba(0,0,0,.35);color:#4a2a00}
   .btn.ad small{display:block;font-size:13px;font-weight:800;opacity:.85}
   .btn.ghost{background:rgba(255,255,255,.15);box-shadow:none;font-size:16px;padding:10px 22px}
-  #toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 16px;border-radius:14px;font:700 14px system-ui,sans-serif;z-index:9;max-width:86vw;text-align:center}
+  #toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 16px;border-radius:14px;font:700 14px Mitr,system-ui,sans-serif;z-index:9;max-width:86vw;text-align:center}
   #mute{position:fixed;left:10px;top:10px;z-index:5;width:40px;height:40px;border-radius:12px;border:0;background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer}
 </style>
 </head>
@@ -283,6 +288,7 @@ const SFX = (() => {
     toggle() { muted = !muted; try { localStorage.setItem('molt_mute', muted ? '1' : '0'); } catch (e) {} return muted; } };
 })();
 window.addEventListener('pointerdown', () => SFX.init(), { capture: true });
+try { document.fonts.load('700 16px Mitr'); document.fonts.load('500 16px Mitr'); } catch (e) {}
 
 // ---------- Rewarded ads ----------
 // In the Android app the AndroidAds bridge shows a real AdMob rewarded ad; in a browser we
@@ -928,7 +934,7 @@ function drawCrowdBasic(cx, cz, n, color, dark, facing) {
 function label(x, z, text, bg, fg, scale) {
   const p = proj(x, z);
   const fs = Math.max(12, Math.min(34, p.s * 0.42 * (scale || 1)));
-  ctx.font = `900 ${fs}px system-ui,sans-serif`;
+  ctx.font = `900 ${fs}px Mitr,system-ui,sans-serif`;
   const w = ctx.measureText(text).width + fs * 0.8;
   ctx.fillStyle = bg;
   roundRect(p.x - w / 2, p.y - fs * 1.15, w, fs * 1.3, fs * 0.35); ctx.fill();
@@ -949,7 +955,7 @@ function box(x, z, w, d, h, top, front, text, fg) {
   ctx.fillStyle = front; ctx.fillRect(a.x, a.y - hh, b.x - a.x, hh);
   if (text) {
     const fs = Math.max(10, (b.x - a.x) * 0.38);
-    ctx.font = `900 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${fs}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = fs * 0.15; ctx.strokeStyle = 'rgba(0,0,0,.35)';
     ctx.strokeText(text, (a.x + b.x) / 2, a.y - hh / 2); ctx.fillStyle = fg || '#fff';
     ctx.fillText(text, (a.x + b.x) / 2, a.y - hh / 2);
@@ -976,7 +982,7 @@ function drawGate(o) {
     ctx.globalAlpha = 1;
     if (!o.used) {
       const fs = Math.max(12, (b.x - a.x) * 0.3);
-      ctx.font = `900 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `900 ${fs}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = fs * 0.14; ctx.strokeStyle = 'rgba(0,0,0,.35)';
       const txt = (g.op === '÷' ? '÷' : g.op) + g.v;
       ctx.strokeText(txt, (a.x + b.x) / 2, a.y - h / 2); ctx.fillStyle = '#fff'; ctx.fillText(txt, (a.x + b.x) / 2, a.y - h / 2);
@@ -1042,7 +1048,7 @@ function drawBoss(o) {
   const bw = Math.max(80, h * 0.9), by = p.y - h * 1.08;
   ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, by, bw, 12, 6); ctx.fill();
   ctx.fillStyle = '#ff4a3a'; roundRect(p.x - bw / 2 + 2, by + 2, (bw - 4) * Math.max(0, o.hp / o.max), 8, 4); ctx.fill();
-  ctx.font = '900 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#fff';
+  ctx.font = '900 13px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#fff';
   ctx.fillText('บอส ' + Math.max(0, Math.ceil(o.hp)), p.x, by - 2);
 }
 function drawCastle(o) {
@@ -1085,7 +1091,7 @@ function draw() {
       if (o.hitT > 0) p.x += Math.sin(o.hitT * 90) * p.s * 0.06;
       const h = drawAt(IMG.barrier, p.x, p.y + p.s * 0.1, w);
       const fs = Math.max(12, w * 0.17);
-      ctx.font = `900 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `900 ${fs}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = fs * 0.16; ctx.strokeStyle = 'rgba(60,30,0,.85)';
       const ty = p.y + p.s * 0.1 - h * 0.6, tx = p.x + w * 0.02;
       ctx.strokeText(String(o.hp), tx, ty); ctx.fillStyle = '#fff'; ctx.fillText(String(o.hp), tx, ty);
@@ -1163,7 +1169,7 @@ function draw() {
   for (const f of floats) {
     const p = proj(f.x, f.z);
     ctx.globalAlpha = Math.max(0, f.life);
-    ctx.font = `900 ${f.small ? Math.max(12, p.s * 0.3) : Math.max(18, p.s * 0.5)}px system-ui,sans-serif`; ctx.textAlign = 'center';
+    ctx.font = `900 ${f.small ? Math.max(12, p.s * 0.3) : Math.max(18, p.s * 0.5)}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'center';
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.4)';
     ctx.strokeText(f.text, p.x, p.y - p.s * (1.2 + f.y)); ctx.fillStyle = f.color; ctx.fillText(f.text, p.x, p.y - p.s * (1.2 + f.y));
     ctx.globalAlpha = 1;
@@ -1175,12 +1181,12 @@ function draw() {
     const top = 14 + (window.visualViewport ? 0 : 0);
     ctx.fillStyle = 'rgba(0,0,0,.28)'; roundRect(W / 2 - 110, top, 220, 14, 7); ctx.fill();
     ctx.fillStyle = '#ffd84a'; roundRect(W / 2 - 108, top + 2, 216 * progress(), 10, 5); ctx.fill();
-    ctx.font = '900 18px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.font = '900 18px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillStyle = '#fff'; ctx.fillText('ด่าน ' + level + ' • ' + levelInfo(level).name, W / 2, top + 20);
     ctx.textAlign = 'right'; ctx.fillStyle = '#ffd84a'; ctx.fillText('🪙 ' + save.coins, W - 14, top);
     if (siege && runT < 3) {
       ctx.globalAlpha = Math.min(1, (3 - runT) / 0.8);
-      ctx.font = '900 26px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(80,0,0,.7)';
+      ctx.font = '900 26px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(80,0,0,.7)';
       ctx.strokeText('แมวบุกเข้ามาแล้ว!', W / 2, H * 0.3); ctx.fillStyle = '#ff6a5a'; ctx.fillText('แมวบุกเข้ามาแล้ว!', W / 2, H * 0.3);
       ctx.globalAlpha = 1;
     }

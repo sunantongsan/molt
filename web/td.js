@@ -227,11 +227,11 @@ function drawCatIntro() {
   if (t > 0.4) {
     const pop = Math.min(1, (t - 0.4) * 5);
     ctx.save(); ctx.translate(cx, cy + sh * 0.32); ctx.scale(pop, pop);
-    ctx.font = '900 20px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '900 20px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const tw = ctx.measureText(line[0]).width + 30;
     ctx.fillStyle = '#d8352a'; roundRect(-tw / 2, -18, tw, 36, 10); ctx.fill(); ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.fillText(line[0], 0, 1);
-    ctx.font = '800 11px system-ui,sans-serif'; ctx.fillStyle = '#ffd84a'; ctx.fillText(kind === 'boss' ? '👑 บอส' : kind === 'chief' ? '⭐ รองหัวหน้า' : '🆕 ศัตรูใหม่', 0, -28);
+    ctx.font = '800 11px Mitr,system-ui,sans-serif'; ctx.fillStyle = '#ffd84a'; ctx.fillText(kind === 'boss' ? '👑 บอส' : kind === 'chief' ? '⭐ รองหัวหน้า' : '🆕 ศัตรูใหม่', 0, -28);
     ctx.restore();
   }
   // the cat king on the left, bouncing as he gloats (when he is not the one on show)
@@ -239,14 +239,14 @@ function drawCatIntro() {
   if (kind !== 'boss' && ready(IMG.boss_walk)) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame('boss_walk', 0, 0, 0, sh * 0.95, false); ctx.restore(); }
   // speech bubble with typed text
   const shown = line[1].slice(0, Math.floor(t * 26)), bx = W * 0.05, by = H * 0.13, bw = W * 0.9;
-  ctx.font = '800 17px system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.font = '800 17px Mitr,system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   const lines = []; let cur = '';
   for (const ch of shown) { if (ctx.measureText(cur + ch).width > bw - 28) { lines.push(cur); cur = ''; } cur += ch; } lines.push(cur);
   const bh = 22 + Math.max(2, lines.length) * 24;
   ctx.fillStyle = '#fffaf0'; roundRect(bx, by, bw, bh, 16); ctx.fill(); ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 3; ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + bw * 0.18, by + bh - 1); ctx.lineTo(bx + bw * 0.14, by + bh + 22); ctx.lineTo(bx + bw * 0.28, by + bh - 1); ctx.closePath(); ctx.fillStyle = '#fffaf0'; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#3a2a1a'; lines.forEach((l, i) => ctx.fillText(l, bx + 14, by + 12 + i * 24));
-  ctx.font = '900 12px system-ui,sans-serif'; ctx.fillStyle = '#d8352a'; ctx.fillText('ราชาแมว:', bx + 14, by - 16);
+  ctx.font = '900 12px Mitr,system-ui,sans-serif'; ctx.fillStyle = '#d8352a'; ctx.fillText('ราชาแมว:', bx + 14, by - 16);
   // a scared duck at the bottom
   if (t > 0.9 && ready(IMG.k_duck_act)) {
     const dx = W * 0.22 + Math.sin(now * 40) * 2, dy = H * 0.82;
@@ -254,7 +254,7 @@ function drawCatIntro() {
     // (the scared duck just quacks: sound, no text)
   }
   // footer
-  ctx.font = '700 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,.8)';
+  ctx.font = '700 12px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,.8)';
   ctx.fillText(`แตะเพื่อไปต่อ  ${I.i + 1}/${I.list.length}`, W / 2, H - bar / 2);
   ctx.restore();
 }
@@ -371,7 +371,7 @@ function spawnCatOrig(c) {
 }
 function spawnCat(c) {
   spawnCatOrig(c);
-  if (c.boss) { SFX.play('bossRoar'); D.banner = 2.2; D.bossBanner = true; D.bannerTxt = null; }
+  if (c.boss) { SFX.play('bossRoar'); D.banner = 2.2; D.bossBanner = true; D.bannerTxt = null; D.zoomT = 1.2; D.shake = Math.max(D.shake, 0.4); }
 }
 function wallFor(c) {
   return D.walls[Math.max(0, Math.min(NWALL - 1, Math.round(c.x / WALL_W + (NWALL - 1) / 2)))];
@@ -385,6 +385,9 @@ function tdUpdate(dt) {
   // slow motion after a big kill
   if (D.slowT > 0) { D.slowT -= dt; dt *= D.slowT > 0.25 ? 0.22 : 0.6; }
   if (D.phase === 'intro') { catIntroUpdate(dt); return; }
+  if (D.hitStop > 0) { D.hitStop -= dt; return; }
+  if (D.zoomT > 0) D.zoomT -= dt;
+  if (D.flinchT > 0) D.flinchT -= dt;
   D.t += dt; D.banner -= dt;
   for (const p of T.plats) { const o = shooter(p.slot); o.arrive = Math.max(0, o.arrive - dt); }
   if (D.phase === 'wave' || D.phase === 'build' || D.phase === 'victory') leadUpdate(dt);
@@ -479,7 +482,7 @@ function tdUpdate(dt) {
             for (let i = 0; i < (c.boss ? 10 : 2); i++) splinter(wall.x, FENCE_Y);
             if (wall.hp <= 0) { wall.hp = 0; SFX.play('crack'); addFx('ring', wall.x, FENCE_Y, '#ffcf8a'); for (let i = 0; i < 14; i++) splinter(wall.x, FENCE_Y); toast('รั้วพัง! พาเป็ดหัวหน้าไปยืนวงกลม 🔧 เพื่อซ่อม'); }
           } else {
-            D.houseHp -= c.boss ? 4 : c.kind === 'chief' ? 2 : 1; D.shake = Math.max(D.shake, 0.15); SFX.play('hit');
+            D.houseHp -= c.boss ? 4 : c.kind === 'chief' ? 2 : 1; D.flinchT = 0.35; D.shake = Math.max(D.shake, 0.15); SFX.play('hit');
             D.floats.push({ x: c.x, y: c.y, t: 0, text: c.boss ? '-4❤️' : '-1❤️', color: '#ff7a6a' });
             if (D.houseHp <= 0) startDefeat();
           }
@@ -628,6 +631,7 @@ function tdUpdate(dt) {
     c.y -= 0.75 * dt; c.x += Math.sin((c.deadT || 0) * 3) * 0.2 * dt;
     if (Math.random() < dt * 0.6) SFX.play('catScared');
   }
+  for (const c of D.cats) { if (c.squash) c.squash = Math.max(0, c.squash - dt * 6); if (c.fly) { c.fly.t += dt; } }
   D.cats = D.cats.filter(c => c.hp > 0 || (c.deadT = (c.deadT || 0) + dt) < ((c.boss || c.kind === 'chief') ? (c.y > dinv(0, 30).y ? 99 : 0) : 0.6));
   for (const p of D.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.h += p.vh * dt; p.vh -= 14 * dt; p.t += dt; if (p.h < 0) { p.h = 0; p.vh *= -0.3; p.vx *= 0.6; p.vy *= 0.6; } }
   D.parts = D.parts.filter(p => p.t < p.life);
@@ -661,11 +665,17 @@ function hurtCat(c, dmg, src) {
   }
   if (c.kind === 'shadow' && src !== 'burn' && src !== 'lead' && Math.random() < 0.2) { SFX.play('shoot'); addFx('poof', c.x, c.y, '#c8b6ff'); return; }
   c.hp -= dmg; c.hitT = 0.12;
-  D.floats.push({ x: c.x, y: c.y, t: 0, text: '-' + (Math.round(dmg * 10) / 10), color: '#fff', small: true });
+  const big = dmg >= 5;
+  D.floats.push({ x: c.x + (Math.random() - 0.5) * 0.4, y: c.y, t: 0, text: String(Math.round(dmg * 10) / 10), color: big ? '#ffe14a' : '#fff', small: !big, pop: true, big });
+  c.squash = 1;                                                    // squish the cat on every hit
+  if (dmg >= 8) D.hitStop = Math.max(D.hitStop || 0, 0.045);
   addFx('spark', c.x, c.y, '#fff3b0'); SFX.play('hit');
   if (c.hp > 0 && Math.random() < 0.25) SFX.play('catHurt');
   if (c.hp <= 0) {
     D.killed++; c.deadT = 0;
+    if (!c.boss && c.kind !== 'chief' && c.kind !== 'cart' && Math.random() < 0.55) c.fly = { t: 0, vx: (Math.random() - 0.5) * 6, vh: 7 + Math.random() * 4, spin: (Math.random() < 0.5 ? -1 : 1) * (10 + Math.random() * 8) };
+    // nearby duck archers cheer
+    for (const p of T.plats) { const q = platPos(p.slot); if (Math.hypot(q.x - c.x, q.y - c.y) < 9 && Math.random() < 0.35) shooter(p.slot).cheer = 0.5; }
     if (c.boss) {
       SFX.play('bossDie'); D.shake = 0.6; D.slowT = 1.8; D.flashT = 0.35;
       D.banner = 2.2; D.bannerTxt = 'ราชาแมวล้มแล้ว!! 🎉';
@@ -963,7 +973,7 @@ function confetti(x, y) {
 }
 function bossSlam(c) {
   const ix = c.x, iy = c.y + 0.6;
-  SFX.play('slam'); D.shake = 0.55;
+  SFX.play('slam'); D.shake = 0.55; D.hitStop = 0.08;
   addFx('shock', ix, iy, '#ffe2a8'); addFx('shock2', ix, iy, '#ffffff'); addFx('dust', ix, iy, '#d9c49a');
   for (let i = 0; i < 16; i++) D.parts.push({ x: ix, y: iy, h: 0.1, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 4, vh: 3 + Math.random() * 4, t: 0, life: 0.9, kind: 'rock', r: Math.random() * 6 });
 }
@@ -1034,10 +1044,10 @@ function drawVictoryStars() {
     ctx.restore();
   }
   if (D.vicShown >= 3) {
-    ctx.font = '900 18px system-ui,sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
+    ctx.font = '900 18px Mitr,system-ui,sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
     const tx = `ล้มแมว ${D.killed} ตัว • 🪙 +${Math.floor(D.earned)}`;
     ctx.strokeText(tx, cx, cy + 56); ctx.fillStyle = '#fff'; ctx.fillText(tx, cx, cy + 56);
-    ctx.font = '700 12px system-ui,sans-serif'; ctx.globalAlpha = 0.8 + Math.sin(performance.now() / 200) * 0.2;
+    ctx.font = '700 12px Mitr,system-ui,sans-serif'; ctx.globalAlpha = 0.8 + Math.sin(performance.now() / 200) * 0.2;
     ctx.strokeText('แตะเพื่อไปต่อ', cx, cy + 82); ctx.fillText('แตะเพื่อไปต่อ', cx, cy + 82);
   }
   ctx.restore();
@@ -1351,6 +1361,7 @@ function tdDraw() {
   fitField();
   ctx.save();
   if (D.shake > 0) ctx.translate((Math.random() - 0.5) * 30 * D.shake, (Math.random() - 0.5) * 30 * D.shake);
+  if (D.zoomT > 0) { const z = 1 + Math.sin(Math.min(1, D.zoomT / 1.2) * Math.PI) * 0.07, cy = H * 0.35; ctx.translate(W / 2, cy); ctx.scale(z, z); ctx.translate(-W / 2, -cy); }
   // background is painted once into an offscreen canvas (no tiles, so no seams), then copied every frame
   const bg = getBg();
   if (bg) ctx.drawImage(bg, 0, 0, W, H);
@@ -1403,11 +1414,14 @@ function tdDraw() {
     ctx.globalAlpha = 1;
   }
   for (const f of D.floats) {
-    const p = dproj(f.x, f.y), a = 1 - f.t / 1.1;
+    const p = dproj(f.x, f.y), a = 1 - Math.max(0, f.t - 0.6) / 0.5;
     ctx.globalAlpha = Math.max(0, a);
-    ctx.font = `900 ${f.small ? 13 : 17}px system-ui,sans-serif`; ctx.textAlign = 'center';
-    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)';
-    const y = p.y - dk * 1.3 - f.t * 30;
+    // pop: overshoot then settle, rise with ease-out
+    const pop = f.pop ? (f.t < 0.12 ? 0.4 + f.t / 0.12 * 1.0 : Math.max(1, 1.4 - (f.t - 0.12) * 3)) : 1;
+    const size = (f.big ? 21 : f.small ? 14 : 17) * pop;
+    ctx.font = `900 ${Math.round(size)}px Mitr,system-ui,sans-serif`; ctx.textAlign = 'center';
+    ctx.lineWidth = f.big ? 5 : 3.5; ctx.strokeStyle = f.big ? '#7a2a00' : 'rgba(0,0,0,.6)'; ctx.lineJoin = 'round';
+    const y = p.y - dk * 1.25 - (1 - Math.pow(1 - Math.min(1, f.t / 1.1), 3)) * 36;
     ctx.strokeText(f.text, p.x, y); ctx.fillStyle = f.color; ctx.fillText(f.text, p.x, y);
     ctx.globalAlpha = 1;
   }
@@ -1536,7 +1550,7 @@ function drawFence(w) {
   const shakeX = w.hit > 0 ? Math.sin(w.hit * 90) * 3 : 0;
   if (w.hp <= 0) {
     for (const f of [-0.3, 0.05, 0.35]) if (ready(IMG.fence_stump)) drawAt(IMG.fence_stump, c.x + f * dk * WALL_W, c.y + 2, dk * 0.42);
-    ctx.font = '900 12px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)';
+    ctx.font = '900 12px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)';
     ctx.strokeText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.4); ctx.fillStyle = '#ffe2a8'; ctx.fillText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.4);
     return;
   }
@@ -1602,7 +1616,9 @@ function drawPlatform(s) {
     ctx.restore();
   }
   // the duck archer on top (hops up from the house when the platform is new)
-  const o = shooter(s), h = k * 1.1, flip = o.aimDx < 0;
+  const o = shooter(s), h = k * 1.1;
+  if (D.phase !== 'wave' && Math.random() < 0.004) o.aimDx = -o.aimDx || 1;   // idle: look the other way now and then
+  const flip = o.aimDx < 0;
   o.topH = (p.y - top) / k + 0.5;
   const hop = o.arrive > 0 ? Math.sin(o.arrive * Math.PI) * k * 0.8 : 0;
   const fk = o.shootT > 0 ? Math.min(3, Math.floor((0.3 - o.shootT) / 0.3 * 4)) : 0;
@@ -1611,7 +1627,9 @@ function drawPlatform(s) {
     // kitchen duck: wind up, throw, then idle; holds its weapon; dresses up with the platform tier
     const tr2 = tierOf(pl.lvl), fw = h * 0.75;
     ctx.save(); ctx.translate(p.x, dy); if (flip) ctx.scale(-1, 1);
-    if (o.stunT > 0) { drawFrame('k_duck_act', 2, 0, 0, h, false); ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', Math.cos(performance.now() / 150) * h * 0.2, -h * 1.05); }
+    if (o.cheer > 0) { o.cheer -= 1 / 60; drawFrame('k_duck_act', 3, 0, -Math.sin((0.5 - o.cheer) / 0.5 * Math.PI) * h * 0.22, h, false); }
+    else if (D.flinchT > 0) drawFrame('k_duck_act', 2, Math.sin(performance.now() / 25) * 2, 0, h, false);
+    else if (o.stunT > 0) { drawFrame('k_duck_act', 2, 0, 0, h, false); ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', Math.cos(performance.now() / 150) * h * 0.2, -h * 1.05); }
     else if (D.phase === 'victory' && D.cheered) { const hp2 = Math.abs(Math.sin(performance.now() / 160 + s)) * h * 0.25; drawFrame('k_duck_act', 3, 0, -hp2, h, false); }
     else if (o.shootT > 0) drawFrame('k_duck_act', o.shootT > 0.15 ? 0 : 1, 0, 0, h, false);
     else drawFrame('k_duck_walk', 1, 0, Math.sin(performance.now() / 300 + s) * 1.5, h, false);
@@ -1676,6 +1694,17 @@ function drawCat(c) {
   const flip = c.faceL;
   let x = p.x + (c.hitT > 0 ? Math.sin(c.hitT * 120) * 3 : 0);
   if (c.kind === 'cart') { drawCart(c, p, h); return; }
+  if (c.fly && c.hp <= 0) {
+    // knocked flying: arc up and away, spinning, shrinking into the distance
+    const f = c.fly, h2 = f.vh * f.t - 9 * f.t * f.t, sc = Math.max(0.2, 1 - f.t * 0.6);
+    ctx.save(); ctx.globalAlpha = Math.max(0, 1 - Math.max(0, f.t - 0.45) / 0.2);
+    ctx.translate(p.x + f.vx * f.t * dk, p.y - Math.max(0, h2) * dk - h * 0.4); ctx.rotate(f.t * f.spin); ctx.scale(sc, sc);
+    const im = OLD_IMG[c.kind] ? OLD_IMG[c.kind] : 'k_cat_act';
+    if (ready(IMG[im])) drawFrame(im, OLD_IMG[c.kind] ? 2 : 2, 0, h * 0.5, h, false);
+    ctx.restore(); ctx.globalAlpha = 1;
+    if (f.t > 0.5 && !f.poofed) { f.poofed = true; }
+    return;
+  }
   const KC = !c.boss && !OLD_IMG[c.kind] && ready(IMG.k_cat_walk) && ready(IMG.k_cat_act);
   if (c.hp <= 0 && !KC) { ctx.save(); ctx.translate(x, p.y); ctx.rotate((flip ? -1 : 1) * Math.min(1.4, (c.deadT || 0) * 5)); x = 0; }
   const py = c.hp <= 0 && !KC ? 0 : p.y, atk = (c.fighting || c.st !== 'walk') && c.st !== 'flee' && c.st !== 'jump' && c.hp > 0, k = (c.atk || 0) / 0.9;
@@ -1803,6 +1832,10 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
     const ws = h * (cb ? 0.55 : tk ? 0.5 : 0.45), sw = Math.sin(t * 7) * 0.12;
     if (c.dance) bob += Math.abs(Math.sin(c.dance * 10 + c.ph)) * h * 0.15;
   ctx.save(); ctx.translate(x, py - bob + lunge);
+    { // squash & stretch: stretch on the way up of each step, squash when hit
+      const sq = c.squash || 0, step = !dead && !atk && c.st === 'walk' ? Math.sin(t * 14) * 0.04 : 0;
+      ctx.scale(1 + sq * 0.22 - step, 1 - sq * 0.2 + step);
+    }
     if (lunge < 0) ctx.scale(1, 1 + lunge / h * 0.6); else if (lunge > 0) ctx.scale(1 + lunge / h * 0.5, 1 - lunge / h * 0.4);
     if (view === 'back') drawItem(wpn, -fw * 0.48, -h * 0.5, ws, -0.4 + sw);       // weapon peeks out at the side
     drawFrame(img, fr, 0, 0, h, false);
@@ -1830,6 +1863,7 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
     return;
   }
   ctx.save(); ctx.translate(x, py - bob); if (flip) ctx.scale(-1, 1);
+  if (c.squash) ctx.scale(1 + c.squash * 0.22, 1 - c.squash * 0.2);
   drawFrame(img, fr, 0, 0, h, false);
   if (!dead) {
     // headgear (front of the face is +x)
@@ -2020,7 +2054,7 @@ function drawPads(top) {
     if (top) {
       const paid = T.pads[pd.id] || 0, afford = save.coins + paid >= pd.cost;
       ctx.textAlign = 'center'; ctx.font = `${Math.round(dk * 0.32)}px system-ui`; ctx.fillText(pd.icon, p.x, p.y + dk * 0.04);
-      ctx.font = `900 ${Math.round(Math.max(10, dk * 0.24))}px system-ui,sans-serif`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)';
+      ctx.font = `900 ${Math.round(Math.max(10, dk * 0.24))}px Mitr,system-ui,sans-serif`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)';
       const txt = `🪙${Math.max(0, pd.cost - paid)}`;
       ctx.strokeText(txt, p.x, p.y + r * 0.62 + dk * 0.26); ctx.fillStyle = afford ? '#ffe680' : '#fff'; ctx.fillText(txt, p.x, p.y + r * 0.62 + dk * 0.26);
       if (on) { ctx.strokeText(pd.label, p.x, p.y - r * 0.62 - 4); ctx.fillStyle = '#fff'; ctx.fillText(pd.label, p.x, p.y - r * 0.62 - 4); }
@@ -2101,13 +2135,13 @@ function drawTdHud() {
   } else if (!save.td.walked) {
     // first-time hint until the player drags once
     const p = dproj(D.lead.x, D.lead.y), b = Math.sin(performance.now() / 250) * 6;
-    ctx.font = '900 14px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
+    ctx.font = '900 14px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
     const tx = '👆 ลากนิ้วเพื่อเดิน'; ctx.strokeText(tx, p.x, p.y + dk * 0.9 + b); ctx.fillStyle = '#fff'; ctx.fillText(tx, p.x, p.y + dk * 0.9 + b);
   }
   if (D.joy && D.joy.moved && !save.td.walked) { save.td.walked = true; persist(); }
   if (D.phase === 'wave') {
     const alive = D.cats.filter(c => c.hp > 0).length + D.queue.length;
-    ctx.font = '900 16px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.font = '900 16px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
     const t1 = `🐱 เหลือ ${alive}`;
     ctx.strokeText(t1, W / 2, 62); ctx.fillStyle = '#fff'; ctx.fillText(t1, W / 2, 62);
@@ -2115,8 +2149,8 @@ function drawTdHud() {
       ctx.fillStyle = D.trapMode ? 'rgba(255,210,80,.75)' : 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(tx, ty, tr, 0, Math.PI * 2); ctx.fill();
       if (D.trapMode) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); }
       if (!drawItem('it_fishtrap', tx, ty, tr * 1.5)) { ctx.font = '24px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🐟', tx, ty); }
-      ctx.font = '900 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(T.traps, tx + 20, ty + 18); ctx.fillStyle = '#fff'; ctx.fillText(T.traps, tx + 20, ty + 18); ctx.textBaseline = 'alphabetic';
-      if (D.trapMode) { ctx.font = '900 14px system-ui,sans-serif'; ctx.strokeText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 170); ctx.fillStyle = '#ffe680'; ctx.fillText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 170); } }
+      ctx.font = '900 13px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(T.traps, tx + 20, ty + 18); ctx.fillStyle = '#fff'; ctx.fillText(T.traps, tx + 20, ty + 18); ctx.textBaseline = 'alphabetic';
+      if (D.trapMode) { ctx.font = '900 14px Mitr,system-ui,sans-serif'; ctx.strokeText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 170); ctx.fillStyle = '#ffe680'; ctx.fillText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 170); } }
     const bx = W - 46, by = H - 196, r = 28;
     ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
     if (D.bombCd > 0) { ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.moveTo(bx, by); ctx.arc(bx, by, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - D.bombCd / 7)); ctx.fill(); }
@@ -2125,7 +2159,7 @@ function drawTdHud() {
   }
   if (D.banner > 0) {
     ctx.globalAlpha = Math.min(1, D.banner);
-    ctx.font = '900 30px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(80,0,0,.75)';
+    ctx.font = '900 30px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(80,0,0,.75)';
     const txt = D.bannerTxt || (D.bossBanner ? 'ราชาแมวมาแล้ว!! 👑' : 'แมวบุกมาแล้ว!');
     ctx.strokeText(txt, W / 2, H * 0.2); ctx.fillStyle = '#ff6a5a'; ctx.fillText(txt, W / 2, H * 0.2);
     ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
@@ -2138,7 +2172,7 @@ window.onMoltPatch = v => {
   let b = document.getElementById('patchBar');
   if (!b) {
     b = document.createElement('button'); b.id = 'patchBar';
-    b.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:50;border:0;border-radius:16px;padding:10px 18px;font:900 15px system-ui,sans-serif;color:#fff;background:linear-gradient(#5fd06a,#2f9a3e);box-shadow:0 4px 0 #1f6a2a,0 8px 18px rgba(0,0,0,.35)';
+    b.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:50;border:0;border-radius:16px;padding:10px 18px;font:900 15px Mitr,system-ui,sans-serif;color:#fff;background:linear-gradient(#5fd06a,#2f9a3e);box-shadow:0 4px 0 #1f6a2a,0 8px 18px rgba(0,0,0,.35)';
     document.body.appendChild(b);
   }
   b.innerHTML = `🔄 อัปเดตใหม่พร้อมแล้ว (รุ่น ${v})<br><small style="font-weight:700">แตะเพื่อโหลดเกมใหม่</small>`;
