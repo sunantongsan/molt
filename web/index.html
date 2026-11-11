@@ -268,8 +268,10 @@ const SFX = (() => {
     squish: () => sample('squish', rnd(0.9, 1.2), 0.6),
     bonk: () => sample('bat', rnd(1.0, 1.25), 0.55),
     metal: () => sample('metal', rnd(0.9, 1.2), 0.5),
+    quack: () => sample('quack', rnd(0.92, 1.15), 0.6),
+    purr: () => sample('purr', rnd(0.95, 1.05), 0.45),
   };
-  Object.assign(gap, { catScared: 0.2, clang: 0.06, tray: 0.08, thud: 0.06, squish: 0.08, bonk: 0.1, metal: 0.06, crack: 0.1, bossRoar: 0.5 });
+  Object.assign(gap, { purr: 2.2, catScared: 0.2, clang: 0.06, tray: 0.08, thud: 0.06, squish: 0.08, bonk: 0.1, metal: 0.06, crack: 0.1, bossRoar: 0.5 });
   function play(n) {
     if (muted || !ac) return;
     const now = ac.currentTime;

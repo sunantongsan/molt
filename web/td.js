@@ -754,6 +754,7 @@ function trapUpdate(dt) {
   for (const tr of D.traps) {
     tr.t += dt;
     const around = D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - tr.x, c.y - tr.y) < 0.8).length;
+    if (around) SFX.play('purr');   // happy cats munching the mackerel
     if (around >= 3 || tr.t >= tr.fuse) {
       tr.done = true;
       const dmg = 10 + T.wave * 1.6;
