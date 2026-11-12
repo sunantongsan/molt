@@ -584,6 +584,13 @@ function tdUpdate(dt) {
         }
         c.lured = false;
         const hx = 0, hy = HOUSE_TY, dh = Math.hypot(c.x - hx, c.y - hy);
+        const gx = D.walls[GATE].x, spread = c.kind === 'ram' ? 0.3 : 0.8;
+        if (!past && c.y >= FENCE_Y - 1.1 && Math.abs(c.x - gx) > spread && c.kind !== 'cart') {
+          // the wall itself can't be broken: walk along it to the gate
+          const sd = c.x > gx ? -1 : 1; c.mx = sd; c.my = 0.2;
+          c.x += sd * c.v * sdt; c.y = Math.min(FENCE_Y - 0.6, c.y + c.v * 0.3 * sdt);
+          continue;
+        }
         if (!past && c.y >= FENCE_Y - 0.55 && wall.hp > 0) { c.st = 'wall'; c.atk = 0; }
         else if (past && dh <= EGG_R + 0.3) { c.st = 'house'; c.atk = 0; }
         else {
@@ -776,7 +783,7 @@ function tdUpdate(dt) {
   D.fx.forEach(f => { if ((f.type === 'dust' || f.type === 'shock') && f.t > 0.45) f.t = 0.5; });
   for (const f of D.floats) f.t += dt;
   D.floats = D.floats.filter(f => f.t < 1.1);
-  for (const w of D.walls) w.hit = Math.max(0, w.hit - dt);
+  for (const w of D.walls) { w.hit = Math.max(0, w.hit - dt); if (!w.gate) w.hp = w.max; }
   D.shake = Math.max(0, D.shake - dt); D.eggHit = Math.max(0, (D.eggHit || 0) - dt);
   if (D.phase === 'wave' && !D.queue.length && !D.cats.some(c => c.hp > 0)) startVictory();
   if (D.phase === 'victory') victoryUpdate(dt);
@@ -859,7 +866,7 @@ function cartFire(c) {
   } else if (r < 0.45) {
     D.eshots.push({ type: Math.random() < 0.5 ? 'chili' : 'rock', sx, sy, tx: (Math.random() - 0.5) * 1.6, ty: EGG_Y, t: 0, dur: 1.5 });
   } else {
-    const alive = D.walls.filter(w => w.hp > 0), w = alive.length ? alive[Math.floor(Math.random() * alive.length)] : null;
+    const g0 = D.walls[GATE], w = g0 && g0.hp > 0 ? g0 : null;
     if (w) D.eshots.push({ type: Math.random() < 0.5 ? 'chili' : 'rock', wall: w, sx, sy, tx: w.x + (Math.random() - 0.5) * 0.8, ty: FENCE_Y, t: 0, dur: 1.1 });
     else D.eshots.push({ type: 'rock', sx, sy, tx: 0, ty: EGG_Y, t: 0, dur: 1.5 });
   }
@@ -1307,6 +1314,7 @@ function joyEnd(e) {
 cv.addEventListener('pointerup', joyEnd);
 cv.addEventListener('pointercancel', joyEnd);
 function tapField(cx, cy) {
+  if (document.getElementById('baseMenu')) { closeBaseMenu(); return; }
   if (D.phase === 'intro') { catIntroNext(); return; }
   if (D.phase === 'victory') { if (D.vicT > 1.5 && D.slowT <= 0) { D.vicT = 99; } return; }
   if (D.phase === 'defeat') return;
@@ -1333,14 +1341,14 @@ function tapField(cx, cy) {
     if (Math.hypot(p.x - q.x, p.y - q.y) < 0.8 || Math.hypot(p.x - q.x, p.y + 1.3 - q.y) < 0.8) {
       SFX.play('click');
       if (D.moveFrom !== undefined && D.moveFrom !== null) { finishMove(s); return; }
-      openSlot(s); return;
+      openBaseMenu(s); return;
     }
   }
   if (D.moveFrom !== undefined && D.moveFrom !== null) { D.moveFrom = null; toast('ยกเลิกการย้าย'); return; }
   // tents
   for (let i = 0; i < CAMP_POS.length; i++) { const cp = CAMP_POS[i]; if (Math.hypot(p.x - cp.x, (p.y - cp.y + 0.4) * 0.8) < 0.95) { SFX.play('click'); openCamp(i); return; } }
   // a hurt wall segment: repair on the spot
-  if (p.y > FENCE_Y - 0.6 && p.y < WALL_FOOT + 0.2) for (const w of D.walls) if (Math.abs(p.x - w.x) < WALL_W / 2 && w.hp < w.max) { repairWall(w); return; }
+  if (p.y > FENCE_Y - 0.6 && p.y < WALL_FOOT + 0.2 && Math.abs(p.x) < FIELD_X + 0.3) { SFX.play('click'); openGate(); return; }
   if (Math.hypot(p.x, p.y - EGG_Y + 0.3) < 1.1) { SFX.play('click'); openHouse(); return; }
   closeSheet();
   if (D.phase !== 'wave' || D.bombCd > 0) return;
@@ -1498,8 +1506,8 @@ function leadUpdate(dt) {
 
 // ---------- sheets ----------
 let sheetFor = null;
-function closeSheet() { sheetFor = null; $('sheet').classList.add('hidden'); }
-function refreshSheet() { if (!sheetFor) return; if (sheetFor === 'house') openHouse(); else openSlot(sheetFor.slot); }
+function closeSheet() { closeBaseMenu(); sheetFor = null; $('sheet').classList.add('hidden'); }
+function refreshSheet() { if (!sheetFor) return; if (sheetFor === 'gate') { openGate(); return; } if (sheetFor.camp !== undefined) { openCamp(sheetFor.camp); return; } if (sheetFor === 'house') openHouse(); else openSlot(sheetFor.slot); }
 function sellValue(p) {
   const tier = WEAPONS.findIndex(w => w.id === p.w); let sum = 60 + (WEAPON[p.w].cost || 0);
   for (let l = 1; l < p.lvl; l++) sum += Math.round(40 * Math.pow(l, 1.5) * (1 + tier * 0.4));
@@ -1521,6 +1529,25 @@ function repairWall(w) {
   save.coins -= cost; w.hp = w.max; SFX.play('plus'); addFx('ring', w.x, FENCE_Y + 0.5, '#7dff8a');
   D.floats.push({ x: w.x, y: FENCE_Y, t: 0, text: `🔧 ซ่อมแล้ว -🪙${cost}`, color: '#7dff8a' }); persist(); renderTdHud();
 }
+function openGate() {
+  sheetFor = 'gate';
+  const body = $('sheetBody'); body.innerHTML = '';
+  const g = D.walls[GATE], wt = WALL_TIERS[wallTierOf(T.fence)];
+  $('sheetTitle').textContent = `🏰 ${wt.name} Lv.${T.fence}`;
+  const info = document.createElement('div'); info.className = 'sinfo';
+  info.innerHTML = `แมวเข้าเมืองได้ทาง<b>ประตู</b>เท่านั้น (ยกเว้นปีนบันได มุดดิน หรือโดดร่ม) • ประตูทน <b>${Math.ceil(g.hp)}/${g.max}</b> • 🪙 ${Math.floor(save.coins).toLocaleString()}`;
+  body.appendChild(info);
+  if (g.hp < g.max) { const c = Math.max(5, Math.round((20 + T.fence * 6) * (1 - g.hp / g.max)));
+    body.appendChild(btn(g.hp <= 0 ? '🔧 สร้างประตูใหม่' : '🔧 ซ่อมประตู', `🪙${c}`, save.coins >= c, () => { save.coins -= c; g.hp = g.max; SFX.play('plus'); addFx('ring', g.x, FENCE_Y + 0.5, '#7dff8a'); })); }
+  const fc = 50 * T.fence;
+  body.appendChild(btn(`🧱 อัปเกรดกำแพงเมือง Lv.${T.fence + 1}`, `ประตูทน ${wallMax(GATE)} → ${Math.round((30 + T.fence * 18) * (1.4 + (T.gatehouse || 0) * 0.6))}${WALL_LOOK_AT.includes(T.fence + 1) ? ` • โฉมใหม่: ${WALL_TIERS[wallTierOf(T.fence + 1)].name}` : ''} • 🪙${fc}`, save.coins >= fc, () => {
+    save.coins -= fc; const before = wallTierOf(T.fence); T.fence++; for (const w of D.walls) { w.max = wallMax(w.i); w.hp = w.gate ? Math.min(w.max, w.hp + 18) : w.max; }
+    if (wallTierOf(T.fence) > before) { SFX.play('fanfare'); toast(`🏰 กำแพงโฉมใหม่: ${WALL_TIERS[wallTierOf(T.fence)].name}!`); for (let i = 0; i < 30; i++) confetti((Math.random() - 0.5) * 8, FENCE_Y); }
+  }));
+  if (T.gatehouse < 3) body.appendChild(btn(`🏯 ${['สร้างซุ้มประตูเมือง', 'ซุ้มประตูหิน', 'ซุ้มประตูทองคำ'][T.gatehouse]}`, T.wave < 3 ? 'ปลดล็อกวันที่ 3' : `ประตูทนขึ้นอีกมาก • 🪙${gateCost()}`, T.wave >= 3 && save.coins >= gateCost(), () => { save.coins -= gateCost(); T.gatehouse++; g.max = wallMax(GATE); g.hp = g.max; SFX.play('fanfare'); toast('🏯 ประตูเมืองแข็งแรงขึ้นแล้ว!'); }));
+  if (T.expand < MAX_EXPAND) body.appendChild(btn(`🏰 สร้างกำแพงข้าง (ตัว U) ${T.expand + 1}/${MAX_EXPAND}`, T.wave < expandDay() ? `ปลดล็อกวันที่ ${expandDay()} • ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด` : `ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด วางป้อมได้ทันที • 🪙${expandCost()}`, T.wave >= expandDay() && save.coins >= expandCost(), () => { save.coins -= expandCost(); expandTown(); }));
+  $('sheet').classList.remove('hidden');
+}
 function openCamp(i) {
   sheetFor = { camp: i };
   const body = $('sheetBody'); body.innerHTML = '';
@@ -1534,6 +1561,43 @@ function openCamp(i) {
     body.appendChild(btn(`⬆️ อัปเกรดค่าย Lv.${cm.lvl + 1}`, `กับดักแรงขึ้น • Lv.5, 10 ได้เป็ดเพิ่ม • 🪙${c}`, save.coins >= c, () => { save.coins -= c; cm.lvl++; if (cm.lvl === 5 || cm.lvl === 10) toast('ได้เป็ดวางกับดักเพิ่ม 1 ตัว!'); })); }
   else { const d = document.createElement('div'); d.className = 'sinfo'; d.textContent = '⭐ เลเวลเต็มแล้ว'; body.appendChild(d); }
   $('sheet').classList.remove('hidden');
+}
+function closeBaseMenu() { const m = document.getElementById('baseMenu'); if (m) m.remove(); }
+function openBaseMenu(s) {
+  closeBaseMenu(); closeSheet();
+  const p = platAt(s), q = platPos(s), sp = dproj(q.x, q.y);
+  const m = document.createElement('div'); m.id = 'baseMenu';
+  m.style.cssText = `position:fixed;left:${Math.max(110, Math.min(W - 110, sp.x))}px;top:${Math.max(70, sp.y - dk * 1.55)}px;transform:translate(-50%,-100%);z-index:8;display:flex;gap:6px;padding:6px;border-radius:18px;background:rgba(40,25,10,.82);box-shadow:0 6px 16px rgba(0,0,0,.4)`;
+  const mk = (icon, label, sub, ok, fn) => {
+    const b = document.createElement('button');
+    b.style.cssText = `border:0;border-radius:14px;width:62px;padding:6px 2px 5px;font-family:Mitr,system-ui,sans-serif;color:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;background:${ok ? 'linear-gradient(#5fd06a,#2f9a3e)' : '#8a8070'};box-shadow:0 3px 0 ${ok ? '#1f6a2a' : '#5a5246'}`;
+    b.innerHTML = `<span style="font-size:20px;line-height:1">${icon}</span><b style="font-size:11px">${label}</b>${sub ? `<small style="font-size:10px;color:#ffe680">${sub}</small>` : ''}`;
+    b.onclick = e => { e.stopPropagation(); SFX.init(); if (!ok) { SFX.play('gateBad'); return; } fn(); };
+    b.onpointerdown = e => e.stopPropagation();
+    m.appendChild(b); return b;
+  };
+  if (!p) {
+    mk('🏰', 'สร้างป้อม', `🪙${buildCost()}`, save.coins >= buildCost(), () => { save.coins -= buildCost(); T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast('เป็ดขึ้นป้อมแล้ว! 🦆'); persist(); closeBaseMenu(); renderTdHud(); });
+  } else {
+    if (p.lvl < 10) mk('⬆️', `Lv.${p.lvl + 1}`, `🪙${lvlCost(p)}`, save.coins >= lvlCost(p), () => {
+      const before = tierOf(p.lvl); save.coins -= lvlCost(p); p.lvl++; const after = tierOf(p.lvl);
+      addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('gateGood'); D.floats.push({ x: q.x, y: q.y, t: 0, text: `⬆️ Lv.${p.lvl}`, color: '#ffe680', big: true });
+      if (after > before) { toast(`ป้อมใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); for (let i = 0; i < 30; i++) confetti(q.x, q.y); SFX.play('win'); }
+      persist(); renderTdHud(); openBaseMenu(s);
+    });
+    else mk('⭐', 'เต็มแล้ว', '', false, () => {});
+    mk('⚔️', 'อาวุธ', WEAPON[p.w].icon, true, () => { closeBaseMenu(); openSlot(s); });
+    const idle = D.phase !== 'wave';
+    mk('🔀', 'ย้าย', '', idle, () => { D.moveFrom = s; closeBaseMenu(); toast('🔀 แตะจุดบนกำแพงที่จะย้ายไป'); });
+    let sure = false; const sv = sellValue(p);
+    const sb = mk('💰', 'ขาย', `+${sv}`, idle, () => {
+      if (!sure) { sure = true; sb.querySelector('b').textContent = 'ยืนยัน?'; sb.style.background = 'linear-gradient(#ff8a5a,#d8452a)'; SFX.play('click'); return; }
+      save.coins += sv; T.plats = T.plats.filter(x => x !== p); D.shooters.delete(s); SFX.play('coin'); toast(`ขายป้อมแล้ว +🪙${sv}`); persist(); closeBaseMenu(); renderTdHud();
+    });
+    if (!idle) { const n = document.createElement('div'); n.style.cssText = 'position:absolute;left:0;right:0;top:100%;text-align:center;font:700 10px Mitr,system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000;margin-top:2px'; n.textContent = 'ย้าย/ขายได้ตอนพัก'; m.appendChild(n); }
+  }
+  document.body.appendChild(m);
+  const r = m.getBoundingClientRect(); m.style.left = Math.max(r.width / 2 + 6, Math.min(W - r.width / 2 - 6, sp.x)) + 'px';
 }
 function openSlot(s) {
   sheetFor = { slot: s };
@@ -1598,9 +1662,7 @@ function openHouse() {
   body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; }));
   const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = '🏰 เมืองเป็ด'; body.appendChild(hh);
   body.appendChild(btn(`🥚 เสริมเกราะไข่ทองคำ Lv.${T.house + 1}`, `ทน ${houseMax()} → ${houseMax() + 12} • 🪙${80 * T.house}`, save.coins >= 80 * T.house, () => { save.coins -= 80 * T.house; T.house++; D.houseHp = D.houseMax = houseMax(); }));
-  body.appendChild(btn(`🧱 เสริมกำแพง Lv.${T.fence}${WALL_LOOK_AT.includes(T.fence + 1) ? ` → ${WALL_TIERS[wallTierOf(T.fence + 1)].name}` : ''}`, `ทน ${wallMax(0)} (ประตู ${wallMax(GATE)}) • โฉมใหม่ที่ Lv.3, 6, 9 • 🪙${fc}`, save.coins >= fc, () => { save.coins -= fc; T.fence++; for (const w of D.walls) { w.max = wallMax(w.i); w.hp = Math.max(w.hp, Math.min(w.max, w.hp + 18)); } }));
-  if (T.expand < MAX_EXPAND) body.appendChild(btn(`🏰 สร้างกำแพงข้าง (ตัว U) ${T.expand + 1}/${MAX_EXPAND}`, T.wave < expandDay() ? `ปลดล็อกวันที่ ${expandDay()} • ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด` : `กำแพงยื่นขึ้นไปสองข้างทาง ได้ป้อมเป็ดเพิ่ม 2 จุด • 🪙${expandCost()}`, T.wave >= expandDay() && save.coins >= expandCost(), () => { save.coins -= expandCost(); expandTown(); }));
-  if (T.gatehouse < 3) body.appendChild(btn(`🏯 ${['สร้างประตูเมือง', 'เสริมประตูเมืองเป็นหิน', 'ประตูเมืองทองคำ'][T.gatehouse]}`, T.wave < 3 ? 'ปลดล็อกวันที่ 3' : `ประตูทนขึ้นมาก (ทน ${Math.round((30 + (T.fence - 1) * 18) * (1.4 + (T.gatehouse + 1) * 0.6))}) • 🪙${gateCost()}`, T.wave >= 3 && save.coins >= gateCost(), () => { save.coins -= gateCost(); T.gatehouse++; const g = D.walls[GATE]; g.max = wallMax(GATE); g.hp = g.max; SFX.play('fanfare'); toast('🏯 ประตูเมืองแข็งแรงขึ้นแล้ว!'); }));
+  { const wh = document.createElement('div'); wh.className = 'sinfo'; wh.textContent = '🧱 อัปเกรดกำแพง ประตูเมือง และกำแพงข้าง: แตะที่ตัวกำแพงได้เลย'; body.appendChild(wh); }
   body.appendChild(btn(`🐟 กับดักปลาทูระเบิด (มี ${T.traps})`, `ซื้อเพิ่ม 1 อัน • 🪙120`, save.coins >= 120, () => { save.coins -= 120; T.traps++; }));
   body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; }));
   const rp = document.createElement('button'); rp.className = 'sbtn'; rp.style.background = '#6d8fc9'; rp.style.boxShadow = '0 4px 0 #3f62a3';
@@ -2779,6 +2841,7 @@ function wallSegment(x0, x1, w) {
   const ratio = w ? w.hp / w.max : 1, sh = w && w.hit > 0 ? Math.sin(w.hit * 90) * 3 : 0;
   x0 += sh; x1 += sh;
   let seed = (w ? w.i * 97 : Math.round(x0)) + 13; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  if (w && w.hp <= 0 && w.gate) { wallSegment(x0, x1, null); drawBrokenGate((x0 + x1) / 2, yi, FH); return; }
   if (w && w.hp <= 0) {
     // rubble: a low pile of stones the cats can walk over
     ctx.fillStyle = 'rgba(40,30,20,.25)'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, yi + FH * 0.6, (x1 - x0) * 0.55, dk * 0.3, 0, 0, Math.PI * 2); ctx.fill();
@@ -2836,12 +2899,33 @@ function wallSegment(x0, x1, w) {
     ctx.fillStyle = C.merlon; ctx.beginPath(); ctx.roundRect(mx, mt, mw, MH + 2, 3); ctx.fill(); ctx.stroke();
     ctx.fillStyle = C.cap; ctx.fillRect(mx + 2, mt + 2, mw - 4, MH * 0.22);
   }
-  if (w && w.hp < w.max && D.phase === 'wave') { ctx.font = `${Math.round(dk * 0.32)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('🔧', (x0 + x1) / 2 + dk * 0.55, yi + FH * 0.55); }
+  if (w && w.gate && w.hp > 0 && w.hp < w.max && D.phase === 'wave') { ctx.font = `${Math.round(dk * 0.32)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('🔧', (x0 + x1) / 2 + dk * 0.55, yi + FH * 0.55); }
   if (w && w.hp < w.max) {
     const cx = (x0 + x1) / 2, by = yi + FH - 9;
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(cx - 20, by, 40, 5);
     ctx.fillStyle = ratio > 0.5 ? '#7dde5a' : ratio > 0.25 ? '#ffb347' : '#ff5a4a'; ctx.fillRect(cx - 20, by, 40 * ratio, 5);
   }
+}
+function drawBrokenGate(cx, yi, FH) {
+  const gw = dk * 0.95, gb = yi + FH, gt = yi + FH * 0.05, t = performance.now() / 1000;
+  // dark empty archway
+  ctx.fillStyle = '#5a4030'; ctx.beginPath(); ctx.moveTo(cx - gw / 2 - 4, gb); ctx.lineTo(cx - gw / 2 - 4, gt + gw * 0.45); ctx.arc(cx, gt + gw * 0.45 + 2, gw / 2 + 4, Math.PI, 0); ctx.lineTo(cx + gw / 2 + 4, gb); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#20160e'; ctx.beginPath(); ctx.moveTo(cx - gw / 2, gb); ctx.lineTo(cx - gw / 2, gt + gw * 0.5); ctx.arc(cx, gt + gw * 0.5, gw / 2, Math.PI, 0); ctx.lineTo(cx + gw / 2, gb); ctx.closePath(); ctx.fill();
+  // one door leaf hanging off its hinge, the other lying smashed
+  ctx.save(); ctx.translate(cx - gw / 2, gt + gw * 0.35); ctx.rotate(0.55 + Math.sin(t * 2) * 0.03);
+  ctx.fillStyle = '#8a5428'; ctx.strokeStyle = '#3a2210'; ctx.lineWidth = 2; ctx.fillRect(0, 0, gw * 0.45, FH * 0.8); ctx.strokeRect(0, 0, gw * 0.45, FH * 0.8);
+  ctx.strokeStyle = 'rgba(58,34,16,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(gw * 0.22, 0); ctx.lineTo(gw * 0.22, FH * 0.8); ctx.stroke();
+  ctx.fillStyle = '#5c5f69'; ctx.fillRect(0, FH * 0.2, gw * 0.45, 4); ctx.fillRect(0, FH * 0.6, gw * 0.45, 4);
+  ctx.fillStyle = '#20160e'; ctx.beginPath(); ctx.moveTo(gw * 0.45, FH * 0.5); ctx.lineTo(gw * 0.3, FH * 0.62); ctx.lineTo(gw * 0.45, FH * 0.72); ctx.fill();
+  ctx.restore();
+  ctx.save(); ctx.translate(cx + gw * 0.3, gb + 2); ctx.rotate(-0.18);
+  ctx.fillStyle = '#8a5428'; ctx.strokeStyle = '#3a2210'; ctx.lineWidth = 2; ctx.fillRect(-gw * 0.3, -FH * 0.16, gw * 0.62, FH * 0.2); ctx.strokeRect(-gw * 0.3, -FH * 0.16, gw * 0.62, FH * 0.2); ctx.restore();
+  // splinters
+  ctx.strokeStyle = '#c8904a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const [dx, dy, a] of [[-0.55, 0.05, 0.6], [0.6, 0.12, -0.9], [-0.15, 0.2, 1.4], [0.15, 0.08, 0.3]]) { ctx.beginPath(); ctx.moveTo(cx + dx * gw, gb + dy * dk); ctx.lineTo(cx + dx * gw + Math.cos(a) * dk * 0.18, gb + dy * dk + Math.sin(a) * dk * 0.08); ctx.stroke(); }
+  // crack marks around the arch
+  ctx.strokeStyle = 'rgba(30,20,10,.75)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - gw * 0.6, gt + 4); ctx.lineTo(cx - gw * 0.75, gt + FH * 0.25); ctx.lineTo(cx - gw * 0.68, gt + FH * 0.45); ctx.moveTo(cx + gw * 0.55, gt + 6); ctx.lineTo(cx + gw * 0.72, gt + FH * 0.3); ctx.stroke();
 }
 function drawCityWall() {
   const l = dproj(wallX(0) - WALL_W / 2, 0).x, r = dproj(wallX(NWALL - 1) + WALL_W / 2, 0).x;
