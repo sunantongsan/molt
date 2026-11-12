@@ -1747,6 +1747,9 @@ function tdDraw() {
     if (L > 0) list.push([FENCE_Y - L - 0.3, () => { drawArmEnd(-1); drawArmEnd(1); }]); }
   for (const lad of D.ladders) list.push([FENCE_Y - 0.5, () => drawLadder(lad)]);
   list.push([EGG_Y - 1.2, drawEggStand]);
+  if (ready(IMG.shrine_serjoy) && ready(IMG.molt_altar) && !D.thief && D.phase !== 'defeat') {
+    list.push([SERJOY_Y, drawSerjoy]);
+  }
   for (let s = 0; s < SLOTS; s++) { const q = platPos(s); list.push([q.y, () => { const mv = D.moveFrom === s && platAt(s); drawPlatform(s); if (mv) ctx.restore(); }]); }
   for (const c of D.cats) list.push([c.y, () => drawCat(c)]);
   for (const tp of D.tops || []) list.push([tp.y, () => drawTopsOne(tp)]);
@@ -3152,20 +3155,26 @@ function drawNest(x, y, s, front) {
   ctx.strokeStyle = '#e8b860'; ctx.lineWidth = 2; ctx.lineCap = 'round';
   for (const [dx, dy, ex, ey] of [[-0.55, -0.12, -0.75, -0.25], [0.5, -0.1, 0.72, -0.2], [-0.2, 0.12, -0.35, 0.2], [0.3, 0.12, 0.45, 0.22]]) { ctx.beginPath(); ctx.moveTo(x + dx * s, y + dy * s); ctx.lineTo(x + ex * s, y + ey * s); ctx.stroke(); }
 }
-// the golden egg on its altar, with Serจ่อย sunbathing next to it (one painted picture)
-const SHRINE_W = 5.4, SHRINE_EGG = [0.37, 0.485];     // width in world units; egg bottom-centre as a fraction of the picture
+// The older shrine images already include Serจ่อย; the separate sprite accompanies the new altar.
+const SHRINE_EGG = [0.37, 0.485], SERJOY_Y = EGG_Y + 0.65;
+
+function drawSerjoy() {
+  const p = dproj(2.35, SERJOY_Y);
+  drawAt(IMG.shrine_serjoy, p.x, p.y, dk * 1.65);
+}
+
 function shrineRect() {
   const empty = D.thief || D.phase === 'defeat';
   const altar = !empty && ready(IMG.molt_altar);
   const im = altar ? IMG.molt_altar : empty && ready(IMG.shrine_noegg) ? IMG.shrine_noegg : IMG.shrine;
   const anchor = altar ? [0.5, 0.45] : SHRINE_EGG;
-  const w = dk * SHRINE_W, h = ready(im) ? w * artHeight(im) / artWidth(im) : w * 0.75, e = dproj(0, EGG_Y);
+  const w = dk * (altar ? 3.5 : 4.3), h = ready(im) ? w * artHeight(im) / artWidth(im) : w * 0.75, e = dproj(0, EGG_Y);
   return { x: e.x - w * anchor[0], y: e.y - h * anchor[1], w, h, ex: e.x, ey: e.y, im, altar };
 }
 function drawEggStand() {
   const r = shrineRect(), gone = D.thief || D.phase === 'defeat', t = performance.now() / 1000;
   const im = r.im;
-  ctx.fillStyle = 'rgba(40,25,10,.25)'; ctx.beginPath(); ctx.ellipse(r.ex + r.w * 0.05, r.y + r.h * 0.86, r.w * 0.42, r.h * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(40,25,10,.25)'; ctx.beginPath(); ctx.ellipse(r.ex + r.w * 0.05, r.y + r.h * 0.96, r.w * 0.4, dk * 0.19, 0, 0, Math.PI * 2); ctx.fill();
   if (ready(im)) {
     const shake = r.altar && D.eggHit > 0 ? Math.sin(D.eggHit * 60) * dk * 0.045 : 0;
     ctx.drawImage(im, r.x + shake, r.y, r.w, r.h);
