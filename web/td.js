@@ -145,7 +145,7 @@ function expandDay() { return T.expand >= 1 ? 12 : 6; }
 function expandTown() {
   if (T.expand >= MAX_EXPAND) return;
   T.expand++; applyLayout();
-  persist(); renderTdHud(); SFX.play('fanfare');
+  persist(); renderTdHud(); SFX.play('upgrade');
   toast('🏰 สร้างกำแพงข้างเพิ่มแล้ว! มีจุดตั้งป้อมเป็ดใหม่ 2 จุด');
 }
 function gateCost() { return [600, 1500, 3500][T.gatehouse] || 0; }
@@ -221,7 +221,7 @@ const INTRO_LINES = {
   glider: ['ร่มฝาชี', 'ร่มฝาชี! กระโดดข้ามกำแพงเจ้าได้สบายๆ!'],
   pitcher: ['แมวปาลูกชิ้น', 'มือปาลูกชิ้นของข้า! ปาโดนหัวเป็ดทีเดียวมึนเลย!'],
   boxer:  ['แมวนักมวย', 'นักมวยถุงมือร้อน! หมัดเดียวกำแพงกระจุย!'],
-  chief:  ['รองหัวหน้า แมวเชฟ', 'มือขวาของข้า! กระทะเขาฟาดทีเดียวกำแพงพัง!'],
+  chief:  ['รองบอสแมวค้อน', 'มือขวาของข้า! ระวังค้อนไม้ของเขาไว้ให้ดี!'],
   boss:   ['ราชาแมว', 'ข้าเอง! ราชาแมว!! วันนี้ข้าจะลงสนามเองโว้ย!!'],
   ladder: ['แมวแบกบันได', 'บันไดลิง! พาดกำแพงปุ๊บ ปีนเข้าไปแย่งไข่ทองคำปั๊บ!'],
   mole:   ['แมวขอมดำดิน', 'คาถาดำดิน! มุดดินไปโผล่หน้าประตู เป็ดไม่ทันเห็นแน่ ฮ่าๆ!'],
@@ -261,7 +261,8 @@ function drawCatIntro() {
   const inK = Math.min(1, t / 0.5), ex = cx + (1 - inK) * W * 0.5, pose = Math.abs(Math.sin(now * 3)) * 6;
   const fake = { kind, gear: kind === 'boss' ? null : catGear(kind === 'boss' ? 'cat' : kind), hp: 1, max: 1, st: 'walk', mx: 0, my: 1, ph: 0, hitT: 0, stun: 0, atk: 0, x: 0, y: 0, trayHp: kind === 'tray' ? 4 : 0, boss: kind === 'boss' };
   if (!I.gear || I.gearFor !== kind) { I.gear = fake.gear; I.gearFor = kind; } fake.gear = I.gear;
-  if (kind === 'boss') { if (ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
+  if (kind === 'boss' && ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 4, ex, cy - pose, sh * 1.4, true);
+  else if (kind === 'chief' && ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.08, false);
   else if (kind === 'cart') drawCart(fake, { x: ex, y: cy - pose }, sh * 0.9);
   else if (kind === 'ram') drawRam(fake, { x: ex, y: cy - pose }, sh * 0.85);
   else if (OLD_IMG[kind]) drawFrame(OLD_IMG[kind], Math.floor(now * 6) % 4, ex, cy - pose, sh * 0.85, false);
@@ -279,7 +280,7 @@ function drawCatIntro() {
   }
   // the cat king on the left, bouncing as he gloats (when he is not the one on show)
   const kx = W * 0.2, ky = H * 0.42, talk = Math.abs(Math.sin(now * 9)) * 4;
-  const KW = ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
+  const KW = 'boss_walk';
   if (kind !== 'boss' && ready(IMG[KW])) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame(KW, 0, 0, 0, sh * 0.95, false); ctx.restore(); }
   // speech bubble with typed text
   const shown = line[1].slice(0, Math.floor(t * 26)), bx = W * 0.05, by = H * 0.13, bw = W * 0.9;
@@ -770,6 +771,13 @@ function tdUpdate(dt) {
   for (const c of D.cats) if (c.hp <= 0 && (c.boss || c.kind === 'chief') && (c.deadT || 0) > 1.3) {
     c.y -= 0.75 * dt; c.x += Math.sin((c.deadT || 0) * 3) * 0.2 * dt;
     if (Math.random() < dt * 0.6) SFX.play('catScared');
+  }
+  for (const c of D.cats) {
+    if (c.walkX !== undefined && (c.st === 'walk' || c.st === 'flee' || (c.hp <= 0 && c.deadT > 1.3))) {
+      const distance = Math.hypot(c.x - c.walkX, c.y - c.walkY);
+      if (distance < 0.8) c.walkDistance = ((c.walkDistance || 0) + distance) % 4.5;
+    }
+    c.walkX = c.x; c.walkY = c.y;
   }
   for (const c of D.cats) { if (c.squash) c.squash = Math.max(0, c.squash - dt * 6); if (c.fly) { c.fly.t += dt; } }
   D.cats = D.cats.filter(c => c.hp > 0 || (c.deadT = (c.deadT || 0) + dt) < ((c.boss || c.kind === 'chief') ? (c.y > dinv(0, 30).y ? 99 : 0) : c.shockDead ? 0.9 : 0.6));
@@ -1374,15 +1382,15 @@ function padListOld() {
     } });
     else if (pl.lvl < 10) L.push({ id: 'u' + s, x, y, icon: WEAPON[pl.w].icon, label: `Lv.${pl.lvl + 1}`, cost: lvlCost(pl), apply: () => {
       const before = tierOf(pl.lvl); pl.lvl++; const after = tierOf(pl.lvl);
-      if (after > before) { toast(`แท่นใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); const q = platPos(s); for (let i = 0; i < 30; i++) confetti(q.x, q.y); addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('win'); }
+      if (after > before) { toast(`แท่นใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); const q = platPos(s); for (let i = 0; i < 30; i++) confetti(q.x, q.y); addFx('ring', q.x, q.y, '#ffd84a'); }
     } });
   }
   CAMP_POS.forEach((cp, i) => {
     const cm = T.camps[i], x = cp.x + (i ? -0.2 : 0.4), y = cp.y + 1.15;
     if (!cm) L.push({ id: 'cb' + i, x, y, icon: '⛺', label: 'ค่ายเป็ดวางกับดัก', cost: 500, apply: () => { T.camps[i] = { lvl: 1 }; toast('ตั้งค่ายแล้ว! เป็ดจะออกไปวางไม้กระดกกับระเบิดปลาทู 🪤'); SFX.play('quack'); } });
-    else if (cm.lvl < 10) L.push({ id: 'cu' + i, x, y, icon: '🪖', label: `ค่าย Lv.${cm.lvl + 1}`, cost: Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4), apply: () => { cm.lvl++; if (cm.lvl === 5 || cm.lvl === 10) toast(cm.lvl === 5 ? 'ค่ายได้เป็ดวางกับดักเพิ่ม 1 ตัว!' : 'กับดักแรงขึ้น + เป็ดเพิ่มอีกตัว!'); } });
+    else if (cm.lvl < 10) L.push({ id: 'cu' + i, x, y, icon: '🪖', label: `ค่าย Lv.${cm.lvl + 1}`, cost: Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4), apply: () => { cm.lvl++; SFX.play('upgrade'); if (cm.lvl === 5 || cm.lvl === 10) toast(cm.lvl === 5 ? 'ค่ายได้เป็ดวางกับดักเพิ่ม 1 ตัว!' : 'กับดักแรงขึ้น + เป็ดเพิ่มอีกตัว!'); } });
   });
-  L.push({ id: 'house', x: -2.0, y: EGG_Y + 1.45, icon: '🥚', label: `เกราะไข่ Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
+  L.push({ id: 'house', x: -2.0, y: EGG_Y + 1.45, icon: '🥚', label: `เกราะไข่ Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; SFX.play('upgrade'); D.houseHp = D.houseMax = houseMax(); } });
   for (const w of D.walls) if (w.hp < w.max) {
     const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
     L.push({ id: 'w' + w.i, x: w.x + (w.i === NWALL - 1 ? -0.9 : 0.9), y: WALL_FOOT + 0.55, icon: '🔧', label: w.gate ? 'ซ่อมประตู' : 'ซ่อมกำแพง', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
@@ -1552,9 +1560,10 @@ function openGate() {
   const fc = 50 * T.fence;
   body.appendChild(btn(`🧱 อัปเกรดกำแพงเมือง Lv.${T.fence + 1}`, `ประตูทน ${wallMax(GATE)} → ${Math.round((30 + T.fence * 18) * (1.4 + (T.gatehouse || 0) * 0.6))}${WALL_LOOK_AT.includes(T.fence + 1) ? ` • โฉมใหม่: ${WALL_TIERS[wallTierOf(T.fence + 1)].name}` : ''} • 🪙${fc}`, save.coins >= fc, () => {
     save.coins -= fc; const before = wallTierOf(T.fence); T.fence++; for (const w of D.walls) { w.max = wallMax(w.i); w.hp = w.gate ? Math.min(w.max, w.hp + 18) : w.max; }
-    if (wallTierOf(T.fence) > before) { SFX.play('fanfare'); toast(`🏰 กำแพงโฉมใหม่: ${WALL_TIERS[wallTierOf(T.fence)].name}!`); for (let i = 0; i < 30; i++) confetti((Math.random() - 0.5) * 8, FENCE_Y); }
+    SFX.play('upgrade');
+    if (wallTierOf(T.fence) > before) { toast(`🏰 กำแพงโฉมใหม่: ${WALL_TIERS[wallTierOf(T.fence)].name}!`); for (let i = 0; i < 30; i++) confetti((Math.random() - 0.5) * 8, FENCE_Y); }
   }));
-  if (T.gatehouse < 3) body.appendChild(btn(`🏯 ${['สร้างซุ้มประตูเมือง', 'ซุ้มประตูหิน', 'ซุ้มประตูทองคำ'][T.gatehouse]}`, T.wave < 3 ? 'ปลดล็อกวันที่ 3' : `ประตูทนขึ้นอีกมาก • 🪙${gateCost()}`, T.wave >= 3 && save.coins >= gateCost(), () => { save.coins -= gateCost(); T.gatehouse++; g.max = wallMax(GATE); g.hp = g.max; SFX.play('fanfare'); toast('🏯 ประตูเมืองแข็งแรงขึ้นแล้ว!'); }));
+  if (T.gatehouse < 3) body.appendChild(btn(`🏯 ${['สร้างซุ้มประตูเมือง', 'ซุ้มประตูหิน', 'ซุ้มประตูทองคำ'][T.gatehouse]}`, T.wave < 3 ? 'ปลดล็อกวันที่ 3' : `ประตูทนขึ้นอีกมาก • 🪙${gateCost()}`, T.wave >= 3 && save.coins >= gateCost(), () => { save.coins -= gateCost(); T.gatehouse++; g.max = wallMax(GATE); g.hp = g.max; SFX.play('upgrade'); toast('🏯 ประตูเมืองแข็งแรงขึ้นแล้ว!'); }));
   if (T.expand < MAX_EXPAND) body.appendChild(btn(`🏰 สร้างกำแพงข้าง (ตัว U) ${T.expand + 1}/${MAX_EXPAND}`, T.wave < expandDay() ? `ปลดล็อกวันที่ ${expandDay()} • ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด` : `ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด วางป้อมได้ทันที • 🪙${expandCost()}`, T.wave >= expandDay() && save.coins >= expandCost(), () => { save.coins -= expandCost(); expandTown(); }));
   $('sheet').classList.remove('hidden');
 }
@@ -1568,7 +1577,7 @@ function openCamp(i) {
   body.appendChild(info);
   if (!cm) body.appendChild(btn('⛺ ตั้งค่าย', 'เป็ดวางกับดัก 1 ตัว • 🪙500', save.coins >= 500, () => { save.coins -= 500; T.camps[i] = { lvl: 1 }; SFX.play('quack'); toast('ตั้งค่ายแล้ว! 🪤'); }));
   else if (cm.lvl < 10) { const c = Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4);
-    body.appendChild(btn(`⬆️ อัปเกรดค่าย Lv.${cm.lvl + 1}`, `กับดักแรงขึ้น • Lv.5, 10 ได้เป็ดเพิ่ม • 🪙${c}`, save.coins >= c, () => { save.coins -= c; cm.lvl++; if (cm.lvl === 5 || cm.lvl === 10) toast('ได้เป็ดวางกับดักเพิ่ม 1 ตัว!'); })); }
+    body.appendChild(btn(`⬆️ อัปเกรดค่าย Lv.${cm.lvl + 1}`, `กับดักแรงขึ้น • Lv.5, 10 ได้เป็ดเพิ่ม • 🪙${c}`, save.coins >= c, () => { save.coins -= c; cm.lvl++; SFX.play('upgrade'); if (cm.lvl === 5 || cm.lvl === 10) toast('ได้เป็ดวางกับดักเพิ่ม 1 ตัว!'); })); }
   else { const d = document.createElement('div'); d.className = 'sinfo'; d.textContent = '⭐ เลเวลเต็มแล้ว'; body.appendChild(d); }
   $('sheet').classList.remove('hidden');
 }
@@ -1591,8 +1600,8 @@ function openBaseMenu(s) {
   } else {
     if (p.lvl < 10) mk('⬆️', `Lv.${p.lvl + 1}`, `🪙${lvlCost(p)}`, save.coins >= lvlCost(p), () => {
       const before = tierOf(p.lvl); save.coins -= lvlCost(p); p.lvl++; const after = tierOf(p.lvl);
-      addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('gateGood'); D.floats.push({ x: q.x, y: q.y, t: 0, text: `⬆️ Lv.${p.lvl}`, color: '#ffe680', big: true });
-      if (after > before) { toast(`ป้อมใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); for (let i = 0; i < 30; i++) confetti(q.x, q.y); SFX.play('win'); }
+      addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('upgrade'); D.floats.push({ x: q.x, y: q.y, t: 0, text: `⬆️ Lv.${p.lvl}`, color: '#ffe680', big: true });
+      if (after > before) { toast(`ป้อมใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); for (let i = 0; i < 30; i++) confetti(q.x, q.y); }
       persist(); renderTdHud(); openBaseMenu(s);
     });
     else mk('⭐', 'เต็มแล้ว', '', false, () => {});
@@ -1632,8 +1641,8 @@ function openSlot(s) {
     body.appendChild(perk);
     if (p.lvl < 10) body.appendChild(btn(`⬆️ อัปเกรดเป็น Lv.${p.lvl + 1}`, `${[4, 7, 10].includes(p.lvl + 1) ? `ป้อมเปลี่ยนเป็น${PLAT_NAME[tierOf(p.lvl + 1)]}! • ` : ''}🪙${lvlCost(p)}`, save.coins >= lvlCost(p), () => {
       const before = tierOf(p.lvl); save.coins -= lvlCost(p); p.lvl++; const after = tierOf(p.lvl); const q = platPos(s);
-      addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('gateGood');
-      if (after > before) { toast(`ป้อมใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); for (let i = 0; i < 30; i++) confetti(q.x, q.y); SFX.play('win'); }
+      addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('upgrade');
+      if (after > before) { toast(`ป้อมใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); for (let i = 0; i < 30; i++) confetti(q.x, q.y); }
     }));
     else { const mx = document.createElement('div'); mx.className = 'sinfo'; mx.textContent = '⭐ เลเวลเต็มแล้ว! ' + PLAT_SKILL[3]; body.appendChild(mx); }
     const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px';
@@ -1668,13 +1677,13 @@ function openHouse() {
   const fc = 50 * T.fence, bc = 60 * T.bomb;
   const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = '🦆 <b>เป็ดหัวหน้า</b> (แตะวงกลมซื้อของ เป็ดจะเดินไปจ่ายเอง ลากนิ้วก็ยังบังคับเดินได้ และฟาดแมวด้วยทัพพี)'; body.appendChild(lh);
   const la = 70 * T.lead.atk, ls = 60 * T.lead.spd, lm = 50 * T.lead.mag;
-  body.appendChild(btn(`🥄 ทัพพี Lv.${T.lead.atk}${T.lead.atk >= 5 ? ' → กระทะ' : ''}`, `ฟาดแรง ${leadDmg().toFixed(1)} • 🪙${la}`, save.coins >= la, () => { save.coins -= la; T.lead.atk++; if (T.lead.atk === 5) toast('ได้กระทะ! ฟาดแรงขึ้น 🍳'); }));
-  body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; }));
+  body.appendChild(btn(`🥄 ทัพพี Lv.${T.lead.atk}${T.lead.atk >= 5 ? ' → กระทะ' : ''}`, `ฟาดแรง ${leadDmg().toFixed(1)} • 🪙${la}`, save.coins >= la, () => { save.coins -= la; T.lead.atk++; SFX.play('upgrade'); if (T.lead.atk === 5) toast('ได้กระทะ! ฟาดแรงขึ้น 🍳'); }));
+  body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; SFX.play('upgrade'); }));
   const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = '🏰 เมืองเป็ด'; body.appendChild(hh);
-  body.appendChild(btn(`🥚 เสริมเกราะไข่ทองคำ Lv.${T.house + 1}`, `ทน ${houseMax()} → ${houseMax() + 12} • 🪙${80 * T.house}`, save.coins >= 80 * T.house, () => { save.coins -= 80 * T.house; T.house++; D.houseHp = D.houseMax = houseMax(); }));
+  body.appendChild(btn(`🥚 เสริมเกราะไข่ทองคำ Lv.${T.house + 1}`, `ทน ${houseMax()} → ${houseMax() + 12} • 🪙${80 * T.house}`, save.coins >= 80 * T.house, () => { save.coins -= 80 * T.house; T.house++; SFX.play('upgrade'); D.houseHp = D.houseMax = houseMax(); }));
   { const wh = document.createElement('div'); wh.className = 'sinfo'; wh.textContent = '🧱 อัปเกรดกำแพง ประตูเมือง และกำแพงข้าง: แตะที่ตัวกำแพงได้เลย'; body.appendChild(wh); }
   body.appendChild(btn(`🐟 กับดักปลาทูระเบิด (มี ${T.traps})`, `ซื้อเพิ่ม 1 อัน • 🪙120`, save.coins >= 120, () => { save.coins -= 120; T.traps++; }));
-  body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; }));
+  body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; SFX.play('upgrade'); }));
   const rp = document.createElement('button'); rp.className = 'sbtn'; rp.style.background = '#6d8fc9'; rp.style.boxShadow = '0 4px 0 #3f62a3';
   rp.innerHTML = '<b>🎬 ดูเรื่องราวตอนต้นอีกครั้ง</b>'; rp.onclick = () => { closeSheet(); playIntro(); }; body.appendChild(rp);
   const ver = document.createElement('div'); ver.className = 'sinfo'; ver.style.opacity = '.7'; ver.textContent = `เกม ${gameVersion()} • อัปเดตอัตโนมัติเมื่อมีแพตใหม่`; body.appendChild(ver);
@@ -2401,14 +2410,15 @@ function drawCat(c) {
     if (f.t > 0.5 && !f.poofed) { f.poofed = true; }
     return;
   }
-  const KC = !c.boss && !OLD_IMG[c.kind] && ready(IMG.k_cat_walk) && ready(IMG.k_cat_act);
+  const chiefArt = c.kind === 'chief' && ready(IMG.k_king_act) && (ready(IMG.chief_walk) || ready(IMG.k_king_walk));
+  const KC = !c.boss && !chiefArt && !OLD_IMG[c.kind] && ready(IMG.k_cat_walk) && ready(IMG.k_cat_act);
   if (c.hp <= 0 && !KC) { ctx.save(); ctx.translate(x, p.y); ctx.rotate((flip ? -1 : 1) * Math.min(1.4, (c.deadT || 0) * 5)); x = 0; }
   const py = c.hp <= 0 && !KC ? 0 : p.y, atk = (c.fighting || c.st !== 'walk') && c.st !== 'flee' && c.st !== 'jump' && c.st !== 'climb' && c.hp > 0, k = (c.atk || 0) / 0.9;
   if (KC) {
     if (c.hp <= 0 && c.kind !== 'chief') ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
-  } else if (c.boss && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
-    const bh = h * 1.1;
+  } else if (chiefArt) {
+    const bh = h * 1.15;
     if (c.hp <= 0) {
       ctx.restore(); ctx.globalAlpha = 1;
       const dt2 = c.deadT || 0;
@@ -2416,25 +2426,27 @@ function drawCat(c) {
         // knocked down: sits dizzy, wobbling, stars circling
         ctx.save(); ctx.translate(p.x, p.y); cartoonRecoil(Math.min(1, dt2 / 0.55), 1.2); drawFrame('k_king_act', 2, 0, 0, bh * 0.9, flip); ctx.restore();
       } else {
-        // limps away, back turned, little hops, sweat drop
+        // Limps away facing a stable direction.
         ctx.save(); ctx.translate(p.x, p.y - Math.abs(Math.sin(dt2 * 7)) * bh * 0.04); ctx.rotate(Math.sin(dt2 * 7) * 0.08);
-        drawFrame('k_king_act', 3, 0, 0, bh * 0.95, Math.floor(dt2 * 3.5) % 2 === 1); ctx.restore();
+        drawFrame('k_king_act', 3, 0, 0, bh * 0.95, flip); ctx.restore();
         ctx.font = `${Math.round(bh * 0.18)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', p.x + bh * 0.28, p.y - bh * 0.85 + Math.sin(dt2 * 12) * 3);
       }
       ctx.font = `${Math.round(bh * 0.16)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', p.x + Math.cos(dt2 * 5) * bh * 0.18, p.y - bh * 0.98);
       return;
     }
     if (atk) {
-      const phase = c.atk / BOSS_PERIOD;
+      const phase = k;
       ctx.save(); ctx.translate(x, py); if (flip) ctx.scale(-1, 1);
-      cartoonStrike(bh, phase, 0.8, 1.35);
-      drawFrame('k_king_act', phase < 0.8 ? 0 : 1, 0, 0, bh * 1.08);
+      cartoonStrike(bh, phase, 0.87, 0.95);
+      drawFrame('k_king_act', phase < 0.87 ? 0 : 1, 0, 0, bh * 1.08);
       ctx.restore();
     } else {
       ctx.save(); ctx.translate(x, py);
+      const gait = (c.walkDistance || 0) / 0.75;
       if (c.hitT > 0) cartoonRecoil(1 - c.hitT / 0.12);
-      else cartoonStep(bh, t * Math.PI * 6, 0.8);
-      drawFrame('k_king_walk', Math.floor(t * 6), 0, 0, bh);
+      else cartoonStep(bh, gait * Math.PI * 2, 0.2);
+      const sprite = ready(IMG.chief_walk) ? 'chief_walk' : 'k_king_walk';
+      drawFrame(sprite, sprite === 'chief_walk' ? Math.floor(gait * 6) : 1, 0, 0, bh, flip);
       ctx.restore();
     }
     if (c.hitT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, py - bh * 0.5, bh * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
@@ -2460,7 +2472,7 @@ function drawCat(c) {
       drawFrame('boss_attack', fr, x, py, bh * 1.1, flip);
     } else {
       const back = (c.my || 1) < -0.3 && ready(IMG.boss_walk_back);
-      drawFrame(back ? 'boss_walk_back' : 'boss_walk', Math.floor(t * 7) % 6, x, py - Math.abs(Math.sin(t * 5.7)) * bh * 0.03, bh, back ? !flip : flip);
+      drawFrame(back ? 'boss_walk_back' : 'boss_walk', Math.floor((c.walkDistance || 0) * 8) % 6, x, py, bh, back ? !flip : flip);
     }
     if (c.hitT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, py - bh * 0.5, bh * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   } else if (c.boss && ready(IMG.boss)) {
@@ -2468,7 +2480,7 @@ function drawCat(c) {
     drawAt(IMG.boss, 0, 0, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight); ctx.restore();
   } else if (OLD_IMG[c.kind] && ready(IMG[OLD_IMG[c.kind]])) {
     // redesigned front-walking cats: code-driven lunge for the attack
-    const ci = OLD_IMG[c.kind], wf = Math.floor(t * (c.kind === 'shadow' ? 12 : 8)) % 2;
+    const ci = OLD_IMG[c.kind], wf = Math.floor((c.walkDistance || 0) * 9) % 2;
     if (atk) {
       const wind = k < 0.5 ? k / 0.5 : 0, hit = k >= 0.5 && k < 0.75 ? 1 - Math.abs(k - 0.62) / 0.13 : 0;
       ctx.save(); ctx.translate(x, py + hit * h * 0.1); ctx.scale(1 + wind * 0.08 - hit * 0.05, 1 - wind * 0.1 + hit * 0.12);
@@ -2550,6 +2562,7 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   // glider in the air: lift it up and open the colander parachute
   const jh = c.jh || 0;
   if (jh > 0) py -= jh * dk;
+  const gait = (c.walkDistance || 0) / 0.75;
   const dressed = KITCHEN_CAT_ART[c.kind];
   const back = !atk && (c.my || 0) < -0.3 && Math.abs(c.my) > Math.abs(c.mx || 0);
   if (ready(IMG[dressed]) && !back && !jh) {
@@ -2559,14 +2572,14 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
     ctx.save(); ctx.translate(x, py); if ((c.mx || 0) < 0) ctx.scale(-1, 1);
     if (c.hp <= 0 || c.hitT > 0) cartoonRecoil(c.hp <= 0 ? (c.deadT || 0) / 0.35 : 1 - c.hitT / 0.12);
     else if (firing) cartoonStrike(h, c.st === 'pitch' ? 1 - c.fireT / 0.8 : kk, 0.87);
-    else if (c.st === 'walk') cartoonStep(h, t * 21, 0.85);
+    else if (c.st === 'walk') cartoonStep(h, gait * Math.PI * 2, 0.42);
     drawFrame(dressed, frame, 0, 0, h);
     ctx.restore();
     return;
   }
   // the kitchen cat sprites face RIGHT; cats on the right side walk left, so mirror those
   const flee = c.st === 'flee', flip = (c.mx || 0) < 0, w = h * 0.76, dead = c.hp <= 0;
-  let img = 'k_cat_walk', fr = Math.floor(t * (flee ? 16 : c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
+  let img = 'k_cat_walk', fr = Math.floor(gait * 4) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
   if (IMG.k_cat_walk instanceof HTMLCanvasElement && (atk || dead || c.hitT > 0 || c.stun > 0)) {
     const action = dead ? 3 : c.hitT > 0 || c.stun > 0 ? 2 : kk < 0.55 ? 0 : 1;
     ctx.save(); ctx.translate(x, py); if (flip) ctx.scale(-1, 1);
@@ -2603,7 +2616,7 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   if (flee && !dead) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', x + h * 0.3, py - h * 1.0 + Math.sin(t * 20) * 3); }
   if (c.kind === 'cat' && IMG[img] instanceof HTMLCanvasElement) {
     ctx.save(); ctx.translate(x, py); if (view === 'side' && flip) ctx.scale(-1, 1);
-    if (c.st === 'walk' || flee) cartoonStep(h, t * Math.PI * (flee ? 16 : 7), flee ? 1.05 : 0.85);
+    if (c.st === 'walk' || flee) cartoonStep(h, gait * Math.PI * 2, flee ? 0.65 : 0.35);
     drawFrame(img, fr, 0, 0, h);
     ctx.restore();
     return;

@@ -5,7 +5,7 @@
     '01': {"k_duck_walk":{"frames":[1,0,3,0]},"k_duck_act":{"frames":[4,4,7,2]}},
     '02': {"duck_crossbow_art":{"frames":[0,1,2,3]},"duck_chili_art":{"frames":[4,4,5,6]},"duck_spoon_art":{"frames":[8,9,10,11]}},
     '03': {"h_pan":[11,7,146,158],"h_bow":[173,7,158,158],"h_egg":[341,31,158,134],"h_coffee":[509,56,158,109],"h_triple":[5,216,158,117],"h_cannon":[173,176,158,157],"h_stove":[353,175,134,158],"h_storm":[509,184,158,149],"h_melon":[5,345,158,156],"h_roller":[177,343,149,158],"h_fish":[341,377,158,124],"it_chefhat":[509,357,158,144],"h_xbow":[10,511,147,158],"h_ice":[178,511,147,158]},
-    '04': {"k_cat_front":{"frames":[0,1,2,3]},"k_cat_back":{"frames":[4,5,6,7]},"k_cat_walk":{"frames":[8,9,10,11]},"k_cat_act":{"frames":[12,13,14,15]}},
+    '04': {"k_cat_front":{"frames":[0,1,0,3]},"k_cat_back":{"frames":[4,5,6,7]},"k_cat_walk":{"frames":[8,10,8,10]},"k_cat_act":{"frames":[12,13,14,15]}},
     '05': {"k_knight":{"frames":[0,1,2,3]},"k_shadow":{"frames":[4,5,6,7]},"k_steel":{"frames":[8,9,10,11]}},
     '06': {"k_king_walk":{"frames":[0,1,0,1]},"k_king_act":{"frames":[2,3,5,6]}},
     '07': {"cat_colander_art":{"frames":[0,1,2,3]},"cat_club_art":{"frames":[4,5,6,7]},"cat_board_art":{"frames":[8,9,10,11]}},
