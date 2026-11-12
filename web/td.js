@@ -175,7 +175,7 @@ function freshField() {
     shooters: new Map(),   // slot -> {cd, aimDx, aimDy, shootT}
     cats: [], shots: [], fx: [], floats: [], queue: [], banner: 0, killed: 0, earned: 0,
     parts: [], coins: [], revived: false, hudPulse: 0, seen: {}, bolts: [],
-    drops: [], pools: [], traps: [], troops: [], ladders: [], tops: [], strikes: [], sky: null, ufo: null, campT: {}, trapMode: false,                                   // coins lying on the ground for the leader to pick up
+    drops: [], pools: [], traps: [], troops: [], ladders: [], cracks: [], holes: [], tops: [], strikes: [], sky: null, ufo: null, campT: {}, trapMode: false,                                   // coins lying on the ground for the leader to pick up
     lead: { x: -1.8, y: WALL_FOOT + 1.2, face: 1, walkT: 0, moving: false, atkCd: 0, swingT: 0, hurtT: 0, happyT: 0 },
     joy: null,                                   // {sx, sy, x, y} while a finger is dragging
     padT: 0,
@@ -473,16 +473,19 @@ function tdUpdate(dt) {
       }
       if (c.under) {
         // tunnelling under the lawn and the wall, pops up inside the town
+        const ox = c.x, oy = c.y;
         c.y += c.v * 1.7 * dt; c.x += Math.sin(D.t * 2 + c.sway) * 0.4 * dt; c.mx = 0; c.my = 1;
-        if (Math.random() < dt * 6) D.parts.push({ x: c.x + (Math.random() - 0.5) * 0.3, y: c.y, h: 0.1, vx: (Math.random() - 0.5) * 1.5, vy: -0.5, vh: 2 + Math.random() * 2, t: 0, life: 0.6, kind: 'rock', r: Math.random() * 6 });
+        c.crackD = (c.crackD || 0) + Math.hypot(c.x - ox, c.y - oy);
+        if (c.crackD > 0.22) { c.crackD = 0; const j = (Math.random() - 0.5) * 0.18; D.cracks.push({ x1: c.cx || ox, y1: c.cy || oy, x2: c.x + j, y2: c.y, t: 0, w: 0.6 + Math.random() * 0.6, br: Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) : 0 }); c.cx = c.x + j; c.cy = c.y; }
+        if (Math.random() < dt * 4) D.parts.push({ x: c.x + (Math.random() - 0.5) * 0.3, y: c.y, h: 0.05, vx: (Math.random() - 0.5) * 1.2, vy: -0.3, vh: 1.5 + Math.random() * 1.5, t: 0, life: 0.5, kind: 'rock', r: Math.random() * 6 });
         if (c.y >= FENCE_Y - 0.3) {
           c.under = false; c.y = WALL_FOOT + 0.6 + Math.random() * 0.9; c.x = Math.max(-3, Math.min(3, c.x));
-          c.popT = 0.45; c.jumped = true; addFx('dust', c.x, c.y, '#a8865a'); burst(c.x, c.y, ['#8a6a3a', '#a8865a', '#6a4a2a'], 12, 3.5, 1.2); SFX.play('thud'); SFX.play('meow');
+          c.emerge = 0.7; c.stun = Math.max(c.stun || 0, 0.7); c.jumped = true; D.holes.push({ x: c.x, y: c.y, t: 0 }); D.shake = Math.max(D.shake, 0.12); addFx('dust', c.x, c.y, '#a8865a'); burst(c.x, c.y, ['#8a6a3a', '#a8865a', '#6a4a2a'], 16, 4, 1.3); SFX.play('crack'); SFX.play('meow');
           if (!save.seenMoleTip) { save.seenMoleTip = true; persist(); toast('⛏️ แมวขอมดำดินโผล่ในเมือง! พาเป็ดหัวหน้าไปฟาด'); }
         }
         continue;
       }
-      if (c.popT > 0) c.popT -= dt;
+      if (c.emerge > 0) c.emerge -= dt;
       if (c.burn > 0) { c.burn -= dt; c.burnTick = (c.burnTick || 0) + dt; if (c.burnTick > 0.5) { c.burnTick = 0; hurtCat(c, c.burnDps * 0.5, 'burn'); if (c.hp <= 0) continue; } }
       if (c.launch) {
         // flung by a seesaw: fly back up the lane and land on the head
@@ -784,6 +787,8 @@ function tdUpdate(dt) {
   for (const f of D.floats) f.t += dt;
   D.floats = D.floats.filter(f => f.t < 1.1);
   for (const w of D.walls) { w.hit = Math.max(0, w.hit - dt); if (!w.gate) w.hp = w.max; }
+  for (const k of D.cracks) k.t += dt; D.cracks = D.cracks.filter(k => k.t < 7);
+  for (const h of D.holes) h.t += dt; D.holes = D.holes.filter(h => h.t < 6);
   D.shake = Math.max(0, D.shake - dt); D.eggHit = Math.max(0, (D.eggHit || 0) - dt);
   if (D.phase === 'wave' && !D.queue.length && !D.cats.some(c => c.hp > 0)) startVictory();
   if (D.phase === 'victory') victoryUpdate(dt);
@@ -1227,7 +1232,7 @@ function endWave(won) {
     return;
   }
   D.phase = 'build';
-  D.cats = []; D.shots = []; D.queue = []; D.pools = []; D.eshots = []; D.traps = []; D.troops = []; D.ladders = []; D.thief = null; D.trapMode = false; D.tops = []; D.strikes = []; D.sky = null; D.ufo = null;
+  D.cats = []; D.shots = []; D.queue = []; D.pools = []; D.eshots = []; D.traps = []; D.troops = []; D.ladders = []; D.thief = null; D.trapMode = false; D.cracks = []; D.holes = []; D.tops = []; D.strikes = []; D.sky = null; D.ufo = null;
   collectAll();
   if (won) {
     for (let i = 0; i < 50; i++) confetti((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
@@ -1725,6 +1730,7 @@ function tdDraw() {
   }
   drawPads();
   for (const pl of D.pools) drawPool(pl);
+  drawGroundCracks();
   const list = [];
   for (const c of D.drops) list.push([c.y, () => drawDrop(c)]);
   for (const tr of D.traps || []) list.push([tr.y, () => drawTrap(tr)]);
@@ -2241,17 +2247,40 @@ function drawPlatform(s) {
   // (no badge over the duck any more: it hid the face. Level and weapon show on the pad and in the sheet)
 }
 function catImg(c) { return OLD_IMG[c.kind] || 'cat'; }
+function drawGroundCracks() {
+  if (!D.cracks) return;
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const k of D.cracks) {
+    const a = dproj(k.x1, k.y1), b = dproj(k.x2, k.y2), al = Math.min(1, (7 - k.t) / 1.5);
+    const mx = (a.x + b.x) / 2 + (k.w - 1) * 6, my = (a.y + b.y) / 2;
+    // raised soil lips either side, then the dark split
+    ctx.globalAlpha = al * 0.55; ctx.strokeStyle = '#b8955e'; ctx.lineWidth = dk * 0.13 * k.w;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(mx, my); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.globalAlpha = al; ctx.strokeStyle = '#3a2410'; ctx.lineWidth = Math.max(1.5, dk * 0.05 * k.w);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(mx, my); ctx.lineTo(b.x, b.y); ctx.stroke();
+    // an occasional branching crack
+    if (k.br) { ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + k.br * dk * 0.18, my + dk * 0.03); ctx.lineTo(mx + k.br * dk * 0.3, my - dk * 0.02); ctx.stroke(); }
+  }
+  for (const h of D.holes) {
+    const p = dproj(h.x, h.y), al = Math.min(1, (6 - h.t) / 1.2), r = dk * 0.55 * Math.min(1, h.t * 8 + 0.4);
+    ctx.globalAlpha = al;
+    ctx.fillStyle = '#b8955e'; ctx.beginPath(); ctx.ellipse(p.x, p.y, r * 1.25, r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a1a0c'; ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r * 0.36, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + 0.4, x0 = p.x + Math.cos(an) * r * 1.05, y0 = p.y + Math.sin(an) * r * 0.4; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(an) * r * 0.45, y0 + Math.sin(an) * r * 0.2); ctx.lineTo(x0 + Math.cos(an + 0.3) * r * 0.7, y0 + Math.sin(an + 0.3) * r * 0.3); ctx.stroke(); }
+    ctx.fillStyle = '#8a6a3a'; for (let i = 0; i < 5; i++) { const an = i * 1.3 + 0.2; ctx.beginPath(); ctx.ellipse(p.x + Math.cos(an) * r * 1.35, p.y + Math.sin(an) * r * 0.55, r * 0.16, r * 0.1, an, 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.restore();
+}
 function drawMound(c) {
-  // a moving hump of dirt with ears and a helmet lamp peeking out
-  const p = dproj(c.x, c.y), t = performance.now() / 1000 + c.ph, s = dk * 0.9, wob = Math.sin(t * 14) * 2;
-  ctx.fillStyle = 'rgba(40,25,10,.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, s * 0.55, s * 0.18, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#8a6a3a'; ctx.strokeStyle = '#4a3218'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(p.x, p.y - s * 0.05 + wob * 0.3, s * 0.5, s * 0.28, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#a8865a'; for (let i = 0; i < 5; i++) { const a = Math.PI + 0.3 + i * 0.6; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * s * 0.35, p.y - s * 0.05 + Math.sin(a) * s * 0.18, s * 0.06, 0, Math.PI * 2); ctx.fill(); }
-  // ears + lamp glint
-  ctx.fillStyle = '#8a8f99'; ctx.strokeStyle = '#3a3a40';
-  for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(p.x + sd * s * 0.1, p.y - s * 0.28); ctx.lineTo(p.x + sd * s * 0.2, p.y - s * 0.5 + wob); ctx.lineTo(p.x + sd * s * 0.28, p.y - s * 0.26); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gl = ctx.createRadialGradient(p.x, p.y - s * 0.32, 1, p.x, p.y - s * 0.32, s * 0.4); gl.addColorStop(0, 'rgba(255,250,200,.9)'); gl.addColorStop(1, 'rgba(255,250,200,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(p.x, p.y - s * 0.32, s * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  // the head of the tunnel: the ground bulges and splits where the cat is digging
+  const p = dproj(c.x, c.y), t = performance.now() / 1000 + c.ph, s = dk * 0.6, bump = Math.abs(Math.sin(t * 12)) * s * 0.06;
+  ctx.fillStyle = 'rgba(40,25,10,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, s * 0.6, s * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#b8955e'; ctx.strokeStyle = '#5a3c1c'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(p.x, p.y - bump, s * 0.5, s * 0.26, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(p.x - s * 0.35, p.y - s * 0.04 - bump); ctx.lineTo(p.x - s * 0.1, p.y - s * 0.16 - bump); ctx.lineTo(p.x + s * 0.06, p.y - s * 0.08 - bump); ctx.lineTo(p.x + s * 0.3, p.y - s * 0.18 - bump); ctx.stroke();
+  ctx.fillStyle = '#8a6a3a'; for (let i = 0; i < 3; i++) { const a = t * 6 + i * 2.1; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * s * 0.4, p.y - s * 0.2 - Math.abs(Math.sin(a)) * s * 0.3, s * 0.06, 0, Math.PI * 2); ctx.fill(); }
 }
 function drawCat(c) {
   if (c.gone && c.hp <= 0) return;
@@ -2260,16 +2289,39 @@ function drawCat(c) {
     const u = Math.min(1, c.drop.t / c.drop.dur), g = dproj(c.x, c.y), lift = (1 - u) * dk * 7, t = performance.now() / 1000, sw = Math.sin(t * 2 + c.ph) * 0.12, keep = c.drop;
     ctx.fillStyle = `rgba(0,0,0,${0.08 + u * 0.2})`; ctx.beginPath(); ctx.ellipse(g.x, g.y, dk * 0.3, dk * 0.09, 0, 0, Math.PI * 2); ctx.fill();
     ctx.save(); ctx.translate(g.x, g.y - lift); ctx.rotate(sw);
-    const cw = dk * 1.15, cy0 = -dk * 1.9;
-    ctx.strokeStyle = 'rgba(60,40,20,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const f of [-1, -0.35, 0.35, 1]) { ctx.moveTo(f * cw * 0.5, cy0); ctx.lineTo(f * dk * 0.12, -dk * 0.75); } ctx.stroke();
-    ctx.save(); ctx.beginPath(); ctx.ellipse(0, cy0, cw * 0.55, cw * 0.42, 0, Math.PI, 0); ctx.closePath(); ctx.clip();
-    for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#ffffff' : '#e8423a'; ctx.beginPath(); ctx.moveTo(0, cy0 + cw * 0.1); ctx.lineTo(-cw * 0.6 + i * cw * 0.2, cy0 - cw * 0.5); ctx.lineTo(-cw * 0.4 + i * cw * 0.2, cy0 - cw * 0.5); ctx.closePath(); ctx.fill(); }
-    ctx.restore();
-    ctx.strokeStyle = '#3a2210'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, cy0, cw * 0.55, cw * 0.42, 0, Math.PI, 0); ctx.closePath(); ctx.stroke();
+    const cw = dk * 1.7, ch = dk * 0.85, cy0 = -dk * 2.05, n = 7, cols = c.ph % 2 > 1 ? ['#ff6b4a', '#fff3d6'] : ['#3fa8ff', '#fff3d6'];
+    // suspension lines from the canopy edge to the harness
+    ctx.strokeStyle = 'rgba(70,50,30,.75)'; ctx.lineWidth = 1;
+    ctx.beginPath(); for (let i = 0; i <= n; i += 1) { const ex = -cw / 2 + cw * i / n; ctx.moveTo(ex, cy0 + ch * 0.12); ctx.lineTo((i / n - 0.5) * dk * 0.3, -dk * 0.8); } ctx.stroke();
+    // gores (panels) with a scalloped hem
+    for (let i = 0; i < n; i++) {
+      const x0 = -cw / 2 + cw * i / n, x1 = -cw / 2 + cw * (i + 1) / n, xm = (x0 + x1) / 2;
+      const top = x => cy0 - ch * Math.sqrt(Math.max(0, 1 - Math.pow(x / (cw / 2), 2)));
+      ctx.beginPath(); ctx.moveTo(x0, cy0);
+      for (let k = 0; k <= 6; k++) { const x = x0 + (x1 - x0) * k / 6; ctx.lineTo(x, top(x)); }
+      ctx.lineTo(x1, cy0); ctx.quadraticCurveTo(xm, cy0 + ch * 0.22, x0, cy0); ctx.closePath();
+      const gg = ctx.createLinearGradient(x0, 0, x1, 0); const cc = cols[i % 2];
+      gg.addColorStop(0, cc); gg.addColorStop(1, i % 2 ? '#e2d4b4' : (cols[0] === '#ff6b4a' ? '#d8452a' : '#2a7ad0'));
+      ctx.fillStyle = gg; ctx.fill(); ctx.strokeStyle = '#3a2210'; ctx.lineWidth = 1.6; ctx.stroke();
+    }
+    // shine + vent
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.ellipse(-cw * 0.2, cy0 - ch * 0.62, cw * 0.14, ch * 0.12, -0.35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a2210'; ctx.beginPath(); ctx.ellipse(0, cy0 - ch * 0.98, cw * 0.05, ch * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+    // harness straps
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-dk * 0.15, -dk * 0.8); ctx.lineTo(-dk * 0.1, -dk * 0.45); ctx.moveTo(dk * 0.15, -dk * 0.8); ctx.lineTo(dk * 0.1, -dk * 0.45); ctx.stroke();
     ctx.translate(-g.x, -g.y); c.drop = null; drawCat(c); c.drop = keep; ctx.restore();
     return;
   }
-  if (c.popT > 0) { const keep = c.popT, k = keep / 0.45; c.popT = 0; ctx.save(); ctx.translate(0, -Math.sin(k * Math.PI) * dk * 0.8); drawCat(c); ctx.restore(); c.popT = keep; return; }
+  if (c.emerge > 0 && c.hp > 0) {
+    const keep = c.emerge, u = 1 - keep / 0.7, g = dproj(c.x, c.y), hh = dk * 1.2;
+    c.emerge = 0; ctx.save();
+    ctx.beginPath(); ctx.rect(g.x - dk * 2, g.y - dk * 4, dk * 4, dk * 4 - (u < 0.85 ? 0 : 0) + 2); ctx.clip();
+    ctx.translate(0, (1 - Math.min(1, u / 0.75)) * hh - Math.max(0, Math.sin(Math.max(0, u - 0.75) / 0.25 * Math.PI)) * dk * 0.25);
+    drawCat(c); ctx.restore(); c.emerge = keep;
+    // the near rim of the hole drawn over the cat's legs
+    ctx.fillStyle = '#b8955e'; ctx.beginPath(); ctx.ellipse(g.x, g.y, dk * 0.68, dk * 0.27, 0, 0, Math.PI); ctx.fill();
+    return;
+  }
   if (c.abduct && c.hp > 0) {
     const A = c.abduct, u = Math.min(1, A.t / 1.0), g = dproj(c.x, c.y), keep = c.abduct; c.abduct = null;
     ctx.save(); ctx.translate(g.x, g.y - u * dk * 3.0); ctx.rotate(u * 7); ctx.scale(1 - u * 0.65, 1 - u * 0.65); ctx.translate(-g.x, -g.y); drawCat(c); ctx.restore();
