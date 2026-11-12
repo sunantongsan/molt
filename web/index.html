@@ -380,16 +380,18 @@ const IMG = {};
   const i = new Image(); i.src = 'img/' + n + (n === 'floor' || n === 'grass' || n.startsWith('story') || n === 'bg_lane' ? '.jpg' : n.startsWith('shrine') ? '.webp' : '.png'); IMG[n] = i;
 });
 const FRAMES = { duck_run: 6, duck_shoot: 4, duck_die: 3, cat: 6, duck_sleep: 2, duck_cook: 4, duck_hammer: 4, duck_idle: 4, duck_walk_back: 6, duck_walk_front: 6, duck_shoot_front: 4, cat_back: 6, boss_walk: 6, boss_walk_back: 6, boss_attack: 4, boss_die: 3, duck_cannon: 4, duck_xbow: 4, duck_cannon_front: 4, cat_ninja: 6, cat_tank: 6, k_duck_walk: 4, k_duck_act: 4, k_cat_walk: 4, k_cat_act: 4, k_cat_front: 4, k_cat_back: 4, k_king_walk: 4, k_king_act: 4, k_knight: 4, k_shadow: 4, k_steel: 4, fx_boom: 4, fx_smoke: 4, fx_hits: 4 };
-function ready(i) { return i && i.complete && i.naturalWidth > 0; }
+function ready(i) { return i && (i instanceof HTMLCanvasElement ? i.width > 0 : i.complete && i.naturalWidth > 0); }
+function artWidth(i) { return i.naturalWidth || i.width; }
+function artHeight(i) { return i.naturalHeight || i.height; }
 // draw an image so its bottom-centre sits at (x, y) with the given width
 function drawAt(img, x, y, w) {
-  const h = w * img.naturalHeight / img.naturalWidth;
+  const h = w * artHeight(img) / artWidth(img);
   ctx.drawImage(img, x - w / 2, y - h, w, h);
   return h;
 }
 function drawFrame(name, frame, x, y, h, flip) {
   const img = IMG[name], n = FRAMES[name];
-  const fw = img.naturalWidth / n, fh = img.naturalHeight;
+  const fw = artWidth(img) / n, fh = artHeight(img);
   const w = h * fw / fh;
   const f = ((frame % n) + n) % n;
   if (flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); x = 0; }
@@ -921,19 +923,40 @@ function soldier(x, z, color, dark, phase) {
   ctx.beginPath(); ctx.arc(p.x, p.y - sz * 1.9 - bob, sz * 0.55, 0, Math.PI * 2); ctx.fill();
 }
 
+function drawRaidCat(frame, x, y, h, attacking = false) {
+  if (!ready(IMG.k_knight)) {
+    if (ready(IMG.cat)) drawFrame('cat', attacking ? 2 + frame % 3 : [0, 1, 5, 1][frame % 4], x, y, h);
+    return;
+  }
+  if (!attacking) {
+    drawFrame('k_knight', frame, x, y, h);
+    return;
+  }
+  // Lean into the strike, then recover to the same ground anchor.
+  const pose = frame % 3;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate([-0.13, 0.19, 0.05][pose]);
+  drawFrame('k_knight', [1, 2, 3][pose], 0, 0, h);
+  ctx.restore();
+}
+
 function unit(team, x, z, frame, mode) {
   const p = proj(x, z);
   if (p.y > H + 60 || p.s < 2) return;
   const h = p.s * 0.95;
   ctx.fillStyle = 'rgba(0,0,0,.2)';
   ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.24, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
-  if (team === 'duck') drawFrame(mode === 'shoot' ? 'duck_shoot' : 'duck_run', frame, p.x, p.y, h);
-  else if (mode === 'atk') drawFrame('cat', 2 + (frame % 3), p.x, p.y + h * 0.04 * (frame % 3), h);
-  else drawFrame('cat', [0, 1, 5, 1][frame % 4], p.x, p.y - Math.abs(Math.sin(frame * 0.8)) * h * 0.06, h);
+  if (team === 'duck') {
+    const art = mode === 'shoot' ? 'duck_crossbow_art' : 'k_duck_walk';
+    const fallback = mode === 'shoot' ? 'duck_shoot' : 'duck_run';
+    drawFrame(ready(IMG[art]) ? art : fallback, frame, p.x, p.y, h);
+  }
+  else drawRaidCat(frame, p.x, p.y - Math.abs(Math.sin(frame * 0.8)) * h * 0.035, h, mode === 'atk');
 }
 function drawCrowd(cx, cz, n, color, dark, facing, fighting) {
   const team = facing < 0 ? 'duck' : 'cat';
-  if (team === 'duck' ? !ready(IMG.duck_run) || !ready(IMG.duck_shoot) : !ready(IMG.cat)) return drawCrowdBasic(cx, cz, n, color, dark, facing);
+  if (team === 'duck' ? !ready(IMG.duck_run) || !ready(IMG.duck_shoot) : !ready(IMG.k_knight) && !ready(IMG.cat)) return drawCrowdBasic(cx, cz, n, color, dark, facing);
   const shown = Math.min(n, 140);
   const t = performance.now() / 1000;
   const mode = team === 'duck' ? (battle || state !== 'play' ? 'shoot' : 'run') : (fighting ? 'atk' : 'run');
@@ -1020,7 +1043,7 @@ function drawGate(o) {
 }
 
 function drawFoe(o) {
-  if (!ready(IMG.cat)) return;
+  if (!ready(IMG.k_knight) && !ready(IMG.cat)) return;
   const p = proj(o.x, o.z), h = p.s * 0.95;
   if (p.s < 2) return;
   const t = performance.now() / 1000;
@@ -1030,12 +1053,12 @@ function drawFoe(o) {
   if (o.hitT > 0) x += Math.sin(o.hitT * 120) * h * 0.05;
   if (o.st === 'atk') {
     const k = o.atkT / 0.75;                       // 0..1 swing cycle
-    const fr = k < 0.55 ? 2 : k < 0.75 ? 3 : 4;      // raise, swing, follow-through
+    const fr = k < 0.55 ? 0 : k < 0.75 ? 1 : 2;      // raise, swing, follow-through
     y += (k > 0.55 && k < 0.8 ? h * 0.08 : 0);       // lunge toward the ducks
-    drawFrame('cat', fr, x, y, h * (k > 0.55 && k < 0.8 ? 1.08 : 1));
+    drawRaidCat(fr, x, y, h * (k > 0.55 && k < 0.8 ? 1.08 : 1), true);
   } else {
     const ph = t * 9 + o.ph;
-    drawFrame('cat', [0, 1, 5, 1][Math.floor(ph) % 4], x + Math.sin(ph * 0.5) * h * 0.04, y - Math.abs(Math.sin(ph * 0.8)) * h * 0.07, h);
+    drawRaidCat(Math.floor(ph), x + Math.sin(ph * 0.5) * h * 0.04, y - Math.abs(Math.sin(ph * 0.8)) * h * 0.035, h);
   }
   if (o.hitT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y - h * 0.5, h * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   if (o.hp < o.max) {
@@ -1051,17 +1074,23 @@ function drawBoss(o) {
   ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.32, h * 0.1, 0, 0, Math.PI * 2); ctx.fill();
   const shakeX = o.hitT > 0 ? Math.sin(o.hitT * 120) * h * 0.02 : 0;
   const t = performance.now() / 1000;
-  if (ready(IMG.boss)) {
+  const king = ready(IMG.k_king_walk) && ready(IMG.k_king_act);
+  if (king || ready(IMG.boss)) {
+    let actionFrame = null;
     // waddle while walking, wind up and slam while fighting
     ctx.save(); ctx.translate(p.x + shakeX, p.y);
     let lift = Math.abs(Math.sin(t * 6)) * -h * 0.03;
     if (o.fight && battle && battle.o === o) {
       const ph = battle.t % 1.1;
+      actionFrame = ph < 0.6 ? 0 : 1;
       if (ph < 0.6) { const k = ph / 0.6; ctx.rotate(-0.3 * k); ctx.scale(1 - 0.05 * k, 1 + 0.08 * k); lift = -h * 0.12 * k; }   // wind-up: lean back, rise
       else if (ph < 0.8) { const k = (ph - 0.6) / 0.2; ctx.rotate(-0.3 + 0.65 * k); ctx.scale(1 + 0.1 * k, 1 - 0.12 * k); lift = -h * 0.12 * (1 - k); }   // slam down
       else { const k = (ph - 0.8) / 0.3; ctx.rotate(0.35 * (1 - k)); ctx.scale(1 + 0.1 * (1 - k), 1 - 0.12 * (1 - k)); lift = 0; }   // recover
     } else ctx.rotate(Math.sin(t * 6) * 0.06);
-    drawAt(IMG.boss, 0, lift, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
+    if (king) {
+      if (actionFrame === null) drawFrame('k_king_walk', Math.floor(t * 6), 0, lift, h);
+      else drawFrame('k_king_act', actionFrame, 0, lift, h);
+    } else drawAt(IMG.boss, 0, lift, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
     ctx.restore();
   }
   else if (ready(IMG.cat)) {
@@ -1136,9 +1165,9 @@ function draw() {
     const p = proj(d.x, d.z); const h = p.s * 0.95;
     ctx.globalAlpha = Math.max(0, 1 - Math.max(0, d.t - 0.5) / 0.4);
     if (d.team === 'duck' && ready(IMG.duck_die)) drawFrame('duck_die', Math.min(2, Math.floor(d.t * 7)), p.x, p.y, h, d.flip);
-    else if (d.team === 'cat' && ready(IMG.cat)) {
+    else if (d.team === 'cat' && (ready(IMG.k_knight) || ready(IMG.cat))) {
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate((d.flip ? 1 : -1) * Math.min(1.4, d.t * 5));
-      drawFrame('cat', 0, 0, 0, h); ctx.restore();
+      drawRaidCat(0, 0, 0, h); ctx.restore();
     }
     ctx.globalAlpha = 1;
   }]);
@@ -1281,6 +1310,7 @@ window.__molt = { get state() { return state; }, get army() { return army; }, ge
 </script>
 <script src="sounds.js"></script>
 <script src="welcome.js"></script>
+<script src="molt-art.js"></script>
 <script src="td.js"></script>
 <script src="intro.js"></script>
 <script src="tutorial.js"></script>

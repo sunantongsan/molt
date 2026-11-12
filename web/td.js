@@ -48,9 +48,9 @@ const PLAT_SKILL = ['', 'ยิงเร็วขึ้น 15%', 'ยิงเ�
 // draw a kitchen item centred at (x, y)
 function drawItem(name, x, y, size, rot, flip) {
   const img = IMG[name]; if (!ready(img)) return false;
-  const s = size / Math.max(img.naturalWidth, img.naturalHeight);
+  const w = artWidth(img), h = artHeight(img), s = size / Math.max(w, h);
   ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); if (flip) ctx.scale(-1, 1);
-  ctx.drawImage(img, -img.naturalWidth * s / 2, -img.naturalHeight * s / 2, img.naturalWidth * s, img.naturalHeight * s);
+  ctx.drawImage(img, -w * s / 2, -h * s / 2, w * s, h * s);
   ctx.restore(); return true;
 }
 // level look: 0 = Lv1-3, 1 = Lv4-6, 2 = Lv7-9, 3 = Lv10
@@ -261,7 +261,7 @@ function drawCatIntro() {
   const inK = Math.min(1, t / 0.5), ex = cx + (1 - inK) * W * 0.5, pose = Math.abs(Math.sin(now * 3)) * 6;
   const fake = { kind, gear: kind === 'boss' ? null : catGear(kind === 'boss' ? 'cat' : kind), hp: 1, max: 1, st: 'walk', mx: 0, my: 1, ph: 0, hitT: 0, stun: 0, atk: 0, x: 0, y: 0, trayHp: kind === 'tray' ? 4 : 0, boss: kind === 'boss' };
   if (!I.gear || I.gearFor !== kind) { I.gear = fake.gear; I.gearFor = kind; } fake.gear = I.gear;
-  if (kind === 'boss') { if (USE_NEW_KING && ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
+  if (kind === 'boss') { if (ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
   else if (kind === 'cart') drawCart(fake, { x: ex, y: cy - pose }, sh * 0.9);
   else if (kind === 'ram') drawRam(fake, { x: ex, y: cy - pose }, sh * 0.85);
   else if (OLD_IMG[kind]) drawFrame(OLD_IMG[kind], Math.floor(now * 6) % 4, ex, cy - pose, sh * 0.85, false);
@@ -279,7 +279,7 @@ function drawCatIntro() {
   }
   // the cat king on the left, bouncing as he gloats (when he is not the one on show)
   const kx = W * 0.2, ky = H * 0.42, talk = Math.abs(Math.sin(now * 9)) * 4;
-  const KW = USE_NEW_KING && ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
+  const KW = ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
   if (kind !== 'boss' && ready(IMG[KW])) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame(KW, 0, 0, 0, sh * 0.95, false); ctx.restore(); }
   // speech bubble with typed text
   const shown = line[1].slice(0, Math.floor(t * 26)), bx = W * 0.05, by = H * 0.13, bw = W * 0.9;
@@ -2125,6 +2125,8 @@ function drawDuckHat(w, fw, h, tier) {
     ctx.restore();
   }
 }
+const DECK_ART = ['molt_deck_wood', 'molt_deck_bamboo', 'molt_deck_brick', 'molt_deck_gold'];
+const DUCK_DEFENDER_ART = { xbow: 'duck_crossbow_art', fire: 'duck_chili_art', roller: 'duck_spoon_art' };
 function drawPlatform(s) {
   const q = platPos(s), p = dproj(q.x, q.y), pl = platAt(s), k = dk;
   if (D.moveFrom === s) { ctx.save(); ctx.globalAlpha = 0.5 + Math.sin(performance.now() / 120) * 0.3; }
@@ -2139,24 +2141,31 @@ function drawPlatform(s) {
   // a round turret on the wall walkway; it gets sturdier with the level tier (wood -> stone -> iron -> gold)
   const ti = tierOf(pl.lvl), dh = k * (0.16 + ti * 0.05), rx = k * 0.5, ry = k * 0.2;
   const TUR = [['#b07a45', '#d29a5c', '#6a4220'], ['#a8a294', '#cfc9bb', '#55504a'], ['#7f8a99', '#aab4c2', '#3c444f'], ['#e2ac2a', '#ffd968', '#8a5a10']][ti];
+  const deck = IMG[DECK_ART[ti]];
   let top = p.y - dh;
-  if (ti >= 1) {
-    // banner pole behind the duck
-    const px = p.x - rx * 0.75, fl = Math.sin(performance.now() / 260 + s) * 3;
-    ctx.strokeStyle = '#4a3a2c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top - k * 1.5); ctx.stroke();
-    ctx.fillStyle = TIER_COL[ti]; ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(px, top - k * 1.48); ctx.quadraticCurveTo(px - k * 0.3, top - k * 1.36 + fl, px - k * 0.55, top - k * 1.3 + fl); ctx.lineTo(px - k * 0.4, top - k * 1.18 + fl); ctx.lineTo(px - k * 0.55, top - k * 1.06 + fl); ctx.quadraticCurveTo(px - k * 0.3, top - k * 1.12 + fl, px, top - k * 1.04); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if (ready(deck)) {
+    const deckWidth = k * 1.04;
+    const deckHeight = drawAt(deck, p.x, p.y + k * 0.18, deckWidth);
+    top = p.y + k * 0.18 - deckHeight * (ti < 2 ? 0.57 : 0.7);
+  } else {
+    if (ti >= 1) {
+      // banner pole behind the duck
+      const px = p.x - rx * 0.75, fl = Math.sin(performance.now() / 260 + s) * 3;
+      ctx.strokeStyle = '#4a3a2c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top - k * 1.5); ctx.stroke();
+      ctx.fillStyle = TIER_COL[ti]; ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(px, top - k * 1.48); ctx.quadraticCurveTo(px - k * 0.3, top - k * 1.36 + fl, px - k * 0.55, top - k * 1.3 + fl); ctx.lineTo(px - k * 0.4, top - k * 1.18 + fl); ctx.lineTo(px - k * 0.55, top - k * 1.06 + fl); ctx.quadraticCurveTo(px - k * 0.3, top - k * 1.12 + fl, px, top - k * 1.04); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(40,25,10,.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, rx * 1.08, ry * 1.1, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TUR[0]; ctx.strokeStyle = TUR[2]; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(p.x - rx, top); ctx.lineTo(p.x - rx, p.y); ctx.ellipse(p.x, p.y, rx, ry, 0, Math.PI, 0, true); ctx.lineTo(p.x + rx, top); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // planks / stones / rivets on the drum
+    ctx.strokeStyle = TUR[2]; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.2;
+    for (let i = -2; i <= 2; i++) { const xx = p.x + i * rx * 0.38; ctx.beginPath(); ctx.moveTo(xx, top + ry * Math.sqrt(1 - Math.pow(i * 0.38, 2))); ctx.lineTo(xx, p.y + ry * Math.sqrt(1 - Math.pow(i * 0.38, 2))); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    if (ti === 2) { ctx.fillStyle = '#e8eef5'; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(p.x + i * rx * 0.38, top + dh * 0.5 + ry * 0.9 * Math.sqrt(1 - Math.pow(i * 0.38, 2)), 1.8, 0, Math.PI * 2); ctx.fill(); } }
+    ctx.fillStyle = TUR[1]; ctx.beginPath(); ctx.ellipse(p.x, top, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = TUR[2]; ctx.lineWidth = 2; ctx.stroke();
+    if (ti === 3) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + Math.sin(performance.now() / 300) * 0.15; ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.ellipse(p.x - rx * 0.3, top - ry * 0.2, rx * 0.35, ry * 0.35, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   }
-  ctx.fillStyle = 'rgba(40,25,10,.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, rx * 1.08, ry * 1.1, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = TUR[0]; ctx.strokeStyle = TUR[2]; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(p.x - rx, top); ctx.lineTo(p.x - rx, p.y); ctx.ellipse(p.x, p.y, rx, ry, 0, Math.PI, 0, true); ctx.lineTo(p.x + rx, top); ctx.closePath(); ctx.fill(); ctx.stroke();
-  // planks / stones / rivets on the drum
-  ctx.strokeStyle = TUR[2]; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.2;
-  for (let i = -2; i <= 2; i++) { const xx = p.x + i * rx * 0.38; ctx.beginPath(); ctx.moveTo(xx, top + ry * Math.sqrt(1 - Math.pow(i * 0.38, 2))); ctx.lineTo(xx, p.y + ry * Math.sqrt(1 - Math.pow(i * 0.38, 2))); ctx.stroke(); }
-  ctx.globalAlpha = 1;
-  if (ti === 2) { ctx.fillStyle = '#e8eef5'; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(p.x + i * rx * 0.38, top + dh * 0.5 + ry * 0.9 * Math.sqrt(1 - Math.pow(i * 0.38, 2)), 1.8, 0, Math.PI * 2); ctx.fill(); } }
-  ctx.fillStyle = TUR[1]; ctx.beginPath(); ctx.ellipse(p.x, top, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = TUR[2]; ctx.lineWidth = 2; ctx.stroke();
-  if (ti === 3) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + Math.sin(performance.now() / 300) * 0.15; ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.ellipse(p.x - rx * 0.3, top - ry * 0.2, rx * 0.35, ry * 0.35, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   // glowing aura on the deck that grows with the weapon level
   const tr = tierOf(pl.lvl);
   if (tr > 0) {
@@ -2184,7 +2193,13 @@ function drawPlatform(s) {
   // contact shadow so the duck stands on the deck instead of hovering over it
   { const sk = hop > 0 ? Math.max(0.4, 1 - hop / (k * 0.8)) : 1;
     ctx.fillStyle = 'rgba(40,25,10,.35)'; ctx.beginPath(); ctx.ellipse(p.x + (flip ? -1 : 1) * k * 0.04, top + k * 0.08, k * 0.3 * sk, k * 0.09 * sk, 0, 0, Math.PI * 2); ctx.fill(); }
-  if (ready(IMG.k_duck_act)) {
+  const defender = DUCK_DEFENDER_ART[pl.w];
+  if (ready(IMG[defender])) {
+    const progress = 1 - o.shootT / 0.45;
+    const frame = o.stunT > 0 ? 2 : D.phase === 'victory' && D.cheered ? 3 :
+      o.shootT <= 0 ? 0 : progress < 0.4 ? 1 : 2;
+    drawFrame(defender, frame, p.x, dy, h, flip);
+  } else if (ready(IMG.k_duck_act)) {
     // kitchen duck: wind up, throw, then idle; holds its weapon; dresses up with the platform tier
     const tr2 = tierOf(pl.lvl), fw = h * 0.75;
     ctx.save(); ctx.translate(p.x, dy); if (flip) ctx.scale(-1, 1);
@@ -2381,7 +2396,7 @@ function drawCat(c) {
   if (KC) {
     if (c.hp <= 0 && c.kind !== 'chief') ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
-  } else if (c.boss && USE_NEW_KING && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
+  } else if (c.boss && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
     const bh = h * 1.1;
     if (c.hp <= 0) {
       ctx.restore(); ctx.globalAlpha = 1;
@@ -2437,7 +2452,7 @@ function drawCat(c) {
     drawAt(IMG.boss, 0, 0, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight); ctx.restore();
   } else if (OLD_IMG[c.kind] && ready(IMG[OLD_IMG[c.kind]])) {
     // redesigned front-walking cats: code-driven lunge for the attack
-    const ci = OLD_IMG[c.kind], wf = Math.floor(t * (c.kind === 'shadow' ? 12 : 8)) % 4;
+    const ci = OLD_IMG[c.kind], wf = Math.floor(t * (c.kind === 'shadow' ? 12 : 8)) % 2;
     if (atk) {
       const wind = k < 0.5 ? k / 0.5 : 0, hit = k >= 0.5 && k < 0.75 ? 1 - Math.abs(k - 0.62) / 0.13 : 0;
       ctx.save(); ctx.translate(x, py + hit * h * 0.1); ctx.scale(1 + wind * 0.08 - hit * 0.05, 1 - wind * 0.1 + hit * 0.12);
@@ -2445,7 +2460,7 @@ function drawCat(c) {
       drawFrame(ci, k < 0.5 ? 1 : 2, 0, 0, h, flip); ctx.restore();
     } else if (c.st === 'flee') {
       ctx.save(); ctx.translate(x, py - Math.abs(Math.sin(t * 9)) * h * 0.06); ctx.scale(1, 0.95); drawFrame(ci, Math.floor(t * 14) % 4, 0, 0, h, !flip); ctx.restore();
-    } else drawFrame(ci, wf, x, py - Math.abs(Math.sin(t * 7)) * h * 0.05, h, false);
+    } else drawFrame(ci, wf, x, py - Math.abs(Math.sin(t * 7)) * h * 0.035, h, flip);
   } else if (c.st === 'flee' && c.hp > 0 && ready(IMG[catImg(c) + '_back'])) {
     const lunge = atk && k > 0.55 && k < 0.8 ? -h * 0.08 : 0;
     drawFrame(catImg(c) + '_back', atk ? (k < 0.55 ? 0 : 3) : Math.floor(t * 9) % 6, x, py + lunge - (atk ? 0 : Math.abs(Math.sin(t * 7)) * h * 0.05), h, !flip);
@@ -2480,7 +2495,8 @@ function drawCart(c, p, h) {
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.55, h * 0.14, 0, 0, Math.PI * 2); ctx.fill();
   const bob = c.st === 'walk' ? Math.abs(Math.sin(t * 6)) * h * 0.03 : 0, rec = (c.recoil || 0) / 0.35;
   ctx.translate(p.x + (c.hitT > 0 ? Math.sin(c.hitT * 120) * 3 : 0), p.y - bob); ctx.rotate(-rec * 0.12);
-  if (ready(IMG.k_cart)) drawAt(IMG.k_cart, 0, 0, h * 1.25);
+  const cart = c.recoil > 0 && ready(IMG.catapult_prop) ? IMG.catapult_prop : IMG.k_cart;
+  if (ready(cart)) drawAt(cart, 0, 0, h * 1.25);
   else { ctx.fillStyle = '#8a5a2b'; ctx.fillRect(-h * 0.5, -h * 0.5, h, h * 0.4); }
   // two little cats pushing it
   if (!dead && ready(IMG.k_cat_back)) { for (const sx of [-0.32, 0.32]) drawFrame('k_cat_back', Math.floor(t * 7 + sx * 4) % 4, sx * h, -h * 0.02 + h * 0.15, h * 0.5, false); }
@@ -2496,7 +2512,7 @@ function drawEShot(e) {
   ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(q.x, q.y, dk * 0.2, dk * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   const yy = q.y - lift;
   if (e.type === 'cat' && ready(IMG.k_cat_act)) { ctx.save(); ctx.translate(q.x, yy); ctx.rotate(e.t * 9); drawFrame('k_cat_act', 2, 0, dk * 0.4, dk * 0.8, false); ctx.restore(); }
-  else if (e.type === 'chili') drawItem('it_chili', q.x, yy, dk * 0.5, e.t * 10);
+  else if (e.type === 'chili') drawItem('cat_chili_prop', q.x, yy, dk * 0.5, e.t * 10) || drawItem('it_chili', q.x, yy, dk * 0.5, e.t * 10);
   else if (e.type === 'skewer') drawItem('it_skewer', q.x, yy, dk * 0.55, e.t * 14);
   else { ctx.fillStyle = '#8f8a80'; ctx.beginPath(); ctx.arc(q.x, yy, dk * 0.2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#3a3630'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#b8b2a6'; ctx.beginPath(); ctx.arc(q.x - dk * 0.06, yy - dk * 0.06, dk * 0.07, 0, Math.PI * 2); ctx.fill(); }
 }
@@ -2509,14 +2525,37 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
     drawLadderShape(-len / 2, 0, len / 2, 0, h * 0.28); ctx.restore();
   }
 }
+const KITCHEN_CAT_ART = {
+  tank: 'cat_colander_art', boxer: 'cat_club_art', tray: 'cat_board_art',
+  pitcher: 'cat_thrower_art', ninja: 'cat_sling_art', mole: 'cat_tub_art',
+};
 function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   const cb = c.kind === 'chief', G = c.gear || catGear(c.kind);
   // glider in the air: lift it up and open the colander parachute
   const jh = c.jh || 0;
   if (jh > 0) py -= jh * dk;
+  const dressed = KITCHEN_CAT_ART[c.kind];
+  const back = !atk && (c.my || 0) < -0.3 && Math.abs(c.my) > Math.abs(c.mx || 0);
+  if (ready(IMG[dressed]) && !back && !jh) {
+    const firing = atk || c.st === 'pitch';
+    const frame = c.hp <= 0 || c.stun > 0 ? 3 : c.hitT > 0 ? 2 :
+      firing ? (kk < 0.55 ? 1 : 2) : c.kind === 'tray' && c.trayHp > 0 ? 1 : 0;
+    const step = c.st === 'walk' ? Math.sin(t * 12) : 0;
+    ctx.save();
+    ctx.translate(x, py - Math.abs(step) * h * 0.035);
+    ctx.rotate(step * 0.045);
+    drawFrame(dressed, frame, 0, 0, h, (c.mx || 0) < 0);
+    ctx.restore();
+    return;
+  }
   // the kitchen cat sprites face RIGHT; cats on the right side walk left, so mirror those
   const flee = c.st === 'flee', flip = (c.mx || 0) < 0, w = h * 0.76, dead = c.hp <= 0;
   let img = 'k_cat_walk', fr = Math.floor(t * (flee ? 16 : c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
+  if (IMG.k_cat_walk instanceof HTMLCanvasElement && (atk || dead || c.hitT > 0 || c.stun > 0)) {
+    const action = dead ? 3 : c.hitT > 0 || c.stun > 0 ? 2 : kk < 0.55 ? 0 : 1;
+    drawFrame('k_cat_act', action, x, py, h, flip);
+    return;
+  }
   let swing = -1, view = 'side';
   // walking mostly up or down the screen: show the cat from the back or the front
   let lunge = 0, swingA = null;
@@ -2542,6 +2581,10 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   else if (atk) { const kb = kk; img = 'k_cat_act'; fr = kb < 0.55 ? 0 : 1; swing = fr; bob = 0; }
   else if (c.hitT > 0 || c.stun > 0) { img = 'k_cat_act'; fr = 2; bob = 0; }
   if (flee && !dead) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', x + h * 0.3, py - h * 1.0 + Math.sin(t * 20) * 3); }
+  if (c.kind === 'cat' && IMG[img] instanceof HTMLCanvasElement) {
+    drawFrame(img, fr, x, py - bob, h, view === 'side' && flip);
+    return;
+  }
   if (view !== 'side') {
     // front / back views are symmetric: no mirroring, gear centred
     const fw = h * 0.7, tk = c.kind === 'tank', wpn = G.wpn;
@@ -2624,7 +2667,7 @@ function drawShot(s) {
     drawItem('it_chopsticks', q.x, q.y - (1 - kk) * dk * 5 - dk * 0.3, dk * 0.5, 2.35);
     return;
   }
-  if (s.bomb) { drawItem('it_chili', p.x, y, dk * 0.5, s.t * 14) || (ctx.fillStyle = '#d33', ctx.fillRect(p.x - 4, y - 4, 8, 8)); return; }
+  if (s.bomb) { drawItem('cat_bomb_prop', p.x, y, dk * 0.5, s.t * 14) || drawItem('it_chili', p.x, y, dk * 0.5, s.t * 14) || (ctx.fillStyle = '#d33', ctx.fillRect(p.x - 4, y - 4, 8, 8)); return; }
   if (s.t < 0) return;
   // glowing trail behind every thrown item
   if (!s.flame) {
@@ -2710,7 +2753,7 @@ function drawShot(s) {
   ctx.fillStyle = '#eef'; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-2, -3); ctx.lineTo(-2, 3); ctx.fill();
   ctx.restore();
 }
-var USE_NEW_KING = false, USE_FX_ART = false;   // painted king / effects kept on file but switched off
+var USE_FX_ART = false;   // painted effects kept on file but switched off
 // one cell of a 4-cell painted effect sheet, centred at (x, y)
 function fxCell(name, i, x, y, size, rot) {
   const im = IMG[name], cw = im.naturalWidth / 4, ch = im.naturalHeight;
@@ -3092,17 +3135,24 @@ function drawNest(x, y, s, front) {
 // the golden egg on its altar, with Serจ่อย sunbathing next to it (one painted picture)
 const SHRINE_W = 5.4, SHRINE_EGG = [0.37, 0.485];     // width in world units; egg bottom-centre as a fraction of the picture
 function shrineRect() {
-  const im = IMG.shrine, w = dk * SHRINE_W, h = ready(im) ? w * im.naturalHeight / im.naturalWidth : w * 0.75, e = dproj(0, EGG_Y);
-  return { x: e.x - w * SHRINE_EGG[0], y: e.y - h * SHRINE_EGG[1], w, h, ex: e.x, ey: e.y };
+  const empty = D.thief || D.phase === 'defeat';
+  const altar = !empty && ready(IMG.molt_altar);
+  const im = altar ? IMG.molt_altar : empty && ready(IMG.shrine_noegg) ? IMG.shrine_noegg : IMG.shrine;
+  const anchor = altar ? [0.5, 0.45] : SHRINE_EGG;
+  const w = dk * SHRINE_W, h = ready(im) ? w * artHeight(im) / artWidth(im) : w * 0.75, e = dproj(0, EGG_Y);
+  return { x: e.x - w * anchor[0], y: e.y - h * anchor[1], w, h, ex: e.x, ey: e.y, im, altar };
 }
 function drawEggStand() {
   const r = shrineRect(), gone = D.thief || D.phase === 'defeat', t = performance.now() / 1000;
-  const im = gone && ready(IMG.shrine_noegg) ? IMG.shrine_noegg : IMG.shrine;
+  const im = r.im;
   ctx.fillStyle = 'rgba(40,25,10,.25)'; ctx.beginPath(); ctx.ellipse(r.ex + r.w * 0.05, r.y + r.h * 0.86, r.w * 0.42, r.h * 0.14, 0, 0, Math.PI * 2); ctx.fill();
-  if (ready(im)) ctx.drawImage(im, r.x, r.y, r.w, r.h);
+  if (ready(im)) {
+    const shake = r.altar && D.eggHit > 0 ? Math.sin(D.eggHit * 60) * dk * 0.045 : 0;
+    ctx.drawImage(im, r.x + shake, r.y, r.w, r.h);
+  }
   if (gone) return;
   // a hit makes the egg wobble on its cushion
-  if (D.eggHit > 0 && ready(IMG.egg_gold)) {
+  if (!r.altar && D.eggHit > 0 && ready(IMG.egg_gold)) {
     const eg = IMG.egg_gold, ew = r.w * 0.219, eh = ew * eg.naturalHeight / eg.naturalWidth;
     ctx.save(); ctx.translate(r.ex, r.ey); ctx.rotate(Math.sin(D.eggHit * 60) * 0.12); ctx.drawImage(eg, -ew / 2, -eh, ew, eh); ctx.restore();
   }
@@ -3137,10 +3187,12 @@ function drawRam(c, p, h) {
   ctx.strokeStyle = 'rgba(58,38,20,.5)'; ctx.lineWidth = 1.5; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-h * 0.33, -h * 0.5 + h * 0.42 * i / 4); ctx.lineTo(h * 0.33, -h * 0.5 + h * 0.42 * i / 4); ctx.stroke(); }
   // the giant rolling pin, sliding forward on each slam
   const ly = th * h;
-  ctx.fillStyle = '#e0b07a'; ctx.strokeStyle = OUT; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.roundRect(-h * 0.13, -h * 0.62 + ly, h * 0.26, h * 0.72, h * 0.1); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#c8905a'; ctx.beginPath(); ctx.roundRect(-h * 0.045, -h * 0.75 + ly, h * 0.09, h * 0.15, 3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#8a8f99'; ctx.beginPath(); ctx.ellipse(0, h * 0.1 + ly, h * 0.15, h * 0.08, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (!drawItem('cat_ram_prop', 0, -h * 0.26 + ly, h * 0.87, -Math.PI / 4)) {
+    ctx.fillStyle = '#e0b07a'; ctx.strokeStyle = OUT; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-h * 0.13, -h * 0.62 + ly, h * 0.26, h * 0.72, h * 0.1); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c8905a'; ctx.beginPath(); ctx.roundRect(-h * 0.045, -h * 0.75 + ly, h * 0.09, h * 0.15, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#8a8f99'; ctx.beginPath(); ctx.ellipse(0, h * 0.1 + ly, h * 0.15, h * 0.08, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
   ctx.fillStyle = '#d8dde6'; ctx.beginPath(); ctx.ellipse(-h * 0.04, h * 0.085 + ly, h * 0.05, h * 0.025, 0, 0, Math.PI * 2); ctx.fill();
   // checkered tablecloth roof
   const ry0 = -h * 0.95, ry1 = -h * 0.45;
@@ -3244,7 +3296,9 @@ function drawLeader() {
   if (T.lead.atk + T.lead.spd >= 7) drawItem('it_chefhat', w * 0.02, -h * 0.98, h * 0.42);
   // ladle (or frying pan once upgraded) in the front wing
   const big = T.lead.atk >= 5, sw = L.swingT > 0 ? (L.swingT > 0.18 ? -1.3 : 1.1) : 0.35 + Math.sin(L.walkT * 2) * 0.1;
-  drawItem(big ? 'it_pan' : 'it_ladle', w * 0.42, -h * 0.5, h * (big ? 0.5 : 0.55), sw, false);
+  if (img !== 'k_duck_act' || fr > 1 || !(IMG[img] instanceof HTMLCanvasElement)) {
+    drawItem(big ? 'it_pan' : 'it_ladle', w * 0.42, -h * 0.5, h * (big ? 0.5 : 0.55), sw, false);
+  }
   ctx.restore();
 }
 function drawTdHud() {
