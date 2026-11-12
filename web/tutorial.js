@@ -60,4 +60,4 @@ function endTut() {
 $('tutNext').onclick = () => { SFX.init(); SFX.play('click'); if (++tutI >= tutSteps.length) endTut(); else showTutStep(); };
 $('tutSkip').onclick = () => { SFX.play('click'); endTut(); };
 $('helpBtn').onclick = () => { SFX.init(); SFX.play('click'); closeSheet(); runTut('td'); };
-if (!save.tut.td3 && state === 'td') setTimeout(() => runTut('td'), 600);
+onWelcomeDone(() => { if (!save.tut.td3 && state === 'td') setTimeout(() => runTut('td'), 600); });

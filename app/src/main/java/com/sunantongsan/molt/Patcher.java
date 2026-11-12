@@ -29,6 +29,11 @@ final class Patcher {
 
     interface Listener { void onPatched(int version); }
 
+    /** What the patcher is doing right now, for the game's welcome screen: idle, checking, download, ready, none, offline. */
+    static volatile String state = "idle";
+    static volatile int doneFiles = 0, total = 0, newVersion = 0;
+    static String stateJson() { return "{\"s\":\"" + state + "\",\"done\":" + doneFiles + ",\"total\":" + total + ",\"v\":" + newVersion + "}"; }
+
     static File liveDir(Context c) { return new File(c.getFilesDir(), "web"); }
 
     /** Version of the game the app should load: the downloaded patch if it is newer than the APK's own copy. */
@@ -49,11 +54,13 @@ final class Patcher {
 
     /** Runs on a background thread. Calls back only when a newer patch is fully downloaded. */
     static void check(Context ctx, Listener done) {
+        state = "checking"; doneFiles = 0; total = 0;
         try {
             JSONObject remote = new JSONObject(new String(get(BASE + "manifest.json?t=" + System.currentTimeMillis()), StandardCharsets.UTF_8));
             int rv = remote.optInt("version", 0);
             int cur = Math.max(bundledVersion(ctx), liveVersion(ctx));
-            if (rv <= cur) return;
+            if (rv <= cur) { state = "none"; return; }
+            newVersion = rv;
 
             boolean fromLive = liveVersion(ctx) > bundledVersion(ctx);
             JSONObject curFiles;
@@ -65,6 +72,9 @@ final class Patcher {
             deleteAll(tmp);
             JSONObject files = remote.getJSONObject("files");
             AssetManager am = ctx.getAssets();
+            int need = 0;
+            for (Iterator<String> it = files.keys(); it.hasNext(); ) { String path = it.next(); if (!files.getString(path).equals(curFiles.optString(path, ""))) need++; }
+            total = need; state = "download";
             for (Iterator<String> it = files.keys(); it.hasNext(); ) {
                 String path = it.next();
                 if (path.contains("..")) continue;
@@ -79,6 +89,7 @@ final class Patcher {
                 }
                 byte[] data = get(BASE + path + "?v=" + rv);
                 try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
+                doneFiles++;
             }
             try (OutputStream o = new FileOutputStream(new File(tmp, "manifest.json"))) { o.write(remote.toString().getBytes(StandardCharsets.UTF_8)); }
 
@@ -86,10 +97,12 @@ final class Patcher {
             File live = liveDir(ctx), old = new File(ctx.getFilesDir(), "web_old");
             deleteAll(old);
             if (live.exists() && !live.renameTo(old)) deleteAll(live);
-            if (!tmp.renameTo(live)) return;
+            if (!tmp.renameTo(live)) { state = "offline"; return; }
             deleteAll(old);
+            state = "ready";
             done.onPatched(rv);
         } catch (Exception ignored) {
+            state = "offline";
             // offline or no patch hosted yet: just keep playing what we have
         }
     }

@@ -84,7 +84,7 @@ const SLOTS = 5, SLOT_X = [-3.6, -1.8, 0, 1.8, 3.6], PLAT_Y = 0.45, FENCE_Y = 0,
 const NWALL = 5, WALL_W = 1.84, FIELD_X = 4.5, SPAWN_Y = -21;
 const WALL_D = 1.0, WALL_IN = FENCE_Y + WALL_D, GATE = 2;   // city wall: outer edge at FENCE_Y, walkway WALL_D deep, middle segment is the gate
 const WALL_FOOT = WALL_IN + 1.3;                           // where the wall's inner face meets the courtyard floor
-const EGG_Y = WALL_FOOT + 2.6, EGG_R = 0.75;                  // the golden egg the cats want
+const EGG_Y = WALL_FOOT + 3.2, EGG_R = 0.75;                  // the golden egg the cats want
 const CAT_X = 3.3;   // the cats' lane between the two rows of trees (narrower than the duck yard)
 const RING = 4.4, PLAT_R = 2.75;   // old ring sizes, only used by leftover fallback drawing
 function wallX(i) { return (i - (NWALL - 1) / 2) * WALL_W; }
@@ -105,7 +105,7 @@ function leadDmg() { return 1 + (T.lead.atk - 1) * 0.8; }
 function platAt(s) { return T.plats.find(p => p.slot === s); }
 function platPos(s) { return { x: SLOT_X[s] || 0, y: PLAT_Y }; }
 // two tent spots for the duck soldiers, on the open floor either side of the house
-const CAMP_POS = [{ x: -2.75, y: EGG_Y + 0.3 }, { x: 2.75, y: EGG_Y + 0.3 }];
+const CAMP_POS = [{ x: -3.4, y: WALL_FOOT + 2.45 }, { x: 3.85, y: WALL_FOOT + 2.45 }];
 for (const p of T.plats.filter(p => p.w === 'camp')) { const i = T.camps.findIndex(c => !c); if (i >= 0) T.camps[i] = { lvl: p.lvl }; }
 T.plats = T.plats.filter(p => p.w !== 'camp');
 // old saves had 8 ring slots: keep the best platforms and give them the new row slots
@@ -1250,7 +1250,7 @@ function tapField(cx, cy) {
     const q = platPos(s);
     if (Math.hypot(p.x - q.x, p.y - q.y) < 0.75 || Math.hypot(p.x - q.x, p.y + 1.2 - q.y) < 0.75) { SFX.play('click'); openSlot(s); return; }
   }
-  if (Math.hypot(p.x, p.y - HOUSE_Y + 0.8) < HOUSE_R + 0.3) { SFX.play('click'); openHouse(); return; }
+  if (Math.hypot(p.x, p.y - EGG_Y + 0.3) < 1.1) { SFX.play('click'); openHouse(); return; }
   closeSheet();
   if (D.phase !== 'wave' || D.bombCd > 0) return;
   D.bombCd = 7;
@@ -1271,11 +1271,11 @@ function padList() {
     } });
   }
   CAMP_POS.forEach((cp, i) => {
-    const cm = T.camps[i], x = cp.x * 0.68, y = cp.y + 1.1;
+    const cm = T.camps[i], x = cp.x + (i ? -0.2 : 0.4), y = cp.y + 1.15;
     if (!cm) L.push({ id: 'cb' + i, x, y, icon: '⛺', label: 'ค่ายเป็ดวางกับดัก', cost: 500, apply: () => { T.camps[i] = { lvl: 1 }; toast('ตั้งค่ายแล้ว! เป็ดจะออกไปวางไม้กระดกกับระเบิดปลาทู 🪤'); SFX.play('quack'); } });
     else if (cm.lvl < 10) L.push({ id: 'cu' + i, x, y, icon: '🪖', label: `ค่าย Lv.${cm.lvl + 1}`, cost: Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4), apply: () => { cm.lvl++; if (cm.lvl === 5 || cm.lvl === 10) toast(cm.lvl === 5 ? 'ค่ายได้เป็ดวางกับดักเพิ่ม 1 ตัว!' : 'กับดักแรงขึ้น + เป็ดเพิ่มอีกตัว!'); } });
   });
-  L.push({ id: 'house', x: 1.1, y: EGG_Y + 0.15, icon: '🥚', label: `เกราะไข่ Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
+  L.push({ id: 'house', x: -2.0, y: EGG_Y + 1.45, icon: '🥚', label: `เกราะไข่ Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
   for (const w of D.walls) if (w.hp < w.max) {
     const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
     L.push({ id: 'w' + w.i, x: w.x + (w.i === NWALL - 1 ? -0.9 : 0.9), y: WALL_FOOT + 0.55, icon: '🔧', label: w.gate ? 'ซ่อมประตู' : 'ซ่อมกำแพง', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
@@ -1303,7 +1303,7 @@ function leadUpdate(dt) {
   if (L.goal && !D.joy && L.hurtT < 0.6) {
     // auto-walk to the tapped circle, stepping around the house
     let tx = L.goal.x, ty = L.goal.y;
-    const hcx = 0, hcy = HOUSE_Y - 0.5, rr = HOUSE_R + 0.45;
+    const hcx = 0, hcy = EGG_Y + 0.5, rr = HOUSE_R + 0.45;
     const sx = tx - L.x, sy = ty - L.y, sl = Math.hypot(sx, sy) || 1;
     const u = Math.max(0, Math.min(1, ((hcx - L.x) * sx + (hcy - L.y) * sy) / (sl * sl)));
     const qx = L.x + sx * u, qy = L.y + sy * u;
@@ -1335,8 +1335,8 @@ function leadUpdate(dt) {
   }
   // stay in the yard, and walk around the house rather than through it
   L.x = Math.max(-FIELD_X + 0.2, Math.min(FIELD_X - 0.2, L.x)); L.y = Math.max(WALL_FOOT + 0.3, Math.min(HOUSE_Y + 0.6, L.y));
-  { const hx = L.x, hy = L.y - (HOUSE_Y - 0.5), d = Math.hypot(hx, hy * 1.4), r = HOUSE_R + 0.15;
-    if (d < r) { const k = r / (d || 1); L.x = (hx || 0.01) * k; L.y = HOUSE_Y - 0.5 + hy * k; } }
+  { const hx = L.x, hy = L.y - (EGG_Y + 0.5), d = Math.hypot(hx, hy * 1.4), r = HOUSE_R + 0.15;
+    if (d < r) { const k = r / (d || 1); L.x = (hx || 0.01) * k; L.y = EGG_Y + 0.5 + hy * k; } }
   // standing under a ladder pushes it off the wall
   if (D.phase === 'wave') for (const lad of D.ladders) {
     if (lad.down) continue;
@@ -1491,7 +1491,7 @@ function tdDraw() {
   }
   drawPads();
   for (const pl of D.pools) drawPool(pl);
-  const list = [[HOUSE_Y, drawHouse]];
+  const list = [];
   for (const c of D.drops) list.push([c.y, () => drawDrop(c)]);
   for (const tr of D.traps || []) list.push([tr.y, () => drawTrap(tr)]);
   for (const tp of D.troops || []) list.push([tp.y, () => drawTroop(tp)]);
@@ -1499,7 +1499,7 @@ function tdDraw() {
   list.push([D.lead.y, drawLeader]);
   list.push([FENCE_Y, drawCityWall]);
   for (const lad of D.ladders) list.push([FENCE_Y - 0.5, () => drawLadder(lad)]);
-  list.push([EGG_Y, drawEggStand]);
+  list.push([EGG_Y - 1.2, drawEggStand]);
   for (let s = 0; s < SLOTS; s++) { const q = platPos(s); list.push([q.y, () => drawPlatform(s)]); }
   for (const c of D.cats) list.push([c.y, () => drawCat(c)]);
   list.sort((a, b) => a[0] - b[0]);
@@ -1787,11 +1787,6 @@ function getBg() {
     g.fillStyle = sh; g.fillRect(0, ty0, W, dk * 0.9);
 
   }
-  // a little round rug in front of the house
-  const hp = dproj(0, HOUSE_Y - 0.1);
-  g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(hp.x, hp.y + 3, dk * 1.2, dk * 0.47, 0, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#d9584a'; g.beginPath(); g.ellipse(hp.x, hp.y, dk * 1.15, dk * 0.43, 0, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = '#fff3d6'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.ellipse(hp.x, hp.y, dk * 0.98, dk * 0.35, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
   bgCache = { key, cv: cv2 };
   return cv2;
 }
@@ -2020,7 +2015,7 @@ function drawCat(c) {
     ctx.save(); ctx.translate(0, -keep * dk); drawCat(c); ctx.restore();
     c.lift = keep; return;
   }
-  if (D.thief === c && c.hp > 0) { const g = dproj(c.x, c.y); drawGoldenEgg(g.x, g.y - dk * 1.5 + Math.sin(performance.now() / 80) * 2, dk * 0.75, 0.2 * Math.sin(performance.now() / 120)); }
+  if (D.thief === c && c.hp > 0) { const g = dproj(c.x, c.y); { const eg = IMG.egg_gold, ew = dk * 0.7, eh = ready(eg) ? ew * eg.naturalHeight / eg.naturalWidth : ew; ctx.save(); ctx.translate(g.x, g.y - dk * 1.25 + Math.sin(performance.now() / 80) * 2); ctx.rotate(0.2 * Math.sin(performance.now() / 120)); if (ready(eg)) ctx.drawImage(eg, -ew / 2, -eh, ew, eh); else drawGoldenEgg(0, -eh / 2, dk * 0.75, 0); ctx.restore(); } }
   const p = dproj(c.x, c.y), h = dk * (c.boss ? 2.8 : c.kind === 'chief' ? 1.75 : (CAT_KINDS[c.kind] || CAT_KINDS.cat).size);
   if ((c.kind === 'ninja' || c.kind === 'shadow') && c.hp > 0 && c.st === 'walk') {
     // speed streaks behind ninja cats
@@ -2623,31 +2618,34 @@ function drawNest(x, y, s, front) {
   ctx.strokeStyle = '#e8b860'; ctx.lineWidth = 2; ctx.lineCap = 'round';
   for (const [dx, dy, ex, ey] of [[-0.55, -0.12, -0.75, -0.25], [0.5, -0.1, 0.72, -0.2], [-0.2, 0.12, -0.35, 0.2], [0.3, 0.12, 0.45, 0.22]]) { ctx.beginPath(); ctx.moveTo(x + dx * s, y + dy * s); ctx.lineTo(x + ex * s, y + ey * s); ctx.stroke(); }
 }
+// the golden egg on its altar, with Serจ่อย sunbathing next to it (one painted picture)
+const SHRINE_W = 5.4, SHRINE_EGG = [0.37, 0.485];     // width in world units; egg bottom-centre as a fraction of the picture
+function shrineRect() {
+  const im = IMG.shrine, w = dk * SHRINE_W, h = ready(im) ? w * im.naturalHeight / im.naturalWidth : w * 0.75, e = dproj(0, EGG_Y);
+  return { x: e.x - w * SHRINE_EGG[0], y: e.y - h * SHRINE_EGG[1], w, h, ex: e.x, ey: e.y };
+}
 function drawEggStand() {
-  const p = dproj(0, EGG_Y), s = dk * 1.05, t = performance.now() / 1000;
-  drawNest(p.x, p.y, s, false);
-  if (!D.thief && D.phase !== 'defeat') {
-    const hit = D.eggHit > 0 ? Math.sin(D.eggHit * 80) * 3 : 0, wob = Math.sin(t * 1.6) * 0.04;
-    // soft golden glow
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    const gg = ctx.createRadialGradient(p.x, p.y - s * 0.55, 4, p.x, p.y - s * 0.55, s * 1.0); gg.addColorStop(0, 'rgba(255,215,90,.4)'); gg.addColorStop(1, 'rgba(255,215,90,0)');
-    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(p.x, p.y - s * 0.55, s, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    drawGoldenEgg(p.x + hit, p.y - s * 0.52, s * 1.0, wob + hit * 0.03);
+  const r = shrineRect(), gone = D.thief || D.phase === 'defeat', t = performance.now() / 1000;
+  const im = gone && ready(IMG.shrine_noegg) ? IMG.shrine_noegg : IMG.shrine;
+  ctx.fillStyle = 'rgba(40,25,10,.25)'; ctx.beginPath(); ctx.ellipse(r.ex + r.w * 0.05, r.y + r.h * 0.86, r.w * 0.42, r.h * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+  if (ready(im)) ctx.drawImage(im, r.x, r.y, r.w, r.h);
+  if (gone) return;
+  // a hit makes the egg wobble on its cushion
+  if (D.eggHit > 0 && ready(IMG.egg_gold)) {
+    const eg = IMG.egg_gold, ew = r.w * 0.219, eh = ew * eg.naturalHeight / eg.naturalWidth;
+    ctx.save(); ctx.translate(r.ex, r.ey); ctx.rotate(Math.sin(D.eggHit * 60) * 0.12); ctx.drawImage(eg, -ew / 2, -eh, ew, eh); ctx.restore();
   }
-  drawNest(p.x, p.y, s, true);
-  if (D.thief || D.phase === 'defeat') return;
   // twinkles
   for (let i = 0; i < 3; i++) { const k2 = (t * 0.6 + i / 3) % 1, a = i * 2.3 + Math.floor(t * 0.6 + i / 3) * 1.7;
     ctx.globalAlpha = Math.sin(k2 * Math.PI); ctx.fillStyle = '#fffbe0';
-    const sx = p.x + Math.cos(a) * s * 0.45, sy = p.y - s * 0.6 + Math.sin(a) * s * 0.35, r = 2 + k2 * 3;
-    ctx.beginPath(); ctx.moveTo(sx, sy - r * 2); ctx.lineTo(sx + r * 0.5, sy); ctx.lineTo(sx, sy + r * 2); ctx.lineTo(sx - r * 0.5, sy); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(sx - r * 2, sy); ctx.lineTo(sx, sy + r * 0.5); ctx.lineTo(sx + r * 2, sy); ctx.lineTo(sx, sy - r * 0.5); ctx.closePath(); ctx.fill(); }
+    const sx = r.ex + Math.cos(a) * dk * 0.5, sy = r.ey - dk * 0.75 + Math.sin(a) * dk * 0.45, rr = 2 + k2 * 3;
+    ctx.beginPath(); ctx.moveTo(sx, sy - rr * 2); ctx.lineTo(sx + rr * 0.5, sy); ctx.lineTo(sx, sy + rr * 2); ctx.lineTo(sx - rr * 0.5, sy); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(sx - rr * 2, sy); ctx.lineTo(sx, sy + rr * 0.5); ctx.lineTo(sx + rr * 2, sy); ctx.lineTo(sx, sy - rr * 0.5); ctx.closePath(); ctx.fill(); }
   ctx.globalAlpha = 1;
-  // egg HP, only once it has been hurt
   const r2 = Math.max(0, D.houseHp / D.houseMax);
-  if (r2 < 1) { const bw = 64, y = p.y - s * 1.25;
-    ctx.fillStyle = 'rgba(0,0,0,.5)'; roundRect(p.x - bw / 2, y, bw, 8, 4); ctx.fill();
-    ctx.fillStyle = r2 > 0.5 ? '#ffd84a' : r2 > 0.25 ? '#ffa03a' : '#ff5a4a'; roundRect(p.x - bw / 2 + 2, y + 2, (bw - 4) * r2, 4, 2); ctx.fill(); }
+  if (r2 < 1) { const bw = 64, y = r.ey - dk * 1.55;
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; roundRect(r.ex - bw / 2, y, bw, 8, 4); ctx.fill();
+    ctx.fillStyle = r2 > 0.5 ? '#ffd84a' : r2 > 0.25 ? '#ffa03a' : '#ff5a4a'; roundRect(r.ex - bw / 2 + 2, y + 2, (bw - 4) * r2, 4, 2); ctx.fill(); }
 }
 function drawRam(c, p, h) {
   const t = performance.now() / 1000 + c.ph, dead = c.hp <= 0;
@@ -2828,6 +2826,7 @@ function drawTdHud() {
 // ---------- over-the-air patches (Android app) ----------
 // the app downloads a newer game in the background and calls this when it is ready
 window.onMoltPatch = v => {
+  if (window.welcomePatchReady && window.welcomePatchReady(v)) return;   // still on the welcome screen: restart straight into it
   let b = document.getElementById('patchBar');
   if (!b) {
     b = document.createElement('button'); b.id = 'patchBar';

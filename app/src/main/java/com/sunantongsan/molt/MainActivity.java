@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     /** Lets the game show its version and restart into a freshly downloaded patch. */
     private class PatchBridge {
         @JavascriptInterface public int version() { return Math.max(Patcher.bundledVersion(MainActivity.this), Patcher.liveVersion(MainActivity.this)); }
+        @JavascriptInterface public String state() { return Patcher.stateJson(); }
         @JavascriptInterface public void reload() { runOnUiThread(() -> web.loadUrl(Patcher.startUrl(MainActivity.this))); }
     }
 

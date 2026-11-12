@@ -131,4 +131,4 @@ function bubble(text, x, y, a, who, red) {
 // ---------- input ----------
 document.getElementById('introUi').addEventListener('pointerdown', e => { if (e.target.id !== 'introSkip') nextIntro(); });
 document.getElementById('introSkip').onclick = e => { e.stopPropagation(); endIntro(); };
-if (!save.introSeen) playIntro();
+onWelcomeDone(() => { if (!save.introSeen) playIntro(); });
