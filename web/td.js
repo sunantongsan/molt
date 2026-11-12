@@ -261,7 +261,7 @@ function drawCatIntro() {
   const inK = Math.min(1, t / 0.5), ex = cx + (1 - inK) * W * 0.5, pose = Math.abs(Math.sin(now * 3)) * 6;
   const fake = { kind, gear: kind === 'boss' ? null : catGear(kind === 'boss' ? 'cat' : kind), hp: 1, max: 1, st: 'walk', mx: 0, my: 1, ph: 0, hitT: 0, stun: 0, atk: 0, x: 0, y: 0, trayHp: kind === 'tray' ? 4 : 0, boss: kind === 'boss' };
   if (!I.gear || I.gearFor !== kind) { I.gear = fake.gear; I.gearFor = kind; } fake.gear = I.gear;
-  if (kind === 'boss') { if (USE_NEW_KING && ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
+  if (kind === 'boss') { if (ready(IMG.k_king_act)) drawFrame('k_king_act', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, false); else if (ready(IMG.boss_attack)) drawFrame('boss_attack', Math.floor(now * 3) % 2, ex, cy - pose, sh * 1.4, true); }
   else if (kind === 'cart') drawCart(fake, { x: ex, y: cy - pose }, sh * 0.9);
   else if (kind === 'ram') drawRam(fake, { x: ex, y: cy - pose }, sh * 0.85);
   else if (OLD_IMG[kind]) drawFrame(OLD_IMG[kind], Math.floor(now * 6) % 4, ex, cy - pose, sh * 0.85, false);
@@ -279,7 +279,7 @@ function drawCatIntro() {
   }
   // the cat king on the left, bouncing as he gloats (when he is not the one on show)
   const kx = W * 0.2, ky = H * 0.42, talk = Math.abs(Math.sin(now * 9)) * 4;
-  const KW = USE_NEW_KING && ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
+  const KW = ready(IMG.k_king_walk) ? 'k_king_walk' : 'boss_walk';
   if (kind !== 'boss' && ready(IMG[KW])) { ctx.save(); ctx.translate(kx, ky); ctx.scale(1 + talk * 0.004, 1 - talk * 0.004); drawFrame(KW, 0, 0, 0, sh * 0.95, false); ctx.restore(); }
   // speech bubble with typed text
   const shown = line[1].slice(0, Math.floor(t * 26)), bx = W * 0.05, by = H * 0.13, bw = W * 0.9;
@@ -2381,7 +2381,7 @@ function drawCat(c) {
   if (KC) {
     if (c.hp <= 0 && c.kind !== 'chief') ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (c.deadT || 0) - 0.25) / 0.4);
     drawKitchenCat(c, x, py, h, atk, k, t);
-  } else if (c.boss && USE_NEW_KING && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
+  } else if (c.boss && ready(IMG.k_king_walk) && ready(IMG.k_king_act)) {
     const bh = h * 1.1;
     if (c.hp <= 0) {
       ctx.restore(); ctx.globalAlpha = 1;
@@ -2710,7 +2710,7 @@ function drawShot(s) {
   ctx.fillStyle = '#eef'; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-2, -3); ctx.lineTo(-2, 3); ctx.fill();
   ctx.restore();
 }
-var USE_NEW_KING = false, USE_FX_ART = false;   // painted king / effects kept on file but switched off
+var USE_FX_ART = false;   // painted effects kept on file but switched off
 // one cell of a 4-cell painted effect sheet, centred at (x, y)
 function fxCell(name, i, x, y, size, rot) {
   const im = IMG[name], cw = im.naturalWidth / 4, ch = im.naturalHeight;
