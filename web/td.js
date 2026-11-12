@@ -1440,6 +1440,9 @@ function leadUpdate(dt) {
       if (Math.abs(dx) > 3) L.face = dx > 0 ? 1 : -1;
     }
   }
+  // Ease the visual stride in and out independently of joystick movement.
+  const blend = L.strideBlend || 0;
+  L.strideBlend = Math.max(0, Math.min(1, blend + dt * (L.moving ? 7 : -6)));
   // stay in the yard, and walk around the house rather than through it
   L.x = Math.max(-FIELD_X + 0.2, Math.min(FIELD_X - 0.2, L.x)); L.y = Math.max(WALL_FOOT + 0.3, Math.min(HOUSE_Y + 0.6, L.y));
   { const hx = L.x, hy = L.y - (EGG_Y + 0.5), d = Math.hypot(hx, hy * 1.4), r = HOUSE_R + 0.15;
@@ -2198,7 +2201,12 @@ function drawPlatform(s) {
     const progress = 1 - o.shootT / 0.45;
     const frame = o.stunT > 0 ? 2 : D.phase === 'victory' && D.cheered ? 3 :
       o.shootT <= 0 ? 0 : progress < 0.4 ? 1 : 2;
-    drawFrame(defender, frame, p.x, dy, h, flip);
+    ctx.save(); ctx.translate(p.x, dy); if (flip) ctx.scale(-1, 1);
+    if (o.stunT > 0) cartoonRecoil(0.4 + 0.35 * Math.sin(o.stunT * 22), 0.9);
+    else if (D.phase === 'victory' && D.cheered) cartoonStep(h, performance.now() / 75 + s, 1.15);
+    else if (o.shootT > 0) cartoonStrike(h, progress, 0.58, 0.95);
+    drawFrame(defender, frame, 0, 0, h);
+    ctx.restore();
   } else if (ready(IMG.k_duck_act)) {
     // kitchen duck: wind up, throw, then idle; holds its weapon; dresses up with the platform tier
     const tr2 = tierOf(pl.lvl), fw = h * 0.75;
@@ -2209,8 +2217,8 @@ function drawPlatform(s) {
     else if (D.phase === 'victory' && D.cheered) { const hp2 = Math.abs(Math.sin(performance.now() / 160 + s)) * h * 0.25; drawFrame('k_duck_act', 3, 0, -hp2, h, false); }
     else if (u >= 0) {
       // wind up (lean back, weapon behind the head) -> release (lunge forward) -> follow through
-      const back = u < 0.4 ? u / 0.4 : 0, fwd = u >= 0.4 ? Math.max(0, 1 - Math.abs(u - 0.55) / 0.45) : 0;
-      ctx.translate(0, 0); ctx.rotate(-back * 0.28 + fwd * 0.32); ctx.translate(fwd * h * 0.08, 0);
+      const back = u < 0.4 ? u / 0.4 : 0;
+      cartoonStrike(h, u, 0.58, 0.95);
       drawFrame('k_duck_act', u < 0.4 ? 0 : 1, 0, 0, h, false);
       if (tr2 >= 1) drawItem('it_apron', fw * 0.08, -h * 0.33, h * 0.4);
       drawDuckHat(pl.w, fw, h, tr2);
@@ -2403,7 +2411,7 @@ function drawCat(c) {
       const dt2 = c.deadT || 0;
       if (dt2 < 1.3) {
         // knocked down: sits dizzy, wobbling, stars circling
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.sin(dt2 * 9) * 0.06); drawFrame('k_king_act', 2, 0, 0, bh * 0.9, flip); ctx.restore();
+        ctx.save(); ctx.translate(p.x, p.y); cartoonRecoil(Math.min(1, dt2 / 0.55), 1.2); drawFrame('k_king_act', 2, 0, 0, bh * 0.9, flip); ctx.restore();
       } else {
         // limps away, back turned, little hops, sweat drop
         ctx.save(); ctx.translate(p.x, p.y - Math.abs(Math.sin(dt2 * 7)) * bh * 0.04); ctx.rotate(Math.sin(dt2 * 7) * 0.08);
@@ -2414,12 +2422,17 @@ function drawCat(c) {
       return;
     }
     if (atk) {
-      const kb = c.atk / BOSS_PERIOD, up = kb < 0.55;
-      const sq = up ? 1 + kb * 0.08 : 1 - Math.max(0, 0.25 - (kb - 0.55)) * 0.4;
-      ctx.save(); ctx.translate(x, py); ctx.scale(2 - sq, sq); drawFrame('k_king_act', up ? 0 : 1, 0, 0, bh * 1.08, flip); ctx.restore();
+      const phase = c.atk / BOSS_PERIOD;
+      ctx.save(); ctx.translate(x, py); if (flip) ctx.scale(-1, 1);
+      cartoonStrike(bh, phase, 0.8, 1.35);
+      drawFrame('k_king_act', phase < 0.8 ? 0 : 1, 0, 0, bh * 1.08);
+      ctx.restore();
     } else {
-      const wf = [0, 1, 2, 3][Math.floor(t * 6) % 4], bob = Math.abs(Math.sin(t * 6 * Math.PI / 2)) * bh * 0.03;
-      ctx.save(); ctx.translate(x, py - bob); ctx.rotate(Math.sin(t * 3 * Math.PI) * 0.03); drawFrame('k_king_walk', wf, 0, 0, bh, false); ctx.restore();
+      ctx.save(); ctx.translate(x, py);
+      if (c.hitT > 0) cartoonRecoil(1 - c.hitT / 0.12);
+      else cartoonStep(bh, t * Math.PI * 6, 0.8);
+      drawFrame('k_king_walk', Math.floor(t * 6), 0, 0, bh);
+      ctx.restore();
     }
     if (c.hitT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, py - bh * 0.5, bh * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   } else if (c.boss && ready(IMG.boss_walk)) {
@@ -2540,11 +2553,11 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
     const firing = atk || c.st === 'pitch';
     const frame = c.hp <= 0 || c.stun > 0 ? 3 : c.hitT > 0 ? 2 :
       firing ? (kk < 0.55 ? 1 : 2) : c.kind === 'tray' && c.trayHp > 0 ? 1 : 0;
-    const step = c.st === 'walk' ? Math.sin(t * 12) : 0;
-    ctx.save();
-    ctx.translate(x, py - Math.abs(step) * h * 0.035);
-    ctx.rotate(step * 0.045);
-    drawFrame(dressed, frame, 0, 0, h, (c.mx || 0) < 0);
+    ctx.save(); ctx.translate(x, py); if ((c.mx || 0) < 0) ctx.scale(-1, 1);
+    if (c.hp <= 0 || c.hitT > 0) cartoonRecoil(c.hp <= 0 ? (c.deadT || 0) / 0.35 : 1 - c.hitT / 0.12);
+    else if (firing) cartoonStrike(h, c.st === 'pitch' ? 1 - c.fireT / 0.8 : kk, 0.87);
+    else if (c.st === 'walk') cartoonStep(h, t * 21, 0.85);
+    drawFrame(dressed, frame, 0, 0, h);
     ctx.restore();
     return;
   }
@@ -2553,7 +2566,11 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   let img = 'k_cat_walk', fr = Math.floor(t * (flee ? 16 : c.kind === 'ninja' ? 12 : 7)) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
   if (IMG.k_cat_walk instanceof HTMLCanvasElement && (atk || dead || c.hitT > 0 || c.stun > 0)) {
     const action = dead ? 3 : c.hitT > 0 || c.stun > 0 ? 2 : kk < 0.55 ? 0 : 1;
-    drawFrame('k_cat_act', action, x, py, h, flip);
+    ctx.save(); ctx.translate(x, py); if (flip) ctx.scale(-1, 1);
+    if (dead || c.hitT > 0 || c.stun > 0) cartoonRecoil(dead ? (c.deadT || 0) / 0.35 : c.hitT > 0 ? 1 - c.hitT / 0.12 : 0.65);
+    else cartoonStrike(h, kk, 0.87);
+    drawFrame('k_cat_act', action, 0, 0, h);
+    ctx.restore();
     return;
   }
   let swing = -1, view = 'side';
@@ -2582,7 +2599,10 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   else if (c.hitT > 0 || c.stun > 0) { img = 'k_cat_act'; fr = 2; bob = 0; }
   if (flee && !dead) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', x + h * 0.3, py - h * 1.0 + Math.sin(t * 20) * 3); }
   if (c.kind === 'cat' && IMG[img] instanceof HTMLCanvasElement) {
-    drawFrame(img, fr, x, py - bob, h, view === 'side' && flip);
+    ctx.save(); ctx.translate(x, py); if (view === 'side' && flip) ctx.scale(-1, 1);
+    if (c.st === 'walk' || flee) cartoonStep(h, t * Math.PI * (flee ? 16 : 7), flee ? 1.05 : 0.85);
+    drawFrame(img, fr, 0, 0, h);
+    ctx.restore();
     return;
   }
   if (view !== 'side') {
@@ -3283,20 +3303,32 @@ function drawLeader() {
   ctx.strokeStyle = 'rgba(255,220,80,.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, h * 0.34, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
   if (blink) return;
-  const hop = L.happyT > 0 ? Math.abs(Math.sin(L.happyT * 12)) * h * 0.18 : L.moving ? Math.abs(Math.sin(L.walkT * 2)) * h * 0.04 : 0;
+  const stride = L.strideBlend || 0;
   let img = 'k_duck_walk', fr = L.moving ? Math.floor(L.walkT) % 4 : 1;
   if (L.hurtT > 0.5) { img = 'k_duck_act'; fr = 2; }
-  else if (L.swingT > 0) { img = 'k_duck_act'; fr = L.swingT > 0.18 ? 0 : 1; }
+  else if (L.swingT > 0) {
+    const windup = L.swingT > 0.135;
+    img = ready(IMG.duck_spoon_art) ? 'duck_spoon_art' : 'k_duck_act';
+    fr = img === 'duck_spoon_art' ? (windup ? 1 : 2) : (windup ? 0 : 1);
+  }
   else if (L.happyT > 0) { img = 'k_duck_act'; fr = 3; }
   if (!ready(IMG[img])) return;
-  ctx.save(); ctx.translate(p.x, p.y - hop); if (flip) ctx.scale(-1, 1);
-  const lean = L.moving ? Math.sin(L.walkT * Math.PI / 2) * 0.06 : 0; ctx.rotate(lean);
+  ctx.save(); ctx.translate(p.x, p.y); if (flip) ctx.scale(-1, 1);
+  if (L.hurtT > 0.5) cartoonRecoil((1 - L.hurtT) * 2, 1.2);
+  else if (L.swingT > 0) cartoonStrike(h, 1 - L.swingT / 0.3, 0.55, 1.2);
+  else if (L.happyT > 0) cartoonStep(h, L.happyT * 24, 1.35);
+  else if (stride > 0) {
+    const transition = 4 * stride * (1 - stride);
+    cartoonScale((L.moving ? 0.11 : -0.16) * transition, 0.1 * stride);
+    cartoonStep(h, L.walkT * Math.PI, stride);
+  }
   drawFrame(img, fr, 0, 0, h, false);
   drawItem('it_apron', w * 0.08, -h * 0.33, h * 0.42);
   if (T.lead.atk + T.lead.spd >= 7) drawItem('it_chefhat', w * 0.02, -h * 0.98, h * 0.42);
   // ladle (or frying pan once upgraded) in the front wing
   const big = T.lead.atk >= 5, sw = L.swingT > 0 ? (L.swingT > 0.18 ? -1.3 : 1.1) : 0.35 + Math.sin(L.walkT * 2) * 0.1;
-  if (img !== 'k_duck_act' || fr > 1 || !(IMG[img] instanceof HTMLCanvasElement)) {
+  const bakedWeapon = img === 'duck_spoon_art' || (img === 'k_duck_act' && fr < 2 && IMG[img] instanceof HTMLCanvasElement);
+  if (!bakedWeapon) {
     drawItem(big ? 'it_pan' : 'it_ladle', w * 0.42, -h * 0.5, h * (big ? 0.5 : 0.55), sw, false);
   }
   ctx.restore();

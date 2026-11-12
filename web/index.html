@@ -399,6 +399,42 @@ function drawFrame(name, frame, x, y, h, flip) {
   if (flip) ctx.restore();
 }
 
+// Cartoon motion is anchored at the feet and does not move the combat position.
+function cartoonScale(stretch, lean = 0) {
+  const height = 1 + stretch;
+  ctx.rotate(lean);
+  ctx.scale(1 / height, height);
+}
+
+function cartoonStep(h, phase, amount = 1) {
+  const step = Math.cos(phase);
+  ctx.translate(0, -h * Math.max(0, step) * 0.11 * amount);
+  cartoonScale((step * 0.15 - 0.02) * amount, Math.sin(phase * 0.5) * 0.09 * amount);
+}
+
+function cartoonStrike(h, progress, impact, amount = 1) {
+  const u = Math.max(0, Math.min(1, progress));
+  const launch = impact - 0.18;
+  if (u < launch) {
+    const wind = Math.sin(Math.PI * 0.5 * u / launch);
+    ctx.translate(-h * 0.09 * wind * amount, 0);
+    cartoonScale(-0.16 * wind * amount, -0.23 * wind * amount);
+  } else if (u < impact) {
+    const swing = (u - launch) / (impact - launch);
+    ctx.translate(h * (-0.09 + 0.22 * swing) * amount, -h * 0.07 * Math.sin(Math.PI * swing) * amount);
+    cartoonScale((-0.16 + 0.40 * Math.sin(Math.PI * swing)) * amount, (-0.23 + 0.54 * swing) * amount);
+  } else {
+    const settle = (u - impact) / (1 - impact), falloff = (1 - settle) ** 2;
+    ctx.translate(h * 0.13 * falloff * amount, 0);
+    cartoonScale(-Math.cos(settle * Math.PI * 2) * falloff * 0.16 * amount, 0.31 * falloff * amount);
+  }
+}
+
+function cartoonRecoil(progress, amount = 1) {
+  const u = Math.max(0, Math.min(1, progress));
+  cartoonScale(-Math.cos(u * Math.PI * 2.5) * (1 - u) * 0.23 * amount, -0.16 * (1 - u) * amount);
+}
+
 // ---------- Canvas / projection ----------
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
@@ -928,16 +964,12 @@ function drawRaidCat(frame, x, y, h, attacking = false) {
     if (ready(IMG.cat)) drawFrame('cat', attacking ? 2 + frame % 3 : [0, 1, 5, 1][frame % 4], x, y, h);
     return;
   }
-  if (!attacking) {
-    drawFrame('k_knight', frame, x, y, h);
-    return;
-  }
-  // Lean into the strike, then recover to the same ground anchor.
   const pose = frame % 3;
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate([-0.13, 0.19, 0.05][pose]);
-  drawFrame('k_knight', [1, 2, 3][pose], 0, 0, h);
+  if (attacking) cartoonStrike(h, [0.35, 0.65, 0.86][pose], 0.66, 0.8);
+  else cartoonStep(h, frame * Math.PI / 2, 0.7);
+  drawFrame('k_knight', attacking ? [1, 2, 3][pose] : frame, 0, 0, h);
   ctx.restore();
 }
 
@@ -950,7 +982,11 @@ function unit(team, x, z, frame, mode) {
   if (team === 'duck') {
     const art = mode === 'shoot' ? 'duck_crossbow_art' : 'k_duck_walk';
     const fallback = mode === 'shoot' ? 'duck_shoot' : 'duck_run';
-    drawFrame(ready(IMG[art]) ? art : fallback, frame, p.x, p.y, h);
+    ctx.save(); ctx.translate(p.x, p.y);
+    if (mode === 'shoot') cartoonStrike(h, (frame % 4) / 4, 0.62, 0.6);
+    else cartoonStep(h, frame * Math.PI / 2, 0.8);
+    drawFrame(ready(IMG[art]) ? art : fallback, frame, 0, 0, h);
+    ctx.restore();
   }
   else drawRaidCat(frame, p.x, p.y - Math.abs(Math.sin(frame * 0.8)) * h * 0.035, h, mode === 'atk');
 }
@@ -1079,18 +1115,16 @@ function drawBoss(o) {
     let actionFrame = null;
     // waddle while walking, wind up and slam while fighting
     ctx.save(); ctx.translate(p.x + shakeX, p.y);
-    let lift = Math.abs(Math.sin(t * 6)) * -h * 0.03;
     if (o.fight && battle && battle.o === o) {
-      const ph = battle.t % 1.1;
-      actionFrame = ph < 0.6 ? 0 : 1;
-      if (ph < 0.6) { const k = ph / 0.6; ctx.rotate(-0.3 * k); ctx.scale(1 - 0.05 * k, 1 + 0.08 * k); lift = -h * 0.12 * k; }   // wind-up: lean back, rise
-      else if (ph < 0.8) { const k = (ph - 0.6) / 0.2; ctx.rotate(-0.3 + 0.65 * k); ctx.scale(1 + 0.1 * k, 1 - 0.12 * k); lift = -h * 0.12 * (1 - k); }   // slam down
-      else { const k = (ph - 0.8) / 0.3; ctx.rotate(0.35 * (1 - k)); ctx.scale(1 + 0.1 * (1 - k), 1 - 0.12 * (1 - k)); lift = 0; }   // recover
-    } else ctx.rotate(Math.sin(t * 6) * 0.06);
+      const phase = (battle.t % 1.1) / 1.1;
+      actionFrame = phase < 0.68 ? 0 : 1;
+      cartoonStrike(h, phase, 0.68, 1.2);
+    } else if (o.hitT > 0) cartoonRecoil(1 - o.hitT / 0.2);
+    else cartoonStep(h, t * 10, 0.8);
     if (king) {
-      if (actionFrame === null) drawFrame('k_king_walk', Math.floor(t * 6), 0, lift, h);
-      else drawFrame('k_king_act', actionFrame, 0, lift, h);
-    } else drawAt(IMG.boss, 0, lift, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
+      if (actionFrame === null) drawFrame('k_king_walk', Math.floor(t * 6), 0, 0, h);
+      else drawFrame('k_king_act', actionFrame, 0, 0, h);
+    } else drawAt(IMG.boss, 0, 0, h * IMG.boss.naturalWidth / IMG.boss.naturalHeight);
     ctx.restore();
   }
   else if (ready(IMG.cat)) {
