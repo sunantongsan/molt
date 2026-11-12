@@ -42,7 +42,7 @@
   .lvb.lock{background:#555d6b;box-shadow:0 4px 0 #383e48;opacity:.7}
   .lvb.siege{background:#8a3fb5;box-shadow:0 4px 0 #5a2378}
   .lvname{font-weight:900;font-size:18px;color:#bfe3ff;margin-top:-4px}
-  #tdUi .hud{position:fixed;top:10px;left:58px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;z-index:4}
+  #tdUi .hud{position:fixed;top:10px;left:72px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;z-index:4}
   #tdUi .hud span{background:rgba(0,0,0,.5);color:#fff;border-radius:12px;padding:6px 9px;font:800 13px Mitr,system-ui,sans-serif;white-space:nowrap}
   #tdUi .hud b{color:#ffd84a}
   #tdUi .raid{position:fixed;left:0;right:0;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4;pointer-events:none}
@@ -83,7 +83,12 @@
   .btn.ad small{display:block;font-size:13px;font-weight:800;opacity:.85}
   .btn.ghost{background:rgba(255,255,255,.15);box-shadow:none;font-size:16px;padding:10px 22px}
   #toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 16px;border-radius:14px;font:700 14px Mitr,system-ui,sans-serif;z-index:9;max-width:86vw;text-align:center}
-  #mute{position:fixed;left:10px;top:10px;z-index:5;width:40px;height:40px;border-radius:12px;border:0;background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer}
+  #mute{position:fixed;left:8px;top:8px;z-index:5;width:56px;height:56px;border-radius:50%;border:3px solid #fff3c4;background:#f7832a url(img/avatar.png) center/cover;box-shadow:0 3px 0 #a8460c,0 6px 12px rgba(0,0,0,.3);cursor:pointer;padding:0}
+  #mute i{position:absolute;right:-6px;bottom:-4px;font-style:normal;font-size:14px;background:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  #starRow{position:fixed;left:6px;top:66px;z-index:5;width:62px;display:flex;justify-content:center;gap:0;font-size:17px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+  #starRow span{transition:transform .25s}
+  #starRow span.off{filter:grayscale(1) brightness(.75);opacity:.75}
+  #starRow span.pop{transform:scale(1.5)}
 </style>
 </head>
 <body>
@@ -101,8 +106,9 @@
   <button class="btn ghost" id="homeBtn">🦆 กลับบ้านเป็ด</button>
 </div>
 
-<button id="mute" aria-label="sound">🔊</button>
+<button id="mute" aria-label="sound"></button>
 <div id="tdUi" class="hidden">
+  <div id="starRow"><span>⭐</span><span>⭐</span><span>⭐</span></div>
   <div class="hud">
     <span>📅 วันที่ <b id="tdWave">1</b></span><span>🪙 <b id="tdCoins">0</b></span>
   </div>
@@ -229,6 +235,19 @@ const SFX = (() => {
     horn: () => { tone('sawtooth', 196, 196, 0.5, 0.09); tone('sawtooth', 247, 247, 0.5, 0.07, 0.02); tone('sawtooth', 294, 294, 0.8, 0.09, 0.45); },
     zap: () => { noise(0.12, 0.3, 4000, 4); tone('square', 1800, 300, 0.12, 0.05); noise(0.2, 0.15, 900, 2, 0.05); },
     ice: () => { tone('sine', 2400, 1600, 0.15, 0.06); tone('triangle', 3200, 2400, 0.1, 0.04, 0.03); noise(0.1, 0.1, 6000, 3); },
+    fanfare: () => {
+      [392, 523, 659, 784].forEach((f, i) => { tone('square', f, 0, 0.12, 0.05, i * 0.09); tone('triangle', f, 0, 0.16, 0.13, i * 0.09); });
+      [523, 659, 784, 1047].forEach(f => { tone('triangle', f, 0, 1.1, 0.09, 0.42); tone('square', f / 2, 0, 1.0, 0.025, 0.42); });
+      for (let i = 0; i < 7; i++) noise(0.06, 0.12, 1800, 1, 0.38 + i * 0.05 - 0.35);
+      noise(0.6, 0.28, 500, 0.7, 0.42); tone('sine', 110, 50, 0.5, 0.35, 0.42);
+      [1047, 1319, 1568, 2093].forEach((f, i) => tone('triangle', f, 0, 0.25, 0.06, 1.0 + i * 0.07));
+    },
+    thunder: () => { noise(1.1, 0.6, 180, 0.6); noise(0.15, 0.5, 2500, 1.5); tone('sine', 70, 28, 0.9, 0.5); },
+    spin: () => { tone('sawtooth', 260, 520, 0.22, 0.03); noise(0.2, 0.08, 1200, 2); },
+    ufo: () => { tone('sine', 380, 980, 0.7, 0.07); tone('sine', 985, 390, 0.7, 0.05, 0.35); tone('triangle', 1600, 2600, 0.5, 0.025, 0.1); },
+    beam: () => { tone('sine', 700, 1600, 0.5, 0.06); noise(0.4, 0.06, 3000, 3); },
+    chestShake: () => { noise(0.08, 0.3, 500, 2); tone('square', 140, 90, 0.06, 0.06); },
+    chestOpen: () => { noise(0.3, 0.3, 900, 1); [784, 988, 1175, 1568, 2093].forEach((f, i) => tone('triangle', f, 0, 0.35, 0.12, 0.05 + i * 0.07)); },
     reward: () => [784, 988, 1175, 1568].forEach((f, i) => { tone('triangle', f, 0, 0.3, 0.13, i * 0.08); tone('square', f * 2, 0, 0.12, 0.03, i * 0.08); }),
   };
   const gap = { shoot: 0.07, hit: 0.05, meow: 0.25, wood: 0.06, plus: 0.04, clash: 0.08, quack: 0.15, catDie: 0.09, catHurt: 0.12, coin: 0.04, xbow: 0.08, cannon: 0.1, fire: 0.1, poof: 0.06, bossStep: 0.2, zap: 0.1, ice: 0.1 };
@@ -1224,8 +1243,8 @@ function renderMenu() {
 }
 document.getElementById('play').onclick = startLevel;
 const muteBtn = document.getElementById('mute');
-muteBtn.textContent = SFX.muted ? '🔇' : '🔊';
-muteBtn.onclick = e => { e.stopPropagation(); SFX.init(); muteBtn.textContent = SFX.toggle() ? '🔇' : '🔊'; };
+muteBtn.innerHTML = SFX.muted ? '<i>🔇</i>' : '';
+muteBtn.onclick = e => { e.stopPropagation(); SFX.init(); const m = SFX.toggle(); muteBtn.innerHTML = m ? '<i>🔇</i>' : ''; if (window.toast) toast(m ? '🔇 ปิดเสียงแล้ว' : '🔊 เปิดเสียงแล้ว'); };
 document.getElementById('next').onclick = () => { hide('result'); enterTD(); };
 
 function preview() {

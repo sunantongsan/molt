@@ -96,6 +96,7 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
     setTimeout(() => el.remove(), 380);
     const q = WEL.after; WEL.after = []; q.forEach(f => { try { f(); } catch (e) {} });
   }
+  window.closeWelcome = close;
   go.onclick = close;
   skip.onclick = close;
 })();
