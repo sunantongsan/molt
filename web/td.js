@@ -82,6 +82,7 @@ WEAPON.bomb = { speed: 1, range: 0 };
 // lane layout (like a zombie-defense game): y grows downward on screen
 const SLOTS = 5, SLOT_X = [-3.6, -1.8, 0, 1.8, 3.6], PLAT_Y = 1.0, FENCE_Y = 0, HOUSE_Y = 5.0, HOUSE_R = 1.0;
 const NWALL = 5, WALL_W = 1.84, FIELD_X = 4.5, SPAWN_Y = -21;
+const CAT_X = 3.3;   // the cats' lane between the two rows of trees (narrower than the duck yard)
 const RING = 4.4, PLAT_R = 2.75;   // old ring sizes, only used by leftover fallback drawing
 function wallX(i) { return (i - (NWALL - 1) / 2) * WALL_W; }
 if (!save.td) save.td = {
@@ -162,6 +163,7 @@ function startWave() {
   closeSheet();
   D.phase = 'wave'; D.t = 0; D.banner = 2.5; D.bossBanner = false; D.bannerTxt = null; D.eshots = []; D.slowT = 0; D.killed = 0; D.earned = 0; D.revived = false;
   D.queue = buildWave(T.wave);
+  { const wx = WEATHERS[weatherOf(T.wave)]; if (weatherOf(T.wave) !== 'sun') toast(`${wx.icon} วันนี้${wx.name}`); }
   D.total = D.queue.length;
   // new faces today? the cat king shows them off first
   if (!save.seenKinds) save.seenKinds = [];
@@ -276,18 +278,18 @@ const CAT_KINDS = {
 };
 const OLD_IMG = { knight: 'k_knight', shadow: 'k_shadow', steel: 'k_steel' };
 // what each kitchen cat wears and swings (the plain cats get a random silly outfit)
-const HATS = ['it_pot', 'it_pot', 'it_colander', 'it_mortar'];
+const HATS = ['it_pot', 'it_colander', 'h_catberet', 'h_catmelon'];
 const WPNS = ['it_spatula', 'it_spatula', 'it_pestle', 'it_ladle'];
 function catGear(kind) {
   const r = a => a[Math.floor(Math.random() * a.length)];
   if (kind === 'chief') return { hat: 'it_chefhat', wpn: 'it_pan' };
   if (kind === 'tank') return { hat: 'it_steamer', wpn: 'it_pan' };
-  if (kind === 'ninja') return { hat: 'it_mortar', wpn: 'it_skewer' };
+  if (kind === 'ninja') return { hat: 'h_catberet', wpn: 'it_skewer' };
   if (kind === 'tray') return { hat: r(['tray', 'lid']), wpn: 'it_fork' };
   if (kind === 'healer') return { hat: 'it_chefhat', wpn: 'it_soup', apron: true };
   if (kind === 'glider') return { hat: 'it_foodcover', wpn: 'it_spatula' };
-  if (kind === 'boxer') return { hat: 'it_mortar', wpn: 'it_mitt', mitts: true };
-  if (kind === 'pitcher') return { hat: r(['it_pot', 'it_mortar']), wpn: 'it_skewer' };
+  if (kind === 'boxer') return { hat: 'h_catmelon', wpn: 'it_mitt', mitts: true };
+  if (kind === 'pitcher') return { hat: r(['it_pot', 'h_catberet']), wpn: 'it_skewer' };
   return { hat: r(HATS), wpn: r(WPNS) };
 }
 function drawHat(hat, x, y, size, rot) {
@@ -324,10 +326,10 @@ function pickPattern(n) {
 function buildWave(n) {
   const q = [];
   const groups = 4 + Math.floor(n * 1.0);
-  const clampX = x => Math.max(-FIELD_X + 0.3, Math.min(FIELD_X - 0.3, x));
+  const clampX = x => Math.max(-CAT_X + 0.3, Math.min(CAT_X - 0.3, x));
   let t = 0;
   for (let g = 0; g < groups; g++) {
-    const side = (Math.random() * 2 - 1) * (FIELD_X - 0.8);      // group's x across the top
+    const side = (Math.random() * 2 - 1) * (CAT_X - 0.6);      // group's x across the top
     const size = 4 + Math.floor(n * 1.6 + Math.random() * 4);
     let kind = pickKind(n);
     const pat = kind === 'cart' ? 'blob' : pickPattern(n);
@@ -338,11 +340,11 @@ function buildWave(n) {
     for (let i = 0; i < cnt; i++) {
       const e = { t: t + i * (K.v > 1.5 ? 0.22 : 0.35), a: clampX(side + (Math.random() - 0.5) * 2.2), hp, boss: false, kind, pat: i === 0 ? pat : null };
       const mid = (cnt - 1) / 2;
-      if (pat === 'row') { e.t = t + Math.random() * 0.1; e.a = clampX(-FIELD_X + 0.5 + (2 * FIELD_X - 1) * (cnt > 1 ? i / (cnt - 1) : 0.5)); e.dy = (i % 2) * 0.5; }
+      if (pat === 'row') { e.t = t + Math.random() * 0.1; e.a = clampX(-CAT_X + 0.5 + (2 * CAT_X - 1) * (cnt > 1 ? i / (cnt - 1) : 0.5)); e.dy = (i % 2) * 0.5; }
       else if (pat === 'column') { e.t = t + i * 0.3; e.a = clampX(side); }
       else if (pat === 'zigzag') e.zig = 1;
       else if (pat === 'v') { e.t = t; e.a = clampX(side * 0.5 + (i - mid) * 0.55); e.dy = Math.abs(i - mid) * 0.7; }
-      else if (pat === 'flank') { const L = i % 2 === 0; e.a = L ? -FIELD_X + 0.6 : FIELD_X - 0.6; e.t = t + Math.floor(i / 2) * 0.32; }
+      else if (pat === 'flank') { const L = i % 2 === 0; e.a = L ? -CAT_X + 0.6 : CAT_X - 0.6; e.t = t + Math.floor(i / 2) * 0.32; }
       else if (pat === 'rush') { e.t = t + i * 0.12; e.rush = true; }
       q.push(e);
     }
@@ -702,7 +704,7 @@ function hurtCat(c, dmg, src) {
       }
     }
     // the cat's pot helmet goes flying
-    if (!c.boss && !OLD_IMG[c.kind] && c.kind !== 'cart') D.parts.push({ x: c.x, y: c.y, h: 1.0, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 2, vh: 5 + Math.random() * 2, t: 0, life: 0.9, kind: 'item', img: c.gear && c.gear.hat.startsWith('it_') ? c.gear.hat : 'it_pot', r: 0 });
+    if (!c.boss && !OLD_IMG[c.kind] && c.kind !== 'cart') D.parts.push({ x: c.x, y: c.y, h: 1.0, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 2, vh: 5 + Math.random() * 2, t: 0, life: 0.9, kind: 'item', img: c.gear && /^(it|h)_/.test(c.gear.hat) ? c.gear.hat : 'it_pot', r: 0 });
     if (c.kind === 'chief') { D.shake = 0.35; D.slowT = 0.7; addFx('ring', c.x, c.y, '#ffd84a'); for (let i = 0; i < 20; i++) confetti(c.x, c.y); }
   }
 }
@@ -1389,7 +1391,7 @@ function renderTdHud() {
   $('tdWave').textContent = T.wave;
   $('waveBtn').classList.toggle('hidden', D.phase !== 'build');
   for (const id of ['raidBtn', 'houseBtn', 'helpBtn']) { const el = $(id); if (el) el.style.visibility = D.phase === 'intro' ? 'hidden' : ''; }
-  $('waveBtn').textContent = `▶ เริ่มวันที่ ${T.wave}${T.wave % 5 === 0 ? ' 👑' : ''}`;
+  $('waveBtn').textContent = `▶ เริ่มวันที่ ${T.wave} ${WEATHERS[weatherOf(T.wave)].icon}${T.wave % 5 === 0 ? ' 👑' : ''}`;
 }
 
 // ---------- drawing ----------
@@ -1464,6 +1466,7 @@ function tdDraw() {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
+  drawWeather(Math.min(0.05, (performance.now() - (WX.last || performance.now())) / 1000)); WX.last = performance.now();
   // coins flying into the purse
   for (const c of D.coins) {
     if (c.t < 0) continue;
@@ -1476,6 +1479,163 @@ function tdDraw() {
   const pill = $('tdCoins').parentElement;
   pill.style.transform = D.hudPulse > 0 ? `scale(${1 + D.hudPulse})` : '';
   drawTdHud();
+}
+// two rows of cartoon trees and bushes along the cat lane (painted into the cached background)
+function drawLaneTrees(g, fy) {
+  let seed = 98765; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const top = dinv(0, 0).y - 1.5, bottom = FENCE_Y - 0.9;
+  // shade on the grass just inside the trees, so the lane reads as a path
+  for (const sd of [-1, 1]) {
+    const x0 = dproj(sd * (CAT_X + 0.9), 0).x, x1 = dproj(sd * (CAT_X - 0.4), 0).x;
+    const sg = g.createLinearGradient(x0, 0, x1, 0); sg.addColorStop(0, 'rgba(30,70,20,.35)'); sg.addColorStop(1, 'rgba(30,70,20,0)');
+    g.fillStyle = sg; g.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), fy - dk * 0.3);
+  }
+  const items = [];
+  for (const sd of [-1, 1]) {
+    for (let y = top; y < bottom; y += 1.15 + rnd() * 0.5) {
+      const big = rnd() < 0.55;
+      items.push({ x: sd * (CAT_X + (big ? 1.25 : 0.75) + rnd() * 0.35), y, r: big ? 0.95 + rnd() * 0.3 : 0.55 + rnd() * 0.2, tree: big, sd, c: rnd(), f: rnd() < 0.3 });
+    }
+    // fill the far edge of the screen too
+    for (let y = top - 0.5; y < bottom; y += 1.4) items.push({ x: sd * (CAT_X + 2.4 + rnd() * 0.4), y, r: 1.1 + rnd() * 0.3, tree: true, sd, c: rnd(), f: false });
+  }
+  items.sort((a, b) => a.y - b.y);
+  const OUT = '#2e4a1e';
+  for (const it of items) {
+    const p = dproj(it.x, it.y), R = it.r * dk;
+    // blobs that make up the crown
+    const blobs = [[0, -0.55, 0.62], [-0.5, -0.35, 0.5], [0.5, -0.38, 0.52], [-0.25, -0.95, 0.48], [0.28, -0.9, 0.46], [0, -0.2, 0.55]];
+    const cy = p.y - (it.tree ? R * 0.75 : R * 0.15);
+    // ground shadow
+    g.fillStyle = 'rgba(20,50,10,.3)'; g.beginPath(); g.ellipse(p.x, p.y, R * 0.85, R * 0.3, 0, 0, Math.PI * 2); g.fill();
+    if (it.tree) {   // trunk
+      g.fillStyle = OUT; g.beginPath(); g.roundRect(p.x - R * 0.16, cy - R * 0.2, R * 0.32, p.y - cy + R * 0.2, R * 0.08); g.fill();
+      g.fillStyle = '#8a5a32'; g.beginPath(); g.roundRect(p.x - R * 0.11, cy - R * 0.2, R * 0.22, p.y - cy + R * 0.14, R * 0.06); g.fill();
+    }
+    const base = ['#4f9a3a', '#5aa843', '#468f36'][Math.floor(it.c * 3)], light = '#86cc5e';
+    g.fillStyle = OUT; for (const [bx, by, br] of blobs) { g.beginPath(); g.arc(p.x + bx * R, cy + by * R, br * R + 3, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = base; for (const [bx, by, br] of blobs) { g.beginPath(); g.arc(p.x + bx * R, cy + by * R, br * R, 0, Math.PI * 2); g.fill(); }
+    // light from the top left, dark underside
+    g.fillStyle = 'rgba(25,60,15,.28)'; g.beginPath(); g.ellipse(p.x, cy - R * 0.05, R * 0.85, R * 0.32, 0, 0, Math.PI); g.fill();
+    g.fillStyle = light; for (const [bx, by, br] of blobs.slice(0, 5)) { g.beginPath(); g.arc(p.x + bx * R - br * R * 0.25, cy + by * R - br * R * 0.3, br * R * 0.45, 0, Math.PI * 2); g.fill(); }
+    if (it.f) for (let i = 0; i < 4; i++) {   // a few fruit / flowers
+      const a = rnd() * Math.PI * 2, d = rnd() * R * 0.6;
+      g.fillStyle = it.c < 0.5 ? '#ff7a6a' : '#ffd84a'; g.strokeStyle = OUT; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(p.x + Math.cos(a) * d, cy - R * 0.5 + Math.sin(a) * d * 0.6, Math.max(2.5, R * 0.08), 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+  }
+}
+// ---------- weather: every day looks a little different ----------
+const WEATHERS = {
+  sun:    { icon: '☀️', name: 'แดดสดใส' },
+  wind:   { icon: '🍃', name: 'ลมแรง ใบไม้ปลิว' },
+  rain:   { icon: '🌧️', name: 'ฝนตก' },
+  fog:    { icon: '🌫️', name: 'หมอกลง' },
+  sunset: { icon: '🌇', name: 'ตอนเย็น' },
+  night:  { icon: '🌙', name: 'กลางคืน' },
+  storm:  { icon: '⛈️', name: 'พายุฟ้าคะนอง!' },
+};
+function weatherOf(day) {
+  if (day <= 2) return 'sun';
+  if (day % 5 === 0) return day % 10 === 0 ? 'storm' : 'night';   // boss days are dramatic
+  const list = ['wind', 'rain', 'sunset', 'fog', 'sun', 'rain', 'wind', 'night', 'fog', 'sunset', 'sun', 'storm'];
+  return list[(day - 3) % list.length];
+}
+const WX = { kind: null, drops: [], leaves: [], flies: [], splash: [], flash: 0, nextBolt: 4, t: 0 };
+function drawWeather(dt) {
+  const kind = weatherOf(T.wave);
+  if (WX.kind !== kind) { WX.kind = kind; WX.drops = []; WX.leaves = []; WX.flies = []; WX.splash = []; }
+  WX.t += dt;
+  const fy = dproj(0, FENCE_Y).y;
+  ctx.save();
+  if (kind === 'sunset') {
+    const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,120,60,.32)'); gr.addColorStop(0.6, 'rgba(255,170,90,.16)'); gr.addColorStop(1, 'rgba(255,190,120,.08)');
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  }
+  if (kind === 'night' || kind === 'storm' || kind === 'rain') {
+    // darken, but keep a warm pool of light around the duck house
+    const dark = kind === 'night' ? 0.5 : kind === 'storm' ? 0.38 : 0.18;
+    const hp = dproj(0, HOUSE_Y - 1);
+    const gr = ctx.createRadialGradient(hp.x, hp.y, dk * 1.5, hp.x, hp.y, Math.max(W, H) * 0.75);
+    const col = kind === 'night' ? '15,20,70' : '30,40,70';
+    gr.addColorStop(0, `rgba(${col},${dark * 0.35})`); gr.addColorStop(1, `rgba(${col},${dark})`);
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  }
+  if (kind === 'night') {
+    while (WX.flies.length < 22) WX.flies.push({ x: Math.random() * W, y: Math.random() * H * 0.9, ph: Math.random() * 9, vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 8 });
+    ctx.globalCompositeOperation = 'lighter';
+    for (const f of WX.flies) {
+      f.x += (f.vx + Math.sin(WX.t + f.ph) * 10) * dt; f.y += (f.vy + Math.cos(WX.t * 0.8 + f.ph) * 8) * dt;
+      if (f.x < -10) f.x = W + 10; if (f.x > W + 10) f.x = -10; if (f.y < -10) f.y = H; if (f.y > H) f.y = -10;
+      const a = 0.4 + 0.6 * Math.max(0, Math.sin(WX.t * 2.5 + f.ph));
+      const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, 9); gr.addColorStop(0, `rgba(230,255,140,${a})`); gr.addColorStop(1, 'rgba(230,255,140,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(f.x, f.y, 9, 0, Math.PI * 2); ctx.fill();
+    }
+    // a big round moon peeking at the top
+    ctx.globalCompositeOperation = 'source-over';
+    const mx = W * 0.8, my = 80;
+    const mg = ctx.createRadialGradient(mx, my, 10, mx, my, 70); mg.addColorStop(0, 'rgba(255,250,210,.5)'); mg.addColorStop(1, 'rgba(255,250,210,0)');
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.arc(mx, my, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(220,210,160,.7)'; ctx.beginPath(); ctx.arc(mx - 7, my - 5, 5, 0, Math.PI * 2); ctx.arc(mx + 8, my + 6, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+  if (kind === 'rain' || kind === 'storm') {
+    const n = kind === 'storm' ? 140 : 90, wind = kind === 'storm' ? 0.35 : 0.15;
+    while (WX.drops.length < n) WX.drops.push({ x: Math.random() * W * 1.3 - W * 0.15, y: Math.random() * H, v: 700 + Math.random() * 300, l: 10 + Math.random() * 10, gy: Math.random() * H * 0.25 + H * 0.12 + Math.random() * H * 0.7 });
+    ctx.strokeStyle = 'rgba(210,230,255,.55)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round'; ctx.beginPath();
+    for (const d of WX.drops) {
+      d.y += d.v * dt; d.x += d.v * wind * dt;
+      if (d.y > d.gy) { if (WX.splash.length < 60) WX.splash.push({ x: d.x, y: d.gy, t: 0 }); d.y = -20 - Math.random() * 60; d.x = Math.random() * W * 1.3 - W * 0.2; d.gy = H * 0.12 + Math.random() * H * 0.85; }
+      ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - d.l * wind, d.y - d.l);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(220,235,255,.6)'; ctx.lineWidth = 1.2;
+    WX.splash = WX.splash.filter(s2 => (s2.t += dt) < 0.25);
+    for (const s2 of WX.splash) { const r = 2 + s2.t * 24; ctx.globalAlpha = 1 - s2.t / 0.25; ctx.beginPath(); ctx.ellipse(s2.x, s2.y, r, r * 0.35, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    if (kind === 'storm') {
+      WX.nextBolt -= dt;
+      if (WX.nextBolt <= 0) { WX.nextBolt = 5 + Math.random() * 6; WX.flash = 0.35; WX.boltX = W * (0.15 + Math.random() * 0.7); if (window.SFX) try { SFX.play('thunder'); } catch (e) {} }
+      if (WX.flash > 0) {
+        WX.flash -= dt;
+        const a = WX.flash > 0.25 ? 0.55 : WX.flash > 0.15 ? 0.1 : WX.flash > 0.08 ? 0.4 : 0.05;
+        ctx.fillStyle = `rgba(235,240,255,${a})`; ctx.fillRect(0, 0, W, H);
+        if (WX.flash > 0.15) {
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.shadowColor = '#bcd4ff'; ctx.shadowBlur = 14; ctx.beginPath();
+          let x = WX.boltX, y = 0; ctx.moveTo(x, y);
+          let sd = WX.boltX * 7; const r2 = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+          while (y < fy * 0.55) { x += (r2() - 0.5) * 40; y += 18 + r2() * 20; ctx.lineTo(x, y); }
+          ctx.stroke(); ctx.shadowBlur = 0;
+        }
+      }
+    }
+  }
+  if (kind === 'wind') {
+    while (WX.leaves.length < 26) WX.leaves.push({ x: -20 - Math.random() * W, y: Math.random() * H * 0.95, v: 80 + Math.random() * 90, r: Math.random() * 6, s: 5 + Math.random() * 5, c: ['#7fc04e', '#a8d65a', '#e0b84a', '#d9844a'][Math.floor(Math.random() * 4)], ph: Math.random() * 9 });
+    for (const l of WX.leaves) {
+      l.x += l.v * dt; l.y += Math.sin(WX.t * 2 + l.ph) * 30 * dt + 12 * dt; l.r += dt * 4;
+      if (l.x > W + 20) { l.x = -20; l.y = Math.random() * H * 0.95; }
+      ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.r); ctx.scale(1, Math.abs(Math.sin(l.r * 0.7)) * 0.8 + 0.2);
+      ctx.fillStyle = l.c; ctx.strokeStyle = '#2e4a1e'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(0, 0, l.s, l.s * 0.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+    }
+    // streaks of wind
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (let i = 0; i < 5; i++) { const y = (i * 0.19 + 0.08) * H, x = ((WX.t * 260 + i * 177) % (W + 300)) - 150;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 50, y - 10, x + 110, y); ctx.stroke(); }
+  }
+  if (kind === 'fog') {
+    for (let i = 0; i < 4; i++) {
+      const y = fy * (0.1 + i * 0.22), x = ((WX.t * (12 + i * 5) + i * 140) % (W + 400)) - 200;
+      for (const xx of [x, x - W - 400]) {
+        const gr = ctx.createRadialGradient(xx + 200, y, 10, xx + 200, y, 260); gr.addColorStop(0, 'rgba(245,248,250,.5)'); gr.addColorStop(1, 'rgba(245,248,250,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(xx + 200, y, 260, 90, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    const gr = ctx.createLinearGradient(0, 0, 0, fy); gr.addColorStop(0, 'rgba(240,244,248,.55)'); gr.addColorStop(1, 'rgba(240,244,248,0)');
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, fy);
+  }
+  ctx.restore();
 }
 // ---------- painted background: soft garden lawn for the cats, checkered kitchen floor for the ducks ----------
 let bgCache = null;
@@ -1544,6 +1704,7 @@ function getBg() {
     g.fillStyle = sh; g.fillRect(0, ty0, W, dk * 0.9);
 
   }
+  drawLaneTrees(g, fy);
   // a little round rug in front of the house
   const hp = dproj(0, HOUSE_Y - 0.1);
   g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(hp.x, hp.y + 3, dk * 1.55, dk * 0.6, 0, 0, Math.PI * 2); g.fill();
@@ -1614,6 +1775,36 @@ function drawFence(w) {
 }
 const PLAT_H = 1.25;  // how high the duck stands (meters, drawn upward)
 const PLAT_W = 1.55, PLAT_DECK = 0.30;   // platform sprite width (m) and deck centre as a fraction of its height
+// a hat that matches the duck's weapon: [image, x (x frame width), y (x height, hat centre), size (x height), tilt]
+const DUCK_HAT = {
+  bow:    ['h_bow',    0.06, -0.9, 0.48, 0],
+  xbow:   ['h_xbow',   0.08, -1.02, 0.40, 0.08],
+  fire:   ['h_fire',   0.05, -0.97, 0.50, -0.1],
+  ice:    ['h_ice',    0.04, -1.00, 0.48, 0.12],
+  triple: ['h_triple', 0.06, -0.98, 0.46, 0],
+  egg:    ['h_egg',    0.05, -0.95, 0.50, 0.12],
+  coffee: ['h_coffee', 0.08, -0.93, 0.48, 0.1],
+  storm:  ['h_storm',  0.06, -0.97, 0.46, 0.05],
+  pan:    ['h_pan',    0.00, -0.94, 0.62, 0.1],
+  cannon: ['h_cannon', 0.06, -0.95, 0.48, 0.08],
+  stove:  ['h_stove',  0.08, -0.93, 0.52, 0.08],
+  fish:   ['h_fish',   0.05, -1.03, 0.42, 0.15],
+  melon:  ['h_melon',  0.06, -0.99, 0.42, 0.05],
+  roller: ['h_roller', 0.06, -0.94, 0.56, 0],
+};
+function drawDuckHat(w, fw, h, tier) {
+  const d = DUCK_HAT[w]; if (!d) return;
+  const grow = 1 + tier * 0.06;   // a bit bigger and shinier at higher levels
+  drawItem(d[0], fw * d[1], h * d[2] - (grow - 1) * h * d[3] * 0.3, h * d[3] * grow, d[4]);
+  if (tier >= 2) {
+    const t = performance.now() / 1000, a = t * 2;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 + Math.sin(t * 6) * 0.3;
+    ctx.fillStyle = tier >= 3 ? '#ffe680' : '#ffffff';
+    const sx = fw * d[1] + Math.cos(a) * h * 0.22, sy = h * d[2] - h * 0.1 + Math.sin(a) * h * 0.05, r = h * 0.035;
+    ctx.beginPath(); ctx.moveTo(sx, sy - r * 2); ctx.lineTo(sx + r * 0.6, sy); ctx.lineTo(sx, sy + r * 2); ctx.lineTo(sx - r * 0.6, sy); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
 function drawPlatform(s) {
   const q = platPos(s), p = dproj(q.x, q.y), pl = platAt(s), k = dk;
   if (!pl) return;
@@ -1669,7 +1860,10 @@ function drawPlatform(s) {
   o.topH = (p.y - top) / k + 0.5;
   const hop = o.arrive > 0 ? Math.sin(o.arrive * Math.PI) * k * 0.8 : 0;
   const fk = o.shootT > 0 ? Math.min(3, Math.floor((0.3 - o.shootT) / 0.3 * 4)) : 0;
-  const dy = top + k * 0.05 - hop;
+  const dy = top + k * 0.1 - hop;
+  // contact shadow so the duck stands on the deck instead of hovering over it
+  { const sk = hop > 0 ? Math.max(0.4, 1 - hop / (k * 0.8)) : 1;
+    ctx.fillStyle = 'rgba(40,25,10,.35)'; ctx.beginPath(); ctx.ellipse(p.x + (flip ? -1 : 1) * k * 0.04, top + k * 0.1, k * 0.36 * sk, k * 0.11 * sk, 0, 0, Math.PI * 2); ctx.fill(); }
   if (ready(IMG.k_duck_act)) {
     // kitchen duck: wind up, throw, then idle; holds its weapon; dresses up with the platform tier
     const tr2 = tierOf(pl.lvl), fw = h * 0.75;
@@ -1681,7 +1875,7 @@ function drawPlatform(s) {
     else if (o.shootT > 0) drawFrame('k_duck_act', o.shootT > 0.15 ? 0 : 1, 0, 0, h, false);
     else drawFrame('k_duck_walk', 1, 0, Math.sin(performance.now() / 300 + s) * 1.5, h, false);
     if (tr2 >= 1) drawItem('it_apron', fw * 0.08, -h * 0.33, h * 0.4);
-    if (tr2 >= 2) drawItem('it_chefhat', fw * 0.02, -h * 0.98, h * (tr2 >= 3 ? 0.48 : 0.4));
+    drawDuckHat(pl.w, fw, h, tr2);
     const hi = HELD[pl.w], thr = o.shootT > 0 && o.shootT <= 0.15;
     if (!thr) drawItem(hi, fw * 0.4, -h * 0.52, h * (pl.w === 'cannon' ? 0.5 : 0.48), o.shootT > 0.15 ? -1.0 : 0.4);
     ctx.restore();
