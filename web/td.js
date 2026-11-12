@@ -84,7 +84,7 @@ const SLOTS = 5, SLOT_X = [-3.6, -1.8, 0, 1.8, 3.6], PLAT_Y = 0.45, FENCE_Y = 0,
 const NWALL = 5, WALL_W = 1.84, FIELD_X = 4.5, SPAWN_Y = -21;
 const WALL_D = 1.0, WALL_IN = FENCE_Y + WALL_D, GATE = 2;   // city wall: outer edge at FENCE_Y, walkway WALL_D deep, middle segment is the gate
 const WALL_FOOT = WALL_IN + 1.3;                           // where the wall's inner face meets the courtyard floor
-const EGG_Y = WALL_FOOT + 2.9, EGG_R = 0.75;                  // the golden egg the cats want
+const EGG_Y = WALL_FOOT + 2.6, EGG_R = 0.75;                  // the golden egg the cats want
 const CAT_X = 3.3;   // the cats' lane between the two rows of trees (narrower than the duck yard)
 const RING = 4.4, PLAT_R = 2.75;   // old ring sizes, only used by leftover fallback drawing
 function wallX(i) { return (i - (NWALL - 1) / 2) * WALL_W; }
@@ -124,7 +124,7 @@ let D = null;
 let dk = 30;
 // camera: zoomed in, pans sideways (and a little up/down) to follow the leader duck
 let camX = 0, camY = 0;
-function baseY() { return H - 150 - (HOUSE_Y + 0.6) * dk * 0.62; }
+function baseY() { return H - 95 - (HOUSE_Y + 0.6) * dk * 0.62; }
 function dproj(x, y) { return { x: W / 2 + (x - camX) * dk, y: baseY() + (y - camY) * dk * 0.62 }; }
 function dinv(sx, sy) { return { x: (sx - W / 2) / dk + camX, y: (sy - baseY()) / (dk * 0.62) + camY }; }
 function camFollow(dt) { camX = 0; camY = 0; }
@@ -586,14 +586,14 @@ function tdUpdate(dt) {
       }
       if (W0.support) {
         // coffee duck: brews for the neighbours; at Lv.10 also splashes hot coffee now and then
-        if (perkLv(p) >= 2 && o.cd <= 0) { const t2 = nearestCat(pos.x, pos.y, 9); if (t2) { o.cd = 2; o.shootT = 0.3; o.aimDx = t2.x - pos.x; o.aimDy = t2.y - pos.y;
+        if (perkLv(p) >= 2 && o.cd <= 0) { const t2 = nearestCat(pos.x, pos.y, 9); if (t2) { o.cd = 2; o.shootT = 0.45; o.aimDx = t2.x - pos.x; o.aimDy = t2.y - pos.y;
           D.shots.push({ x: pos.x, y: pos.y, sx: pos.x, sy: pos.y, tx: t2.x, ty: t2.y, w: 'coffee', dmg: 3 + p.lvl * 0.4, t: 0, dur: 0.6, high: true, tier, h0: o.topH || PLAT_H }); } }
         continue;
       }
       if (o.cd > 0 || o.arrive > 0) continue;
       const t = nearestCat(pos.x, pos.y, W0.range);
       if (!t) continue;
-      o.cd = 1 / (W0.rate * (1 + tier * 0.15) * coffeeBuff(p.slot)); o.aimDx = t.x - pos.x; o.aimDy = t.y - pos.y; o.shootT = 0.3;
+      o.cd = Math.max(0.5, 1 / (W0.rate * (1 + tier * 0.15) * coffeeBuff(p.slot))); o.aimDx = t.x - pos.x; o.aimDy = t.y - pos.y; o.shootT = 0.45;
       const pk = perkLv(p);
       const n = p.w === 'triple' ? [3, 5, 7][pk] : p.w === 'bow' && pk >= 1 ? 2 : (W0.multi || 1);
       if (p.w === 'stove') {
@@ -616,14 +616,14 @@ function tdUpdate(dt) {
       if (p.w === 'pan') {
         const ang = Math.atan2(t.y - pos.y, t.x - pos.x), R = W0.range;
         D.shots.push({ pan: true, w: 'pan', x: pos.x, y: pos.y, sx: pos.x, sy: pos.y, tx: pos.x + Math.cos(ang) * R, ty: pos.y + Math.sin(ang) * R,
-          t: 0, dur: R / W0.speed, back: pk >= 1, dmg: wDmg(p) * (pk >= 2 ? 1.5 : 1), big: pk >= 2, hit: new Set(), tier, h0: o.topH || PLAT_H });
+          t: -0.18, dur: R / W0.speed, back: pk >= 1, dmg: wDmg(p) * (pk >= 2 ? 1.5 : 1), big: pk >= 2, hit: new Set(), tier, h0: o.topH || PLAT_H });
         SFX.play('xbow'); continue;
       }
       for (let k = 0; k < n; k++) {
         const spread = n > 1 ? (k - (n - 1) / 2) * (p.w === 'bow' ? 0.08 : 0.22) : 0;
         const ang = Math.atan2(t.y - pos.y, t.x - pos.x) + spread, dist = Math.hypot(t.x - pos.x, t.y - pos.y);
         D.shots.push({ x: pos.x, y: pos.y, sx: pos.x, sy: pos.y, tx: pos.x + Math.cos(ang) * dist, ty: pos.y + Math.sin(ang) * dist,
-          target: n > 1 && p.w !== 'bow' ? null : t, w: p.w, dmg: wDmg(p), t: 0, dur: dist / W0.speed, high: true, pk, tier, h0: o.topH || PLAT_H });
+          target: n > 1 && p.w !== 'bow' ? null : t, w: p.w, dmg: wDmg(p), t: -0.18, dur: dist / W0.speed, high: true, pk, tier, h0: o.topH || PLAT_H });
       }
       SFX.play(p.w === 'cannon' || p.w === 'melon' ? 'cannon' : p.w === 'xbow' ? 'xbow' : p.w === 'fire' ? 'fire' : p.w === 'storm' ? 'zap' : p.w === 'ice' ? 'ice' : 'shoot');
       if (p.w === 'cannon' || p.w === 'melon') { D.shake = Math.max(D.shake, 0.06); o.flash = 0.15; }
@@ -655,6 +655,7 @@ function tdUpdate(dt) {
       if (u >= 1) s.done = true;
       continue;
     }
+    if (s.pan && s.t < 0) continue;
     if (s.pan) {
       // out to full range and (with the perk) back again, smacking every cat it passes
       const tot = s.back ? s.dur * 2 : s.dur, u = Math.min(1, s.t / tot);
@@ -729,7 +730,6 @@ function hurtCat(c, dmg, src) {
     D.killed++; c.deadT = 0;
     if (!c.boss && c.kind !== 'chief' && c.kind !== 'cart' && c.kind !== 'ram' && !c.lift && Math.random() < 0.55) c.fly = { t: 0, vx: (Math.random() - 0.5) * 6, vh: 7 + Math.random() * 4, spin: (Math.random() < 0.5 ? -1 : 1) * (10 + Math.random() * 8) };
     // nearby duck archers cheer
-    for (const p of T.plats) { const q = platPos(p.slot); if (Math.hypot(q.x - c.x, q.y - c.y) < 9 && Math.random() < 0.35) shooter(p.slot).cheer = 0.5; }
     if (c.boss) {
       SFX.play('bossDie'); D.shake = 0.6; D.slowT = 1.8; D.flashT = 0.35;
       D.banner = 2.2; D.bannerTxt = 'ราชาแมวล้มแล้ว!! 🎉';
@@ -824,7 +824,7 @@ function trapUpdate(dt) {
       if (tr.broken) { if ((tr.brokeT += dt) > 0.4) tr.done = true; continue; }
       for (const c of D.cats) {
         if (c.hp <= 0 || c.launch || c.st === 'flee' || c.lift) continue;
-        if (Math.abs(c.x - tr.x) > 0.62 || Math.abs(c.y - tr.y) > 0.32) continue;
+        if (Math.abs(c.x - tr.x) > 0.5 || Math.abs(c.y - tr.y) > 0.3) continue;
         if (c.boss || c.kind === 'ram' || c.kind === 'cart' || c.kind === 'steel') {
           // too heavy: the board snaps
           tr.broken = true; tr.brokeT = 0; SFX.play('crack'); for (let i = 0; i < 8; i++) splinter(tr.x, tr.y); if (!c.boss) c.stun = Math.max(c.stun, 0.5); break;
@@ -1271,11 +1271,11 @@ function padList() {
     } });
   }
   CAMP_POS.forEach((cp, i) => {
-    const cm = T.camps[i], x = cp.x, y = cp.y + 1.05;
+    const cm = T.camps[i], x = cp.x * 0.68, y = cp.y + 1.1;
     if (!cm) L.push({ id: 'cb' + i, x, y, icon: '⛺', label: 'ค่ายเป็ดวางกับดัก', cost: 500, apply: () => { T.camps[i] = { lvl: 1 }; toast('ตั้งค่ายแล้ว! เป็ดจะออกไปวางไม้กระดกกับระเบิดปลาทู 🪤'); SFX.play('quack'); } });
     else if (cm.lvl < 10) L.push({ id: 'cu' + i, x, y, icon: '🪖', label: `ค่าย Lv.${cm.lvl + 1}`, cost: Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4), apply: () => { cm.lvl++; if (cm.lvl === 5 || cm.lvl === 10) toast(cm.lvl === 5 ? 'ค่ายได้เป็ดวางกับดักเพิ่ม 1 ตัว!' : 'กับดักแรงขึ้น + เป็ดเพิ่มอีกตัว!'); } });
   });
-  L.push({ id: 'house', x: 1.2, y: HOUSE_Y + 0.55, icon: '🏠', label: `บ้าน Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
+  L.push({ id: 'house', x: 1.1, y: EGG_Y + 0.15, icon: '🥚', label: `เกราะไข่ Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; D.houseHp = D.houseMax = houseMax(); } });
   for (const w of D.walls) if (w.hp < w.max) {
     const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
     L.push({ id: 'w' + w.i, x: w.x + (w.i === NWALL - 1 ? -0.9 : 0.9), y: WALL_FOOT + 0.55, icon: '🔧', label: w.gate ? 'ซ่อมประตู' : 'ซ่อมกำแพง', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
@@ -1454,7 +1454,7 @@ function openHouse() {
   const la = 70 * T.lead.atk, ls = 60 * T.lead.spd, lm = 50 * T.lead.mag;
   body.appendChild(btn(`🥄 ทัพพี Lv.${T.lead.atk}${T.lead.atk >= 5 ? ' → กระทะ' : ''}`, `ฟาดแรง ${leadDmg().toFixed(1)} • 🪙${la}`, save.coins >= la, () => { save.coins -= la; T.lead.atk++; if (T.lead.atk === 5) toast('ได้กระทะ! ฟาดแรงขึ้น 🍳'); }));
   body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; }));
-  const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = `🥚 เสริมเกราะไข่ทองคำ (ทน ${houseMax()}): ไปยืนบนวงกลม 🏠 หน้าบ้าน`; body.appendChild(hh);
+  const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = `🥚 เสริมเกราะไข่ทองคำ (ทน ${houseMax()}): ไปยืนบนวงกลม 🥚 ข้างไข่`; body.appendChild(hh);
   body.appendChild(btn(`🧱 เสริมกำแพง Lv.${T.fence}`, `ทน ${wallMax(0)} (ประตู ${wallMax(GATE)}) • 🪙${fc}`, save.coins >= fc, () => { save.coins -= fc; T.fence++; for (const w of D.walls) { w.max = wallMax(w.i); w.hp = Math.max(w.hp, Math.min(w.max, w.hp + 18)); } }));
   body.appendChild(btn(`🐟 กับดักปลาทูระเบิด (มี ${T.traps})`, `ซื้อเพิ่ม 1 อัน • 🪙120`, save.coins >= 120, () => { save.coins -= 120; T.traps++; }));
   body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; }));
@@ -1730,9 +1730,12 @@ function getBg() {
   if (ready(bi)) {
     // painted lawn + kitchen floor; the grass/tile edge (64.1% down the image) sits on the fence line
     const iw = bi.naturalWidth, ih = bi.naturalHeight, E = 0.641;
-    const s2 = Math.max(W / iw, (H - fy) / (ih * (1 - E)), fy / (ih * E));
-    const dw = iw * s2, dh = ih * s2;
-    g.drawImage(bi, (W - dw) / 2, fy - E * dh, dw, dh);
+    const s2 = W / iw, dw = iw * s2, dh = ih * s2, top = fy - E * dh;
+    g.drawImage(bi, 0, top, dw, dh);
+    // more lawn above: mirrored copies of the lawn part, so the hedges carry on seamlessly
+    for (let y = top, k = 1; y > 0; k++) { const lh = E * dh; g.save(); g.translate(0, y); if (k % 2) g.scale(1, -1); else g.translate(0, -lh); g.drawImage(bi, 0, 0, iw, ih * E, 0, k % 2 ? 0 : 0, dw, lh); g.restore(); y -= lh; }
+    // more floor below: mirrored copies of the tile part
+    for (let y = top + dh, k = 1; y < H; k++) { const fh = (1 - E) * dh; g.save(); g.translate(0, y); if (k % 2) { g.translate(0, fh); g.scale(1, -1); } g.drawImage(bi, 0, ih * E, iw, ih * (1 - E), 0, 0, dw, fh); g.restore(); y += fh; }
   } else {
     let seed = 1234567; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     // lawn
@@ -1784,12 +1787,11 @@ function getBg() {
     g.fillStyle = sh; g.fillRect(0, ty0, W, dk * 0.9);
 
   }
-  drawLaneTrees(g, fy);
   // a little round rug in front of the house
   const hp = dproj(0, HOUSE_Y - 0.1);
-  g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(hp.x, hp.y + 3, dk * 1.55, dk * 0.6, 0, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#d9584a'; g.beginPath(); g.ellipse(hp.x, hp.y, dk * 1.5, dk * 0.56, 0, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = '#fff3d6'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.ellipse(hp.x, hp.y, dk * 1.3, dk * 0.46, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+  g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(hp.x, hp.y + 3, dk * 1.2, dk * 0.47, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#d9584a'; g.beginPath(); g.ellipse(hp.x, hp.y, dk * 1.15, dk * 0.43, 0, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#fff3d6'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.ellipse(hp.x, hp.y, dk * 0.98, dk * 0.35, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
   bgCache = { key, cv: cv2 };
   return cv2;
 }
@@ -1797,7 +1799,7 @@ let houseTop = 0;
 function drawHouse() {
   const p = dproj(0, HOUSE_Y - 0.6), s = dk * 0.6;
   if (ready(IMG.duckhouse)) {
-    houseTop = p.y + s * 0.9 - drawAt(IMG.duckhouse, p.x, p.y + s * 0.9, s * 3.0);
+    houseTop = p.y + s * 1.5 - drawAt(IMG.duckhouse, p.x, p.y + s * 1.5, s * 2.4);
   } else {
     // cartoon placeholder: round yellow house, orange dome roof, duck on top
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + s * 0.25, s * 1.35, s * 0.55, 0, 0, Math.PI * 2); ctx.fill();
@@ -1935,24 +1937,35 @@ function drawPlatform(s) {
   o.topH = (p.y - top) / k + 0.5;
   const hop = o.arrive > 0 ? Math.sin(o.arrive * Math.PI) * k * 0.8 : 0;
   const fk = o.shootT > 0 ? Math.min(3, Math.floor((0.3 - o.shootT) / 0.3 * 4)) : 0;
-  const dy = top + k * 0.05 - hop;
+  const dy = top + k * 0.1 - hop;
   // contact shadow so the duck stands on the deck instead of hovering over it
   { const sk = hop > 0 ? Math.max(0.4, 1 - hop / (k * 0.8)) : 1;
-    ctx.fillStyle = 'rgba(40,25,10,.35)'; ctx.beginPath(); ctx.ellipse(p.x + (flip ? -1 : 1) * k * 0.04, top + k * 0.04, k * 0.33 * sk, k * 0.1 * sk, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = 'rgba(40,25,10,.35)'; ctx.beginPath(); ctx.ellipse(p.x + (flip ? -1 : 1) * k * 0.04, top + k * 0.08, k * 0.3 * sk, k * 0.09 * sk, 0, 0, Math.PI * 2); ctx.fill(); }
   if (ready(IMG.k_duck_act)) {
     // kitchen duck: wind up, throw, then idle; holds its weapon; dresses up with the platform tier
     const tr2 = tierOf(pl.lvl), fw = h * 0.75;
     ctx.save(); ctx.translate(p.x, dy); if (flip) ctx.scale(-1, 1);
-    if (o.cheer > 0) { o.cheer -= 1 / 60; drawFrame('k_duck_act', 3, 0, -Math.sin((0.5 - o.cheer) / 0.5 * Math.PI) * h * 0.22, h, false); }
-    else if (D.flinchT > 0) drawFrame('k_duck_act', 2, Math.sin(performance.now() / 25) * 2, 0, h, false);
-    else if (o.stunT > 0) { drawFrame('k_duck_act', 2, 0, 0, h, false); ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', Math.cos(performance.now() / 150) * h * 0.2, -h * 1.05); }
+    const TH = 0.45, u = o.shootT > 0 ? 1 - o.shootT / TH : -1;    // throw progress
+    let held = true;
+    if (o.stunT > 0) { drawFrame('k_duck_act', 2, 0, 0, h, false); ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', Math.cos(performance.now() / 150) * h * 0.2, -h * 1.05); }
     else if (D.phase === 'victory' && D.cheered) { const hp2 = Math.abs(Math.sin(performance.now() / 160 + s)) * h * 0.25; drawFrame('k_duck_act', 3, 0, -hp2, h, false); }
-    else if (o.shootT > 0) drawFrame('k_duck_act', o.shootT > 0.15 ? 0 : 1, 0, 0, h, false);
-    else drawFrame('k_duck_walk', 1, 0, Math.sin(performance.now() / 300 + s) * 1.5, h, false);
-    if (tr2 >= 1) drawItem('it_apron', fw * 0.08, -h * 0.33, h * 0.4);
-    drawDuckHat(pl.w, fw, h, tr2);
-    const hi = HELD[pl.w], thr = o.shootT > 0 && o.shootT <= 0.15;
-    if (!thr) drawItem(hi, fw * 0.4, -h * 0.52, h * (pl.w === 'cannon' ? 0.5 : 0.48), o.shootT > 0.15 ? -1.0 : 0.4);
+    else if (u >= 0) {
+      // wind up (lean back, weapon behind the head) -> release (lunge forward) -> follow through
+      const back = u < 0.4 ? u / 0.4 : 0, fwd = u >= 0.4 ? Math.max(0, 1 - Math.abs(u - 0.55) / 0.45) : 0;
+      ctx.translate(0, 0); ctx.rotate(-back * 0.28 + fwd * 0.32); ctx.translate(fwd * h * 0.08, 0);
+      drawFrame('k_duck_act', u < 0.4 ? 0 : 1, 0, 0, h, false);
+      if (tr2 >= 1) drawItem('it_apron', fw * 0.08, -h * 0.33, h * 0.4);
+      drawDuckHat(pl.w, fw, h, tr2);
+      if (u < 0.4) drawItem(HELD[pl.w], -fw * 0.25, -h * (0.85 + back * 0.2), h * 0.5, -1.2 - back * 0.8);
+      else if (u < 0.75) { ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, -h * 0.65, h * 0.55, -2.2, -0.1); ctx.stroke(); }
+      held = false;
+    }
+    else drawFrame('k_duck_walk', 1, 0, 0, h, false);
+    if (held) {
+      if (tr2 >= 1) drawItem('it_apron', fw * 0.08, -h * 0.33, h * 0.4);
+      drawDuckHat(pl.w, fw, h, tr2);
+      drawItem(HELD[pl.w], fw * 0.4, -h * 0.52, h * (pl.w === 'cannon' ? 0.5 : 0.48), 0.4);
+    }
     ctx.restore();
   }
   else {
@@ -2272,6 +2285,7 @@ function shotScreen(s, tt) {
   const q = dproj(s.sx + (s.tx - s.sx) * k, s.sy + (s.ty - s.sy) * k); return { x: q.x, y: q.y - lift };
 }
 function drawShot(s) {
+  if (s.t < 0 && !s.rain) return;   // still in the duck's hand
   const k = Math.min(1, s.t / s.dur);
   const W0 = WEAPON[s.w] || {};
   // arrows leave from the raised platform and drop toward the target
@@ -2341,7 +2355,7 @@ function drawShot(s) {
       ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(p.x, y, dk * 0.35 * (1 + tier * 0.2), 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
     const spin = s.w === 'cannon' || s.w === 'fire' || s.w === 'storm' ? s.t * 12 : ang + Math.PI * 0.25;
-    drawItem(AMMO[s.w], p.x, y, dk * (s.w === 'cannon' ? 0.45 : 0.42) * (1 + tier * 0.12), spin);
+    drawItem(AMMO[s.w], p.x, y, dk * (s.w === 'cannon' ? 0.58 : 0.55) * (1 + tier * 0.12), spin);
     return;
   }
   if (s.bomb || s.w === 'cannon') {
@@ -2555,39 +2569,85 @@ function drawLadder(lad) {
   ctx.globalAlpha = 1;
   if (!lad.down && lad.push > 0) { ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(tx, ty - 10, 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, lad.push / 0.35)); ctx.stroke(); }
 }
+function eggPath(w, h) {
+  // a proper egg: narrower on top, round and heavy at the bottom
+  ctx.beginPath(); ctx.moveTo(0, -h);
+  ctx.bezierCurveTo(w * 0.62, -h, w, -h * 0.25, w, h * 0.2);
+  ctx.bezierCurveTo(w, h * 0.72, w * 0.55, h, 0, h);
+  ctx.bezierCurveTo(-w * 0.55, h, -w, h * 0.72, -w, h * 0.2);
+  ctx.bezierCurveTo(-w, -h * 0.25, -w * 0.62, -h, 0, -h); ctx.closePath();
+}
 function drawGoldenEgg(x, y, size, rot) {
+  const w = size * 0.36, h = size * 0.48, t = performance.now() / 1000;
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0);
-  const w = size * 0.36, h = size * 0.5;
-  const g = ctx.createRadialGradient(-w * 0.35, -h * 0.35, size * 0.03, 0, 0, size * 0.6); g.addColorStop(0, '#fffbe0'); g.addColorStop(0.35, '#ffd84a'); g.addColorStop(0.8, '#e2a018'); g.addColorStop(1, '#b8780c');
-  ctx.fillStyle = g; ctx.strokeStyle = '#7a4a08'; ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.moveTo(0, -h); ctx.bezierCurveTo(w * 1.05, -h, w * 1.25, h * 0.55, 0, h * 0.95); ctx.bezierCurveTo(-w * 1.25, h * 0.55, -w * 1.05, -h, 0, -h); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.ellipse(-w * 0.38, -h * 0.4, w * 0.18, h * 0.25, -0.3, 0, Math.PI * 2); ctx.fill();
+  // body: warm gold, darker towards the bottom right
+  const g = ctx.createRadialGradient(-w * 0.35, -h * 0.4, size * 0.02, w * 0.1, h * 0.1, size * 0.62);
+  g.addColorStop(0, '#fffef0'); g.addColorStop(0.18, '#ffe98a'); g.addColorStop(0.5, '#ffc928'); g.addColorStop(0.85, '#e09412'); g.addColorStop(1, '#a8630a');
+  eggPath(w, h); ctx.fillStyle = g; ctx.fill();
+  // reflected light along the bottom edge
+  ctx.save(); eggPath(w, h); ctx.clip();
+  const rl = ctx.createLinearGradient(0, h * 0.4, 0, h); rl.addColorStop(0, 'rgba(255,240,170,0)'); rl.addColorStop(1, 'rgba(255,240,170,.55)');
+  ctx.fillStyle = rl; ctx.fillRect(-w, h * 0.4, w * 2, h * 0.6);
+  // a shine band that sweeps across every few seconds
+  const sx = ((t * 0.45) % 1.6 - 0.3) * w * 2.6 - w * 1.3;
+  ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,255,230,.45)';
+  ctx.beginPath(); ctx.moveTo(sx, -h); ctx.lineTo(sx + w * 0.35, -h); ctx.lineTo(sx - w * 0.15, h); ctx.lineTo(sx - w * 0.5, h); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  eggPath(w, h); ctx.strokeStyle = '#6e3f06'; ctx.lineWidth = Math.max(2, size * 0.035); ctx.stroke();
+  // highlight
+  ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.ellipse(-w * 0.42, -h * 0.42, w * 0.16, h * 0.24, -0.35, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(-w * 0.2, -h * 0.72, w * 0.07, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
+function drawNest(x, y, s, front) {
+  // straw nest; the back half is drawn behind the egg, the front rim over it
+  const rx = s * 0.62, ry = s * 0.24;
+  if (!front) {
+    ctx.fillStyle = 'rgba(40,25,10,.3)'; ctx.beginPath(); ctx.ellipse(x, y + s * 0.06, rx * 1.1, ry * 1.1, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#7a4e22'; ctx.beginPath(); ctx.ellipse(x, y - s * 0.12, rx * 0.95, ry * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#5a3412'; ctx.beginPath(); ctx.ellipse(x, y - s * 0.1, rx * 0.7, ry * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(x, y - s * 0.08, rx, ry * 1.25, 0, 0, Math.PI); ctx.lineTo(x - rx, y - s * 0.1); ctx.closePath();
+  ctx.fillStyle = '#c8924a'; ctx.fill(); ctx.strokeStyle = '#4a2c10'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.clip();
+  let sd = 7; const r = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+  for (let i = 0; i < 26; i++) {
+    const a = r() * Math.PI, cx = x + Math.cos(a) * rx * (0.3 + r() * 0.7), cy = y - s * 0.08 + Math.sin(a) * ry * 1.1 * r();
+    ctx.strokeStyle = ['#e8b860', '#a8742e', '#f2d088', '#8a5a22'][i % 4]; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - s * 0.12, cy - s * 0.02 + r() * 4); ctx.quadraticCurveTo(cx, cy + s * 0.04, cx + s * 0.13, cy - s * 0.03); ctx.stroke();
+  }
+  ctx.restore();
+  // a few loose straws sticking out
+  ctx.strokeStyle = '#e8b860'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (const [dx, dy, ex, ey] of [[-0.55, -0.12, -0.75, -0.25], [0.5, -0.1, 0.72, -0.2], [-0.2, 0.12, -0.35, 0.2], [0.3, 0.12, 0.45, 0.22]]) { ctx.beginPath(); ctx.moveTo(x + dx * s, y + dy * s); ctx.lineTo(x + ex * s, y + ey * s); ctx.stroke(); }
+}
 function drawEggStand() {
-  const p = dproj(0, EGG_Y), s = dk, t = performance.now() / 1000;
-  // stone pedestal with a red cushion
-  ctx.fillStyle = 'rgba(40,25,10,.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 3, s * 0.75, s * 0.26, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#cfc6b4'; ctx.strokeStyle = '#4a3a2c'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(p.x - s * 0.55, p.y - s * 0.4); ctx.lineTo(p.x - s * 0.62, p.y); ctx.ellipse(p.x, p.y, s * 0.62, s * 0.22, 0, Math.PI, 0, true); ctx.lineTo(p.x + s * 0.55, p.y - s * 0.4); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#e7dfcf'; ctx.beginPath(); ctx.ellipse(p.x, p.y - s * 0.4, s * 0.55, s * 0.19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#d8352a'; ctx.beginPath(); ctx.ellipse(p.x, p.y - s * 0.46, s * 0.42, s * 0.14, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#7a1a12'; ctx.stroke();
+  const p = dproj(0, EGG_Y), s = dk * 1.05, t = performance.now() / 1000;
+  drawNest(p.x, p.y, s, false);
+  if (!D.thief && D.phase !== 'defeat') {
+    const hit = D.eggHit > 0 ? Math.sin(D.eggHit * 80) * 3 : 0, wob = Math.sin(t * 1.6) * 0.04;
+    // soft golden glow
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const gg = ctx.createRadialGradient(p.x, p.y - s * 0.55, 4, p.x, p.y - s * 0.55, s * 1.0); gg.addColorStop(0, 'rgba(255,215,90,.4)'); gg.addColorStop(1, 'rgba(255,215,90,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(p.x, p.y - s * 0.55, s, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    drawGoldenEgg(p.x + hit, p.y - s * 0.52, s * 1.0, wob + hit * 0.03);
+  }
+  drawNest(p.x, p.y, s, true);
   if (D.thief || D.phase === 'defeat') return;
-  const hit = D.eggHit > 0 ? Math.sin(D.eggHit * 80) * 3 : 0, bob = Math.sin(t * 2) * 2;
-  // glow + egg + sparkles
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  const gg = ctx.createRadialGradient(p.x, p.y - s * 0.95, 4, p.x, p.y - s * 0.95, s * 1.1); gg.addColorStop(0, 'rgba(255,220,90,.55)'); gg.addColorStop(1, 'rgba(255,220,90,0)');
-  ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(p.x, p.y - s * 0.95, s * 1.1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  drawGoldenEgg(p.x + hit, p.y - s * 0.92 + bob, s * 1.05, hit * 0.03);
-  for (let i = 0; i < 3; i++) { const a = t * 1.3 + i * 2.1, k2 = (t * 0.7 + i / 3) % 1; ctx.globalAlpha = Math.sin(k2 * Math.PI); ctx.fillStyle = '#fff6c0';
-    const sx = p.x + Math.cos(a) * s * 0.55, sy = p.y - s * 0.95 + Math.sin(a) * s * 0.4, r = 3 + k2 * 2;
-    ctx.beginPath(); ctx.moveTo(sx, sy - r * 2); ctx.lineTo(sx + r * 0.5, sy); ctx.lineTo(sx, sy + r * 2); ctx.lineTo(sx - r * 0.5, sy); ctx.closePath(); ctx.fill(); }
+  // twinkles
+  for (let i = 0; i < 3; i++) { const k2 = (t * 0.6 + i / 3) % 1, a = i * 2.3 + Math.floor(t * 0.6 + i / 3) * 1.7;
+    ctx.globalAlpha = Math.sin(k2 * Math.PI); ctx.fillStyle = '#fffbe0';
+    const sx = p.x + Math.cos(a) * s * 0.45, sy = p.y - s * 0.6 + Math.sin(a) * s * 0.35, r = 2 + k2 * 3;
+    ctx.beginPath(); ctx.moveTo(sx, sy - r * 2); ctx.lineTo(sx + r * 0.5, sy); ctx.lineTo(sx, sy + r * 2); ctx.lineTo(sx - r * 0.5, sy); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(sx - r * 2, sy); ctx.lineTo(sx, sy + r * 0.5); ctx.lineTo(sx + r * 2, sy); ctx.lineTo(sx, sy - r * 0.5); ctx.closePath(); ctx.fill(); }
   ctx.globalAlpha = 1;
-  // egg HP
-  const bw = 80, y = p.y - s * 1.75;
-  ctx.fillStyle = 'rgba(0,0,0,.5)'; roundRect(p.x - bw / 2, y, bw, 9, 4.5); ctx.fill();
-  const r = Math.max(0, D.houseHp / D.houseMax);
-  ctx.fillStyle = r > 0.5 ? '#ffd84a' : r > 0.25 ? '#ffa03a' : '#ff5a4a'; roundRect(p.x - bw / 2 + 2, y + 2, (bw - 4) * r, 5, 2.5); ctx.fill();
+  // egg HP, only once it has been hurt
+  const r2 = Math.max(0, D.houseHp / D.houseMax);
+  if (r2 < 1) { const bw = 64, y = p.y - s * 1.25;
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; roundRect(p.x - bw / 2, y, bw, 8, 4); ctx.fill();
+    ctx.fillStyle = r2 > 0.5 ? '#ffd84a' : r2 > 0.25 ? '#ffa03a' : '#ff5a4a'; roundRect(p.x - bw / 2 + 2, y + 2, (bw - 4) * r2, 4, 2); ctx.fill(); }
 }
 function drawRam(c, p, h) {
   const t = performance.now() / 1000 + c.ph, dead = c.hp <= 0;
@@ -2623,7 +2683,7 @@ function drawRam(c, p, h) {
   if (c.hp > 0 && c.hp < c.max) { const bw = 46; ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(p.x - bw / 2, p.y - h * 1.05, bw, 5); ctx.fillStyle = '#ff4a3a'; ctx.fillRect(p.x - bw / 2, p.y - h * 1.05, bw * c.hp / c.max, 5); }
 }
 function drawSeesaw(tr) {
-  const p = dproj(tr.x, tr.y), sz = dk;
+  const p = dproj(tr.x, tr.y), sz = dk * 0.68;
   ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, sz * 0.7, sz * 0.15, 0, 0, Math.PI * 2); ctx.fill();
   const appear = Math.min(1, tr.t * 5);
   ctx.save(); ctx.globalAlpha = tr.broken ? Math.max(0, 1 - Math.max(0, tr.brokeT) / 0.4) : 1;
