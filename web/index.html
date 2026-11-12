@@ -42,10 +42,10 @@
   .lvb.lock{background:#555d6b;box-shadow:0 4px 0 #383e48;opacity:.7}
   .lvb.siege{background:#8a3fb5;box-shadow:0 4px 0 #5a2378}
   .lvname{font-weight:900;font-size:18px;color:#bfe3ff;margin-top:-4px}
-  #tdUi .hud{position:fixed;top:10px;left:72px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;z-index:4}
+  #tdUi .hud{position:fixed;top:10px;left:128px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;z-index:4}
   #tdUi .hud span{background:rgba(0,0,0,.5);color:#fff;border-radius:12px;padding:6px 9px;font:800 13px Mitr,system-ui,sans-serif;white-space:nowrap}
   #tdUi .hud b{color:#ffd84a}
-  #tdUi .raid{position:fixed;left:0;right:0;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4;pointer-events:none}
+  #tdUi .raid{position:fixed;left:0;right:0;top:42%;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:4;pointer-events:none}
   #tdUi .raid .btn{pointer-events:auto;padding:12px 34px;font-size:22px;background:linear-gradient(#ff7a4a,#d8452a);box-shadow:0 6px 0 #8f2a17,0 10px 20px rgba(0,0,0,.35)}
   #tdUi .rsub{color:#fff;font:700 12px Mitr,system-ui,sans-serif;text-shadow:0 1px 3px #000}
   #sheet{position:fixed;left:8px;right:8px;bottom:8px;max-height:58vh;overflow-y:auto;background:#fffaf0;border-radius:20px;padding:12px 12px 14px;z-index:6;box-shadow:0 -6px 24px rgba(0,0,0,.4);color:#2b2216}
@@ -56,12 +56,20 @@
   .sbtn b{font-size:15px}.sbtn small{font-size:12px;opacity:.95;text-align:right}
   .sbtn.off{background:#b8ad9a;box-shadow:0 4px 0 #8c8371}
   #tdUi .raid .btn.small{padding:8px 20px;font-size:15px;background:linear-gradient(#6d8fc9,#3f62a3);box-shadow:0 4px 0 #26406e}
-  .roundbtn{position:fixed;left:12px;bottom:26px;z-index:5;width:66px;height:66px;border-radius:20px;border:0;background:linear-gradient(#ffd84a,#f0a400);box-shadow:0 5px 0 #a86a00,0 8px 16px rgba(0,0,0,.35);font-size:28px;line-height:1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:inherit}
+  .roundbtn{position:fixed;left:8px;bottom:12px;z-index:5;width:54px;height:54px;border-radius:16px;border:0;background:linear-gradient(#ffd84a,#f0a400);box-shadow:0 5px 0 #a86a00,0 8px 16px rgba(0,0,0,.35);font-size:28px;line-height:1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:inherit}
   .roundbtn small{font:800 11px Mitr,system-ui,sans-serif;color:#5a3a00;margin-top:2px}
-  .roundbtn.raidb{left:12px;bottom:104px;background:linear-gradient(#9fb6e8,#5a78c0);box-shadow:0 5px 0 #34508a,0 8px 16px rgba(0,0,0,.35)}
+  .roundbtn.raidb{left:70px;top:8px;bottom:auto;width:52px;height:52px;border-radius:16px;font-size:22px;background:linear-gradient(#9fb6e8,#5a78c0);box-shadow:0 5px 0 #34508a,0 8px 16px rgba(0,0,0,.35)}
   .roundbtn.raidb small{color:#0e2350}
-  .roundbtn.help{left:auto;right:12px;background:linear-gradient(#8fd0ff,#4a9be0);box-shadow:0 5px 0 #2b6aa8,0 8px 16px rgba(0,0,0,.35)}
+  .roundbtn.help{left:auto;right:8px;background:linear-gradient(#8fd0ff,#4a9be0);box-shadow:0 5px 0 #2b6aa8,0 8px 16px rgba(0,0,0,.35)}
   .roundbtn.help small{color:#0c3560}
+  #itemBar{position:fixed;left:66px;right:66px;bottom:12px;z-index:5;display:flex;justify-content:center;gap:4px;flex-wrap:nowrap;pointer-events:none}
+  #itemBar button{pointer-events:auto;border:0;border-radius:12px;min-width:0;flex:0 1 48px;padding:4px 2px 3px;background:rgba(30,20,10,.62);color:#fff;font-family:inherit;display:flex;flex-direction:column;align-items:center;line-height:1.05;box-shadow:0 2px 0 rgba(0,0,0,.35);position:relative}
+  #itemBar button i{font-style:normal;font-size:20px}
+  #itemBar button small{font:800 10px Mitr,system-ui,sans-serif;white-space:nowrap;margin-top:1px}
+  #itemBar button b{position:absolute;top:-5px;right:-4px;background:#ffd84a;color:#4a2a00;border-radius:9px;font:900 10px Mitr,system-ui,sans-serif;padding:1px 5px}
+  #itemBar button.off{opacity:.45}
+  #itemBar button.on{background:rgba(240,170,40,.9)}
+  #itemBar button .cd{position:absolute;inset:0;border-radius:12px;background:rgba(0,0,0,.45);transform-origin:bottom}
   #tut{position:fixed;inset:0;z-index:30}
   #introUi{position:fixed;inset:0;z-index:25}
   #introSkip{position:absolute;right:12px;top:12px;border:0;border-radius:14px;padding:9px 16px;background:rgba(0,0,0,.55);color:#fff;font:800 15px Mitr,system-ui,sans-serif;cursor:pointer}
@@ -118,6 +126,7 @@
   <button id="houseBtn" class="roundbtn">🏠<small>บ้าน</small></button>
   <button id="raidBtn" class="roundbtn raidb">⚔️<small>บุกแมว</small></button>
   <button id="helpBtn" class="roundbtn help">❓<small>วิธีเล่น</small></button>
+  <div id="itemBar"></div>
 </div>
 <div id="sheet" class="hidden">
   <div class="shead"><b id="sheetTitle"></b><button id="sheetClose">✕</button></div>
