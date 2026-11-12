@@ -439,6 +439,7 @@ function spawnCat(c) {
   if (c.boss) { SFX.play('bossRoar'); D.banner = 2.2; D.bossBanner = true; D.bannerTxt = null; D.zoomT = 1.2; D.shake = Math.max(D.shake, 0.4); }
 }
 function wallFor(c) {
+  if (!isFinite(c.x)) c.x = 0; if (!isFinite(c.y)) c.y = -6;
   return D.walls[Math.max(0, Math.min(NWALL - 1, Math.round(c.x / WALL_W + (NWALL - 1) / 2)))];
 }
 const HOUSE_TY = EGG_Y - 0.35;    // where cats stand to grab the golden egg
@@ -1154,7 +1155,7 @@ function startDefeat() {
   D.phase = 'defeat'; D.defT = 0; D.shake = 0.6; SFX.play('crack');
   D.banner = 2.5; D.bannerTxt = 'แมวแย่งไข่ทองคำไปแล้ว!! 😿';
   let th = null, bd = 99; for (const c of D.cats) if (c.hp > 0 && !c.boss && c.kind !== 'ram' && c.kind !== 'cart') { const d = Math.hypot(c.x, c.y - EGG_Y); if (d < bd) { bd = d; th = c; } }
-  D.thief = th; if (th) { th.st = 'flee'; th.dance = 0; th.lift = 0; th.climb = null; SFX.play('catScared'); }
+  D.thief = th; if (th) { th.st = 'flee'; th.fleeT = 0; th.fled = true; th.dance = 0; th.lift = 0; th.climb = null; SFX.play('catScared'); }
 }
 function defeatUpdate(dt) {
   D.defT += dt;
@@ -1263,7 +1264,7 @@ function revive() {
   // knock every cat back out past the fence
   for (const c of D.cats) {
     if (c.hp <= 0) continue;
-    c.y = Math.min(c.y, FENCE_Y - 3); c.st = 'walk'; c.atk = 0; c.dance = 0; c.lift = 0; c.climb = null; c.launch = null;
+    if (!isFinite(c.x)) c.x = 0; c.y = isFinite(c.y) ? Math.min(c.y, FENCE_Y - 3) : FENCE_Y - 5; c.st = 'walk'; c.fleeT = 0; c.atk = 0; c.dance = 0; c.lift = 0; c.climb = null; c.launch = null;
   }
   D.ladders = []; D.thief = null;
   addFx('shock', 0, FENCE_Y, '#bfe6ff'); addFx('shock2', 0, FENCE_Y, '#ffffff'); D.shake = 0.3;
