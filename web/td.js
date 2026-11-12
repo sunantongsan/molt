@@ -224,7 +224,7 @@ const INTRO_LINES = {
   chief:  ['รองหัวหน้า แมวเชฟ', 'มือขวาของข้า! กระทะเขาฟาดทีเดียวกำแพงพัง!'],
   boss:   ['ราชาแมว', 'ข้าเอง! ราชาแมว!! วันนี้ข้าจะลงสนามเองโว้ย!!'],
   ladder: ['แมวแบกบันได', 'บันไดลิง! พาดกำแพงปุ๊บ ปีนเข้าไปแย่งไข่ทองคำปั๊บ!'],
-  mole:   ['แมวขอมดำดิน', 'คาถาดำดิน! มุดใต้กำแพงไปโผล่ข้างไข่ทองคำเลย ฮ่าๆ!'],
+  mole:   ['แมวขอมดำดิน', 'คาถาดำดิน! มุดดินไปโผล่หน้าประตู เป็ดไม่ทันเห็นแน่ ฮ่าๆ!'],
   para:   ['หน่วยโดดร่ม', 'หน่วยรบพิเศษ! โดดร่มลงหน้าประตูเมืองเจ้าเดี๋ยวนี้!'],
   ram:    ['รถกระทุ้งประตู', 'ไม้นวดแป้งยักษ์! กระทุ้งทีเดียว ประตูเมืองเป็ดพังแน่!'],
 };
@@ -318,7 +318,7 @@ const CAT_KINDS = {
   glider: { from: 10, w: 3, hp: 1,   v: 1.05, size: 1.05, name: '🪂 แมวร่มกระชอนมาแล้ว! กระโดดข้ามกำแพงได้' },
   ladder: { from: 3, w: 4,  hp: 1.2, v: 0.9,  size: 1.1,  name: '🪜 แมวแบกบันไดมาแล้ว! พาดกำแพงแล้วปีนเข้าเมือง' },
   ram:    { from: 4, w: 2,  hp: 7,   v: 0.42, size: 1.7,  name: '🪵 รถกระทุ้งประตูมาแล้ว! ยิงมันก่อนถึงประตู' },
-  mole:   { from: 7, w: 3,  hp: 1.0, v: 1.25, size: 1.05, name: '⛏️ แมวขอมดำดินมาแล้ว! มุดดินโผล่ในเมือง ใช้เป็ดหัวหน้าฟาด' },
+  mole:   { from: 7, w: 3,  hp: 1.0, v: 1.25, size: 1.05, name: '⛏️ แมวขอมดำดินมาแล้ว! มุดดินมาโผล่หน้าประตู เป็ดมองไม่เห็นจนกว่าจะโผล่' },
   para:   { from: 8, w: 3,  hp: 1.1, v: 1.0,  size: 1.05, name: '🪂 แมวโดดร่มมาแล้ว! ลงตรงหน้าประตูเลย' },
 };
 const OLD_IMG = { knight: 'k_knight', shadow: 'k_shadow', steel: 'k_steel' };
@@ -475,13 +475,15 @@ function tdUpdate(dt) {
         // tunnelling under the lawn and the wall, pops up inside the town
         const ox = c.x, oy = c.y;
         c.y += c.v * 1.7 * dt; c.x += Math.sin(D.t * 2 + c.sway) * 0.4 * dt; c.mx = 0; c.my = 1;
+        if (c.y > FENCE_Y - 5) { const gx = D.walls[GATE].x + (c.gateOff === undefined ? (c.gateOff = (Math.random() - 0.5) * 1.6) : c.gateOff); c.x += Math.max(-1, Math.min(1, gx - c.x)) * c.v * 1.2 * dt; }
         c.crackD = (c.crackD || 0) + Math.hypot(c.x - ox, c.y - oy);
         if (c.crackD > 0.22) { c.crackD = 0; const j = (Math.random() - 0.5) * 0.18; D.cracks.push({ x1: c.cx || ox, y1: c.cy || oy, x2: c.x + j, y2: c.y, t: 0, w: 0.6 + Math.random() * 0.6, br: Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) : 0 }); c.cx = c.x + j; c.cy = c.y; }
         if (Math.random() < dt * 4) D.parts.push({ x: c.x + (Math.random() - 0.5) * 0.3, y: c.y, h: 0.05, vx: (Math.random() - 0.5) * 1.2, vy: -0.3, vh: 1.5 + Math.random() * 1.5, t: 0, life: 0.5, kind: 'rock', r: Math.random() * 6 });
-        if (c.y >= FENCE_Y - 0.3) {
-          c.under = false; c.y = WALL_FOOT + 0.6 + Math.random() * 0.9; c.x = Math.max(-3, Math.min(3, c.x));
+        if (c.y >= FENCE_Y - 1.15) {
+          // pops up right in front of the gate: the ducks only notice it now
+          c.under = false; c.y = FENCE_Y - 1.15;
           c.emerge = 0.7; c.stun = Math.max(c.stun || 0, 0.7); c.jumped = true; D.holes.push({ x: c.x, y: c.y, t: 0 }); D.shake = Math.max(D.shake, 0.12); addFx('dust', c.x, c.y, '#a8865a'); burst(c.x, c.y, ['#8a6a3a', '#a8865a', '#6a4a2a'], 16, 4, 1.3); SFX.play('crack'); SFX.play('meow');
-          if (!save.seenMoleTip) { save.seenMoleTip = true; persist(); toast('⛏️ แมวขอมดำดินโผล่ในเมือง! พาเป็ดหัวหน้าไปฟาด'); }
+          if (!save.seenMoleTip) { save.seenMoleTip = true; persist(); toast('⛏️ แมวขอมดำดินโผล่หน้าประตู! ตอนมุดอยู่เป็ดมองไม่เห็น'); }
         }
         continue;
       }
