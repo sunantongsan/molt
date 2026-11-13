@@ -2553,42 +2553,15 @@ function drawKitchenCat(c, x, py, h, atk, kk, t) {
     drawLadderShape(-len / 2, 0, len / 2, 0, h * 0.28); ctx.restore();
   }
 }
-const KITCHEN_CAT_ART = {
-  tank: 'cat_colander_art', boxer: 'cat_club_art', tray: 'cat_board_art',
-  pitcher: 'cat_thrower_art', ninja: 'cat_sling_art', mole: 'cat_tub_art',
-};
 function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   const cb = c.kind === 'chief', G = c.gear || catGear(c.kind);
   // glider in the air: lift it up and open the colander parachute
   const jh = c.jh || 0;
   if (jh > 0) py -= jh * dk;
   const gait = (c.walkDistance || 0) / 0.75;
-  const dressed = KITCHEN_CAT_ART[c.kind];
-  const back = !atk && (c.my || 0) < -0.3 && Math.abs(c.my) > Math.abs(c.mx || 0);
-  if (ready(IMG[dressed]) && !back && !jh) {
-    const firing = atk || c.st === 'pitch';
-    const frame = c.hp <= 0 || c.stun > 0 ? 3 : c.hitT > 0 ? 2 :
-      firing ? (kk < 0.55 ? 1 : 2) : c.kind === 'tray' && c.trayHp > 0 ? 1 : 0;
-    ctx.save(); ctx.translate(x, py); if ((c.mx || 0) < 0) ctx.scale(-1, 1);
-    if (c.hp <= 0 || c.hitT > 0) cartoonRecoil(c.hp <= 0 ? (c.deadT || 0) / 0.35 : 1 - c.hitT / 0.12);
-    else if (firing) cartoonStrike(h, c.st === 'pitch' ? 1 - c.fireT / 0.8 : kk, 0.87);
-    else if (c.st === 'walk') cartoonStep(h, gait * Math.PI * 2, 0.42);
-    drawFrame(dressed, frame, 0, 0, h);
-    ctx.restore();
-    return;
-  }
   // the kitchen cat sprites face RIGHT; cats on the right side walk left, so mirror those
   const flee = c.st === 'flee', flip = (c.mx || 0) < 0, w = h * 0.76, dead = c.hp <= 0;
-  let img = 'k_cat_walk', fr = Math.floor(gait * 4) % 4, bob = Math.abs(Math.sin(t * 7)) * h * 0.04;
-  if (IMG.k_cat_walk instanceof HTMLCanvasElement && (atk || dead || c.hitT > 0 || c.stun > 0)) {
-    const action = dead ? 3 : c.hitT > 0 || c.stun > 0 ? 2 : kk < 0.55 ? 0 : 1;
-    ctx.save(); ctx.translate(x, py); if (flip) ctx.scale(-1, 1);
-    if (dead || c.hitT > 0 || c.stun > 0) cartoonRecoil(dead ? (c.deadT || 0) / 0.35 : c.hitT > 0 ? 1 - c.hitT / 0.12 : 0.65);
-    else cartoonStrike(h, kk, 0.87);
-    drawFrame('k_cat_act', action, 0, 0, h);
-    ctx.restore();
-    return;
-  }
+  let img = 'k_cat_walk', fr = Math.floor(gait * 4) % 4, bob = c.st === 'walk' || flee ? Math.abs(Math.sin(gait * Math.PI * 2)) * h * 0.025 : 0;
   let swing = -1, view = 'side';
   // walking mostly up or down the screen: show the cat from the back or the front
   let lunge = 0, swingA = null;
@@ -2614,13 +2587,6 @@ function drawKitchenCatBody(c, x, py, h, atk, kk, t) {
   else if (atk) { const kb = kk; img = 'k_cat_act'; fr = kb < 0.55 ? 0 : 1; swing = fr; bob = 0; }
   else if (c.hitT > 0 || c.stun > 0) { img = 'k_cat_act'; fr = 2; bob = 0; }
   if (flee && !dead) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💦', x + h * 0.3, py - h * 1.0 + Math.sin(t * 20) * 3); }
-  if (c.kind === 'cat' && IMG[img] instanceof HTMLCanvasElement) {
-    ctx.save(); ctx.translate(x, py); if (view === 'side' && flip) ctx.scale(-1, 1);
-    if (c.st === 'walk' || flee) cartoonStep(h, gait * Math.PI * 2, flee ? 0.65 : 0.35);
-    drawFrame(img, fr, 0, 0, h);
-    ctx.restore();
-    return;
-  }
   if (view !== 'side') {
     // front / back views are symmetric: no mirroring, gear centred
     const fw = h * 0.7, tk = c.kind === 'tank', wpn = G.wpn;
@@ -2891,6 +2857,14 @@ function drawEmptySlot(s, p) {
   ctx.textBaseline = 'alphabetic'; ctx.restore();
 }
 // ---------- side walls (the U) and the gatehouse ----------
+// The same capstone and masonry lighting ties the front wall to the side wings.
+function drawWallStone(x, y, w, h, light, dark) {
+  const shade = ctx.createLinearGradient(0, y, 0, y + h);
+  shade.addColorStop(0, light);
+  shade.addColorStop(1, dark);
+  ctx.fillStyle = shade;
+  ctx.fillRect(x, y, w, h);
+}
 function drawArmChunk(side, y0, y1) {
   const C = WALL_TIERS[wallTierOf(T.fence)], cx = side * ARM_X, xa = dproj(cx - ARM_WD / 2, 0).x, xb = dproj(cx + ARM_WD / 2, 0).x;
   const ya = dproj(0, y0).y, yb = dproj(0, y1).y, MH = dk * C.mh * 0.8;
@@ -2899,7 +2873,11 @@ function drawArmChunk(side, y0, y1) {
   ctx.fillStyle = sg; ctx.fillRect(Math.min(sx, sx - side * dk * 0.6), ya, dk * 0.6, yb - ya + dk * 0.3);
   // outer side face peeking out, then the walkway
   ctx.fillStyle = C.face; ctx.fillRect(xa, ya + dk * 0.25, xb - xa, yb - ya);
-  ctx.fillStyle = C.top; ctx.fillRect(xa, ya, xb - xa, yb - ya + 1);
+  drawWallStone(xa, ya, xb - xa, yb - ya + 1, C.cap, C.top);
+  ctx.fillStyle = C.cap;
+  const coping = Math.max(1, dk * 0.045);
+  ctx.fillRect(xa, ya, coping, yb - ya + 1);
+  ctx.fillRect(xb - coping, ya, coping, yb - ya + 1);
   ctx.strokeStyle = C.out; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xa, ya); ctx.lineTo(xa, yb); ctx.moveTo(xb, ya); ctx.lineTo(xb, yb); ctx.stroke();
   ctx.strokeStyle = 'rgba(120,100,70,.3)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xa, (ya + yb) / 2); ctx.lineTo(xb, (ya + yb) / 2); ctx.stroke();
   // merlons along both edges
@@ -2989,15 +2967,29 @@ function wallSegment(x0, x1, w) {
   // shadow on the floor in front of the wall
   const sg = ctx.createLinearGradient(0, yi + FH, 0, yi + FH + dk * 0.5); sg.addColorStop(0, 'rgba(50,35,20,.35)'); sg.addColorStop(1, 'rgba(50,35,20,0)');
   ctx.fillStyle = sg; ctx.fillRect(x0, yi + FH, x1 - x0, dk * 0.5);
-  // inner face (bricks)
-  ctx.fillStyle = C.face; ctx.fillRect(x0, yi, x1 - x0, FH);
-  ctx.strokeStyle = 'rgba(70,52,35,.4)'; ctx.lineWidth = 1.2;
-  const rows = 3, bw = dk * 0.46;
-  for (let r = 0; r <= rows; r++) { const y = yi + FH * r / rows; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); }
-  for (let r = 0; r < rows; r++) for (let x = x0 + (r % 2 ? bw / 2 : 0); x < x1; x += bw) { const y = yi + FH * r / rows; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + FH / rows); ctx.stroke(); }
-  const fg = ctx.createLinearGradient(0, yi, 0, yi + FH); fg.addColorStop(0, 'rgba(255,255,255,.12)'); fg.addColorStop(1, 'rgba(60,40,20,.18)'); ctx.fillStyle = fg; ctx.fillRect(x0, yi, x1 - x0, FH);
+  // Staggered beveled masonry with continuous mortar at the section joints.
+  ctx.fillStyle = C.out; ctx.fillRect(x0, yi, x1 - x0, FH);
+  const rows = 3, bw = dk * 0.47, course = FH / rows, mortar = Math.max(0.6, dk * 0.022);
+  for (let row = 0; row < rows; row++) {
+    const y = yi + row * course + mortar / 2;
+    for (let x = x0 - (row % 2) * bw / 2; x < x1; x += bw) {
+      const left = Math.max(x + mortar / 2, x0 + mortar / 2);
+      const width = Math.min(x + bw - mortar / 2, x1 - mortar / 2) - left;
+      if (width <= 0) continue;
+      ctx.fillStyle = rnd() < 0.25 ? C.merlon : C.face;
+      ctx.fillRect(left, y, width, course - mortar);
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = C.cap;
+      ctx.fillRect(left, y, width, mortar);
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.save();
+  ctx.globalAlpha = 0.24;
+  drawWallStone(x0, yi, x1 - x0, FH, C.cap, C.out);
+  ctx.restore();
   // walkway on top
-  ctx.fillStyle = C.top; ctx.fillRect(x0, yo, x1 - x0, yi - yo);
+  drawWallStone(x0, yo, x1 - x0, yi - yo, C.cap, C.top);
   ctx.strokeStyle = 'rgba(120,100,70,.3)'; ctx.lineWidth = 1;
   for (let x = x0 + dk * 0.55; x < x1; x += dk * 0.55) { ctx.beginPath(); ctx.moveTo(x, yo); ctx.lineTo(x - dk * 0.08, yi); ctx.stroke(); }
   ctx.beginPath(); ctx.moveTo(x0, (yo + yi) / 2); ctx.lineTo(x1, (yo + yi) / 2); ctx.stroke();
@@ -3009,9 +3001,17 @@ function wallSegment(x0, x1, w) {
     const cx = (x0 + x1) / 2, gw = dk * 0.95, gb = yi + FH, gt = yi + FH * 0.05;
     ctx.fillStyle = '#5a4030'; ctx.beginPath(); ctx.moveTo(cx - gw / 2 - 4, gb); ctx.lineTo(cx - gw / 2 - 4, gt + gw * 0.45); ctx.arc(cx, gt + gw * 0.45 + 2, gw / 2 + 4, Math.PI, 0); ctx.lineTo(cx + gw / 2 + 4, gb); ctx.closePath(); ctx.fill();
     ctx.save(); ctx.beginPath(); ctx.moveTo(cx - gw / 2, gb); ctx.lineTo(cx - gw / 2, gt + gw * 0.5); ctx.arc(cx, gt + gw * 0.5, gw / 2, Math.PI, 0); ctx.lineTo(cx + gw / 2, gb); ctx.closePath(); ctx.clip();
-    ctx.fillStyle = ratio > 0.4 ? '#a86a34' : '#8a5428'; ctx.fillRect(cx - gw / 2, gt, gw, gb - gt);
+    drawWallStone(cx - gw / 2, gt, gw, gb - gt, ratio > 0.4 ? '#d99a55' : '#ad7542', '#684323');
     ctx.strokeStyle = '#5a3416'; ctx.lineWidth = 1.5; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(cx - gw / 2 + gw * i / 4, gt); ctx.lineTo(cx - gw / 2 + gw * i / 4, gb); ctx.stroke(); }
-    ctx.fillStyle = '#5c5f69'; for (const f of [0.35, 0.75]) ctx.fillRect(cx - gw / 2, gt + (gb - gt) * f, gw, 4);
+    for (const f of [0.35, 0.75]) {
+      const y = gt + (gb - gt) * f;
+      const band = Math.max(2, dk * 0.075);
+      drawWallStone(cx - gw / 2, y, gw, band, '#9ba7b3', '#424959');
+      ctx.fillStyle = '#c9a773';
+      for (const pin of [-0.32, 0.32]) {
+        ctx.beginPath(); ctx.arc(cx + gw * pin, y + band / 2, Math.max(0.7, band * 0.23), 0, Math.PI * 2); ctx.fill();
+      }
+    }
     if (ratio < 0.6) { ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - gw * 0.1, gt + 6); ctx.lineTo(cx + gw * 0.08, gt + (gb - gt) * 0.4); ctx.lineTo(cx - gw * 0.05, gt + (gb - gt) * 0.7); if (ratio < 0.3) { ctx.moveTo(cx + gw * 0.3, gt + 10); ctx.lineTo(cx + gw * 0.15, gb - 6); } ctx.stroke(); }
     ctx.restore();
     ctx.strokeStyle = C.out; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - gw / 2, gb); ctx.lineTo(cx - gw / 2, gt + gw * 0.5); ctx.arc(cx, gt + gw * 0.5, gw / 2, Math.PI, 0); ctx.lineTo(cx + gw / 2, gb); ctx.stroke();
