@@ -4,11 +4,11 @@
 
 // Story clip (5 Gemini clips joined) with captions drawn on top. Times are seconds in img/intro.mp4.
 const CAPS = [
-  { from: 0.6, to: 7.2, cap: 'ณ ทุ่งหญ้าแสนสงบ…\nบ้านของ Serจ่อย กับไข่เป็ดทองคำ\nที่เสกเหรียญได้ทุกวัน' },
-  { from: 8.0, to: 14.8, cap: 'แต่แล้วคืนหนึ่ง…\nฝูงแมวก็มาล้อมบ้าน' },
-  { from: 16.6, to: 22.6, bubble: 'ไข่ทองคำนั่น…\nข้าจะเอาไปทำไข่เจียว!\nทหาร บุก!!', who: 'ราชาแมว', red: true, y: 0.08 },
-  { from: 23.2, to: 27.6, bubble: 'ลูกน้อง… จัดการที\n(หาว~) ข้าจะนอนต่อ', who: 'Serจ่อย', y: 0.08 },
-  { from: 28.4, to: 33.0, cap: 'เหล่าเป็ด… ออกรบ!' },
+  { from: 0.6, to: 7.2, cap: tr("ณ ทุ่งหญ้าแสนสงบ…\nบ้านของ Serจ่อย กับไข่เป็ดทองคำ\nที่เสกเหรียญได้ทุกวัน") },
+  { from: 8.0, to: 14.8, cap: tr("แต่แล้วคืนหนึ่ง…\nฝูงแมวก็มาล้อมบ้าน") },
+  { from: 16.6, to: 22.6, bubble: tr("ไข่ทองคำนั่น…\nข้าจะเอาไปทำไข่เจียว!\nทหาร บุก!!"), who: tr("ราชาแมว"), red: true, y: 0.08 },
+  { from: 23.2, to: 27.6, bubble: tr("ลูกน้อง… จัดการที\n(หาว~) ข้าจะนอนต่อ"), who: tr("Serจ่อย"), y: 0.08 },
+  { from: 28.4, to: 33.0, cap: tr("เหล่าเป็ด… ออกรบ!") },
 ];
 const LOGO_AT = 33.2;
 const vid = document.createElement('video');
@@ -56,7 +56,7 @@ function introDraw() {
     const s = Math.max(W / vid.videoWidth, H / vid.videoHeight), dw = vid.videoWidth * s, dh = vid.videoHeight * s;
     ctx.drawImage(vid, (W - dw) / 2, (H - dh) / 2, dw, dh);
   } else {
-    ctx.fillStyle = '#fff'; ctx.font = '700 16px system-ui'; ctx.textAlign = 'center'; ctx.fillText('กำลังโหลด…', W / 2, H / 2);
+    ctx.fillStyle = '#fff'; ctx.font = '700 16px system-ui'; ctx.textAlign = 'center'; ctx.fillText(tr("กำลังโหลด…"), W / 2, H / 2);
   }
   for (const c of CAPS) {
     if (t < c.from || t > c.to) continue;
@@ -73,8 +73,8 @@ function introDraw() {
     ctx.lineWidth = 14; ctx.strokeStyle = '#7a3f00'; ctx.strokeText('MOLT', 0, 0);
     ctx.fillStyle = '#ffd84a'; ctx.fillText('MOLT', 0, 0);
     ctx.font = `800 ${Math.round(Math.min(W / 17, 22))}px Mitr,system-ui,sans-serif`; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,.7)';
-    ctx.strokeText('ปกป้องไข่ทองคำของ Serจ่อย!', 0, 70); ctx.fillStyle = '#fff'; ctx.fillText('ปกป้องไข่ทองคำของ Serจ่อย!', 0, 70);
-    if (lt > 1) { ctx.globalAlpha = 0.6 + 0.4 * Math.sin(lt * 5); ctx.font = '800 16px Mitr,system-ui,sans-serif'; ctx.fillText('แตะเพื่อเริ่มเล่น', 0, 120); ctx.globalAlpha = 1; }
+    ctx.strokeText(tr("ปกป้องไข่ทองคำของ Serจ่อย!"), 0, 70); ctx.fillStyle = '#fff'; ctx.fillText(tr("ปกป้องไข่ทองคำของ Serจ่อย!"), 0, 70);
+    if (lt > 1) { ctx.globalAlpha = 0.6 + 0.4 * Math.sin(lt * 5); ctx.font = '800 16px Mitr,system-ui,sans-serif'; ctx.fillText(tr("แตะเพื่อเริ่มเล่น"), 0, 120); ctx.globalAlpha = 1; }
     ctx.restore(); ctx.textBaseline = 'alphabetic';
   }
   // progress bar

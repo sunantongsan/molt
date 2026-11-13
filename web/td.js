@@ -22,20 +22,20 @@ function btn(label, sub, ok, fn) {
 
 // ---------- weapons ----------
 const WEAPONS = [
-  { id: 'bow',    name: 'ตะเกียบพุ่ง',  icon: '🥢', dmg: 1,   rate: 1.3,  range: 6.5, speed: 13, cost: 0 },
-  { id: 'xbow',   name: 'ส้อมยักษ์',   icon: '🍴', dmg: 3,   rate: 0.8,  range: 8,   speed: 18, cost: 150 },
-  { id: 'fire',   name: 'ซอสพริก',     icon: '🌶️', dmg: 2,   rate: 1.1,  range: 7,   speed: 13, splash: 1.0, cost: 300 },
-  { id: 'ice',    name: 'ไอติมแท่ง',   icon: '🍧', dmg: 1.4, rate: 1.1,  range: 7,   speed: 14, cost: 400 },
-  { id: 'triple', name: 'ตะเกียบทั้งกำ', icon: '🥢', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, cost: 500 },
-  { id: 'egg',    name: 'ไข่ดาวแฟลช',   icon: '🥚', dmg: 1.2, rate: 0.55, range: 7, speed: 9, splash: 1.5, arc: true, cost: 550 },
-  { id: 'coffee', name: 'เป็ดชงกาแฟ',   icon: '☕', dmg: 0, rate: 0, range: 0, speed: 1, support: true, cost: 600 },
-  { id: 'storm',  name: 'ตะกร้อไฟฟ้า', icon: '⚡', dmg: 2.2, rate: 0.9,  range: 7.5, speed: 22, chain: 2, cost: 650 },
-  { id: 'pan',    name: 'กระทะบูมเมอแรง', icon: '🍳', dmg: 2.4, rate: 0.7, range: 7, speed: 9, pierce: true, cost: 750 },
-  { id: 'cannon', name: 'หม้อหุงข้าว', icon: '🍙', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, cost: 800 },
-  { id: 'stove',  name: 'เตาพ่นไฟ',     icon: '🔥', dmg: 0.55, rate: 6, range: 3.2, speed: 6, splash: 0.7, cost: 850 },
-  { id: 'fish',   name: 'น้ำปลาพิษ',     icon: '🐟', dmg: 1.2, rate: 0.45, range: 7, speed: 8, arc: true, pool: true, cost: 900 },
-  { id: 'melon',  name: 'แตงโมระเบิด',  icon: '🍉', dmg: 7, rate: 0.4, range: 8, speed: 7, splash: 1.6, arc: true, cost: 1000 },
-  { id: 'roller', name: 'ไม้นวดแป้งกลิ้ง', icon: '🪵', dmg: 3, rate: 0.35, range: 9, speed: 6, pierce: true, cost: 1100 },
+  { id: 'bow',    name: tr("ตะเกียบพุ่ง"),  icon: '🥢', dmg: 1,   rate: 1.3,  range: 6.5, speed: 13, cost: 0 },
+  { id: 'xbow',   name: tr("ส้อมยักษ์"),   icon: '🍴', dmg: 3,   rate: 0.8,  range: 8,   speed: 18, cost: 150 },
+  { id: 'fire',   name: tr("ซอสพริก"),     icon: '🌶️', dmg: 2,   rate: 1.1,  range: 7,   speed: 13, splash: 1.0, cost: 300 },
+  { id: 'ice',    name: tr("ไอติมแท่ง"),   icon: '🍧', dmg: 1.4, rate: 1.1,  range: 7,   speed: 14, cost: 400 },
+  { id: 'triple', name: tr("ตะเกียบทั้งกำ"), icon: '🥢', dmg: 1.6, rate: 1.0,  range: 6.5, speed: 14, multi: 3, cost: 500 },
+  { id: 'egg',    name: tr("ไข่ดาวแฟลช"),   icon: '🥚', dmg: 1.2, rate: 0.55, range: 7, speed: 9, splash: 1.5, arc: true, cost: 550 },
+  { id: 'coffee', name: tr("เป็ดชงกาแฟ"),   icon: '☕', dmg: 0, rate: 0, range: 0, speed: 1, support: true, cost: 600 },
+  { id: 'storm',  name: tr("ตะกร้อไฟฟ้า"), icon: '⚡', dmg: 2.2, rate: 0.9,  range: 7.5, speed: 22, chain: 2, cost: 650 },
+  { id: 'pan',    name: tr("กระทะบูมเมอแรง"), icon: '🍳', dmg: 2.4, rate: 0.7, range: 7, speed: 9, pierce: true, cost: 750 },
+  { id: 'cannon', name: tr("หม้อหุงข้าว"), icon: '🍙', dmg: 9,   rate: 0.33, range: 9,   speed: 9,  splash: 1.8, arc: true, cost: 800 },
+  { id: 'stove',  name: tr("เตาพ่นไฟ"),     icon: '🔥', dmg: 0.55, rate: 6, range: 3.2, speed: 6, splash: 0.7, cost: 850 },
+  { id: 'fish',   name: tr("น้ำปลาพิษ"),     icon: '🐟', dmg: 1.2, rate: 0.45, range: 7, speed: 8, arc: true, pool: true, cost: 900 },
+  { id: 'melon',  name: tr("แตงโมระเบิด"),  icon: '🍉', dmg: 7, rate: 0.4, range: 8, speed: 7, splash: 1.6, arc: true, cost: 1000 },
+  { id: 'roller', name: tr("ไม้นวดแป้งกลิ้ง"), icon: '🪵', dmg: 3, rate: 0.35, range: 9, speed: 6, pierce: true, cost: 1100 },
 ];
 for (const w of WEAPONS) { w.range *= 1.8; w.speed *= 1.6; }   // long lane: throw far
 const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
@@ -43,8 +43,8 @@ const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 const HELD = { camp: null, egg: null, coffee: 'it_soup', stove: null, fish: 'it_sauce', roller: null, pan: 'it_pan', melon: null, bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_sauce', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_ricecooker' };
 const AMMO = { pan: 'it_pan', bow: 'it_chopsticks', xbow: 'it_fork', fire: 'it_chili', ice: 'it_icepop', triple: 'it_chopsticks', storm: 'it_whisk', cannon: 'it_riceball' };
 // platform looks by level tier: crates -> table & chairs -> cupboard tower -> golden stove fort
-const PLAT_NAME = ['ป้อมไม้', 'ป้อมหิน', 'ป้อมเหล็ก', 'ป้อมทองคำ'];
-const PLAT_SKILL = ['', 'ยิงเร็วขึ้น 15%', 'ยิงเร็วขึ้น 30%', 'ยิงเร็วขึ้น 45% + ฝนตะเกียบทุก 6 วิ'];
+const PLAT_NAME = [tr("ป้อมไม้"), tr("ป้อมหิน"), tr("ป้อมเหล็ก"), tr("ป้อมทองคำ")];
+const PLAT_SKILL = ['', tr("ยิงเร็วขึ้น 15%"), tr("ยิงเร็วขึ้น 30%"), tr("ยิงเร็วขึ้น 45% + ฝนตะเกียบทุก 6 วิ")];
 // draw a kitchen item centred at (x, y)
 function drawItem(name, x, y, size, rot, flip) {
   const img = IMG[name]; if (!ready(img)) return false;
@@ -60,20 +60,20 @@ const TIER_GLOW = [null, '#a6ff9a', '#9fd0ff', '#ffd84a'];
 const WCOL = { camp: '#8a9a6a', egg: '#fff6c0', coffee: '#c08a5a', stove: '#ff8a2a', fish: '#9be36a', roller: '#e0b07a', pan: '#e6e6f5', melon: '#ff5a6a', seed: '#ff5a6a', bow: '#ffe27a', xbow: '#d8f4ff', fire: '#ff8a2a', ice: '#9fe8ff', triple: '#ffe27a', storm: '#c8b6ff', cannon: '#ffb347' };
 // special powers unlocked at Lv5 and Lv10
 const PERKS = {
-  bow:    ['พุ่งทีละ 2 คู่', 'จิ้มคริติคอล 25% (x2)'],
-  xbow:   ['แทงแมวกระเด็นถอยหลัง', 'คริติคอล 30% (x2.5)'],
-  fire:   ['เผ็ดไหม้ต่อเนื่อง', 'สาดวงกว้าง'],
-  ice:    ['เย็นเจี๊ยบเป็นวง', 'แช่แข็งจนหยุดนิ่ง'],
-  triple: ['พุ่งทีละ 5 คู่', 'พุ่งทีละ 7 คู่'],
-  storm:  ['ไฟช็อตกระโดด 4 ตัว', 'ไฟช็อตกระโดด 6 ตัว'],
-  cannon: ['ข้าวเหนียวติดหนึบจนมึน', 'ข้าวเหนียวลูกยักษ์ + มึนนาน'],
-  pan:    ['บินกลับมาตีซ้ำขากลับ', 'กระทะยักษ์ แรง x1.5'],
-  melon:  ['แตกเป็นเมล็ดระเบิด 3 ลูก', 'เมล็ด 6 ลูก + น้ำแตงโมลื่นทำแมวช้า'],
-  egg:    ['แฟลชนานขึ้น (มึน 1.6 วิ)', 'แฟลชวงยักษ์'],
-  coffee: ['แท่นข้างๆ ยิงเร็วขึ้น 45%', 'เร็วขึ้น 60% + สาดกาแฟร้อนใส่แมว'],
-  stove:  ['ไฟกว้างเป็นกรวย 3 สาย', 'ไฟสีฟ้า ร้อนกว่า x1.5'],
-  fish:   ['แอ่งใหญ่ขึ้น อยู่นานขึ้น', 'กลิ่นแรง! แมวในแอ่งเดินช้า'],
-  roller: ['ไม้ใหญ่ขึ้น กวาดกว้าง', 'กลิ้งทีละ 2 อัน'],
+  bow:    [tr("พุ่งทีละ 2 คู่"), tr("จิ้มคริติคอล 25% (x2)")],
+  xbow:   [tr("แทงแมวกระเด็นถอยหลัง"), tr("คริติคอล 30% (x2.5)")],
+  fire:   [tr("เผ็ดไหม้ต่อเนื่อง"), tr("สาดวงกว้าง")],
+  ice:    [tr("เย็นเจี๊ยบเป็นวง"), tr("แช่แข็งจนหยุดนิ่ง")],
+  triple: [tr("พุ่งทีละ 5 คู่"), tr("พุ่งทีละ 7 คู่")],
+  storm:  [tr("ไฟช็อตกระโดด 4 ตัว"), tr("ไฟช็อตกระโดด 6 ตัว")],
+  cannon: [tr("ข้าวเหนียวติดหนึบจนมึน"), tr("ข้าวเหนียวลูกยักษ์ + มึนนาน")],
+  pan:    [tr("บินกลับมาตีซ้ำขากลับ"), tr("กระทะยักษ์ แรง x1.5")],
+  melon:  [tr("แตกเป็นเมล็ดระเบิด 3 ลูก"), tr("เมล็ด 6 ลูก + น้ำแตงโมลื่นทำแมวช้า")],
+  egg:    [tr("แฟลชนานขึ้น (มึน 1.6 วิ)"), tr("แฟลชวงยักษ์")],
+  coffee: [tr("แท่นข้างๆ ยิงเร็วขึ้น 45%"), tr("เร็วขึ้น 60% + สาดกาแฟร้อนใส่แมว")],
+  stove:  [tr("ไฟกว้างเป็นกรวย 3 สาย"), tr("ไฟสีฟ้า ร้อนกว่า x1.5")],
+  fish:   [tr("แอ่งใหญ่ขึ้น อยู่นานขึ้น"), tr("กลิ่นแรง! แมวในแอ่งเดินช้า")],
+  roller: [tr("ไม้ใหญ่ขึ้น กวาดกว้าง"), tr("กลิ้งทีละ 2 อัน")],
 };
 function perkLv(p) { return p.lvl >= 10 ? 2 : p.lvl >= 5 ? 1 : 0; }
 WEAPON.bomb = { speed: 1, range: 0 };
@@ -146,7 +146,7 @@ function expandTown() {
   if (T.expand >= MAX_EXPAND) return;
   T.expand++; applyLayout();
   persist(); renderTdHud(); SFX.play('upgrade');
-  toast('🏰 สร้างกำแพงข้างเพิ่มแล้ว! มีจุดตั้งป้อมเป็ดใหม่ 2 จุด');
+  toast(tr("🏰 สร้างกำแพงข้างเพิ่มแล้ว! มีจุดตั้งป้อมเป็ดใหม่ 2 จุด"));
 }
 function gateCost() { return [600, 1500, 3500][T.gatehouse] || 0; }
 function wallMax(i) { return Math.round((30 + (T.fence - 1) * 18) * (i === GATE ? 1.4 + (T.gatehouse || 0) * 0.6 : 1)); }
@@ -199,7 +199,7 @@ function startWave() {
   closeSheet();
   D.phase = 'wave'; D.t = 0; D.banner = 2.5; D.bossBanner = false; D.bannerTxt = null; D.eshots = []; D.slowT = 0; D.killed = 0; D.earned = 0; D.revived = false;
   D.queue = buildWave(T.wave); D.ladders = []; D.thief = null;
-  { const wx = WEATHERS[weatherOf(T.wave)]; if (weatherOf(T.wave) !== 'sun') toast(`${wx.icon} วันนี้${wx.name}`); }
+  { const wx = WEATHERS[weatherOf(T.wave)]; if (weatherOf(T.wave) !== 'sun') toast(tr("{0} วันนี้{1}", wx.icon, wx.name)); }
   D.total = D.queue.length;
   // new faces today? the cat king shows them off first
   if (!save.seenKinds) save.seenKinds = [];
@@ -209,24 +209,24 @@ function startWave() {
   renderTdHud();
 }
 const INTRO_LINES = {
-  cat:    ['ทหารหม้อ', 'ฮ่าๆๆ เป็ดน้อย! เจอกองทัพหม้อของข้าซะ!'],
-  tray:   ['แมวหมวกถาด', 'หมวกถาดกับฝาหม้อ! ของที่เจ้าโยนลงมาจากฟ้าเด้งหมด!'],
-  ninja:  ['นินจาผ้าแดง', 'นินจาของข้าวิ่งเร็วกว่าตะเกียบเจ้าซะอีก!'],
-  knight: ['อัศวินแดง', 'อัศวินแดงของข้ามีโล่ด้วยนะ จะปาอะไรก็ปามา!'],
-  cart:   ['รถยิงพริก', 'รถยิงพริก! จะยิงลูกน้องข้าข้ามกำแพงไปถึงบ้านเจ้าเลย!'],
-  tank:   ['เกราะซึ้งนึ่ง', 'เกราะซึ้งนึ่ง! ทนยิ่งกว่าหม้อหุงข้าวของเจ้าอีก!'],
-  shadow: ['นินจาเงา', 'นินจาเงา... เจ้าจะไม่มีวันปาโดนมันหรอก!'],
-  healer: ['พ่อครัวต้มยำ', 'ต้มยำร้อนๆ! ลูกน้องข้าจะไม่มีวันหมดแรง!'],
-  steel:  ['เกราะเหล็กล้วน', 'เกราะเหล็กทั้งตัว! ไหนลองปามาสิ ฮ่าๆ!'],
-  glider: ['ร่มฝาชี', 'ร่มฝาชี! กระโดดข้ามกำแพงเจ้าได้สบายๆ!'],
-  pitcher: ['แมวปาลูกชิ้น', 'มือปาลูกชิ้นของข้า! ปาโดนหัวเป็ดทีเดียวมึนเลย!'],
-  boxer:  ['แมวนักมวย', 'นักมวยถุงมือร้อน! หมัดเดียวกำแพงกระจุย!'],
-  chief:  ['รองบอสแมวค้อน', 'มือขวาของข้า! ระวังค้อนไม้ของเขาไว้ให้ดี!'],
-  boss:   ['ราชาแมว', 'ข้าเอง! ราชาแมว!! วันนี้ข้าจะลงสนามเองโว้ย!!'],
-  ladder: ['แมวแบกบันได', 'บันไดลิง! พาดกำแพงปุ๊บ ปีนเข้าไปแย่งไข่ทองคำปั๊บ!'],
-  mole:   ['แมวขอมดำดิน', 'คาถาดำดิน! มุดดินไปโผล่หน้าประตู เป็ดไม่ทันเห็นแน่ ฮ่าๆ!'],
-  para:   ['หน่วยโดดร่ม', 'หน่วยรบพิเศษ! โดดร่มลงหน้าประตูเมืองเจ้าเดี๋ยวนี้!'],
-  ram:    ['รถกระทุ้งประตู', 'ไม้นวดแป้งยักษ์! กระทุ้งทีเดียว ประตูเมืองเป็ดพังแน่!'],
+  cat:    [tr("ทหารหม้อ"), tr("ฮ่าๆๆ เป็ดน้อย! เจอกองทัพหม้อของข้าซะ!")],
+  tray:   [tr("แมวหมวกถาด"), tr("หมวกถาดกับฝาหม้อ! ของที่เจ้าโยนลงมาจากฟ้าเด้งหมด!")],
+  ninja:  [tr("นินจาผ้าแดง"), tr("นินจาของข้าวิ่งเร็วกว่าตะเกียบเจ้าซะอีก!")],
+  knight: [tr("อัศวินแดง"), tr("อัศวินแดงของข้ามีโล่ด้วยนะ จะปาอะไรก็ปามา!")],
+  cart:   [tr("รถยิงพริก"), tr("รถยิงพริก! จะยิงลูกน้องข้าข้ามกำแพงไปถึงบ้านเจ้าเลย!")],
+  tank:   [tr("เกราะซึ้งนึ่ง"), tr("เกราะซึ้งนึ่ง! ทนยิ่งกว่าหม้อหุงข้าวของเจ้าอีก!")],
+  shadow: [tr("นินจาเงา"), tr("นินจาเงา... เจ้าจะไม่มีวันปาโดนมันหรอก!")],
+  healer: [tr("พ่อครัวต้มยำ"), tr("ต้มยำร้อนๆ! ลูกน้องข้าจะไม่มีวันหมดแรง!")],
+  steel:  [tr("เกราะเหล็กล้วน"), tr("เกราะเหล็กทั้งตัว! ไหนลองปามาสิ ฮ่าๆ!")],
+  glider: [tr("ร่มฝาชี"), tr("ร่มฝาชี! กระโดดข้ามกำแพงเจ้าได้สบายๆ!")],
+  pitcher: [tr("แมวปาลูกชิ้น"), tr("มือปาลูกชิ้นของข้า! ปาโดนหัวเป็ดทีเดียวมึนเลย!")],
+  boxer:  [tr("แมวนักมวย"), tr("นักมวยถุงมือร้อน! หมัดเดียวกำแพงกระจุย!")],
+  chief:  [tr("รองบอสแมวค้อน"), tr("มือขวาของข้า! ระวังค้อนไม้ของเขาไว้ให้ดี!")],
+  boss:   [tr("ราชาแมว"), tr("ข้าเอง! ราชาแมว!! วันนี้ข้าจะลงสนามเองโว้ย!!")],
+  ladder: [tr("แมวแบกบันได"), tr("บันไดลิง! พาดกำแพงปุ๊บ ปีนเข้าไปแย่งไข่ทองคำปั๊บ!")],
+  mole:   [tr("แมวขอมดำดิน"), tr("คาถาดำดิน! มุดดินไปโผล่หน้าประตู เป็ดไม่ทันเห็นแน่ ฮ่าๆ!")],
+  para:   [tr("หน่วยโดดร่ม"), tr("หน่วยรบพิเศษ! โดดร่มลงหน้าประตูเมืองเจ้าเดี๋ยวนี้!")],
+  ram:    [tr("รถกระทุ้งประตู"), tr("ไม้นวดแป้งยักษ์! กระทุ้งทีเดียว ประตูเมืองเป็ดพังแน่!")],
 };
 function catIntroNext() {
   const I = D.intro; if (!I) return;
@@ -275,7 +275,7 @@ function drawCatIntro() {
     const tw = ctx.measureText(line[0]).width + 30;
     ctx.fillStyle = '#d8352a'; roundRect(-tw / 2, -18, tw, 36, 10); ctx.fill(); ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.fillText(line[0], 0, 1);
-    ctx.font = '800 11px Mitr,system-ui,sans-serif'; ctx.fillStyle = '#ffd84a'; ctx.fillText(kind === 'boss' ? '👑 บอส' : kind === 'chief' ? '⭐ รองหัวหน้า' : '🆕 ศัตรูใหม่', 0, -28);
+    ctx.font = '800 11px Mitr,system-ui,sans-serif'; ctx.fillStyle = '#ffd84a'; ctx.fillText(kind === 'boss' ? tr("👑 บอส") : kind === 'chief' ? tr("⭐ รองหัวหน้า") : tr("🆕 ศัตรูใหม่"), 0, -28);
     ctx.restore();
   }
   // the cat king on the left, bouncing as he gloats (when he is not the one on show)
@@ -291,7 +291,7 @@ function drawCatIntro() {
   ctx.fillStyle = '#fffaf0'; roundRect(bx, by, bw, bh, 16); ctx.fill(); ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 3; ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + bw * 0.18, by + bh - 1); ctx.lineTo(bx + bw * 0.14, by + bh + 22); ctx.lineTo(bx + bw * 0.28, by + bh - 1); ctx.closePath(); ctx.fillStyle = '#fffaf0'; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#3a2a1a'; lines.forEach((l, i) => ctx.fillText(l, bx + 14, by + 12 + i * 24));
-  ctx.font = '900 12px Mitr,system-ui,sans-serif'; ctx.fillStyle = '#d8352a'; ctx.fillText('ราชาแมว:', bx + 14, by - 16);
+  ctx.font = '900 12px Mitr,system-ui,sans-serif'; ctx.fillStyle = '#d8352a'; ctx.fillText(tr("ราชาแมว:"), bx + 14, by - 16);
   // a scared duck at the bottom
   if (t > 0.9 && ready(IMG.k_duck_act)) {
     const dx = W * 0.22 + Math.sin(now * 40) * 2, dy = H * 0.82;
@@ -300,27 +300,27 @@ function drawCatIntro() {
   }
   // footer
   ctx.font = '700 12px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,.8)';
-  ctx.fillText(`แตะเพื่อไปต่อ  ${I.i + 1}/${I.list.length}`, W / 2, H - bar / 2);
+  ctx.fillText(tr("แตะเพื่อไปต่อ  {0}/{1}", I.i + 1, I.list.length), W / 2, H - bar / 2);
   ctx.restore();
 }
 // enemy roster: new kinds join as the waves go on (kitchen cats + the old armoured cats)
 const CAT_KINDS = {
-  cat:    { from: 1, w: 10, hp: 1,   v: 1,    size: 1.1,  name: 'แมวหม้อ' },
-  ninja:  { from: 3, w: 5,  hp: 0.6, v: 1.9,  size: 1.0,  name: '🥷 แมวนินจาผ้าแดงมาแล้ว! วิ่งเร็วมาก' },
-  knight: { from: 4, w: 5,  hp: 1.8, v: 0.9,  size: 1.15, name: '⚔️ แมวอัศวินแดงมาแล้ว! มีโล่กันดาเมจนิดหน่อย' },
-  tank:   { from: 6, w: 3,  hp: 3.2, v: 0.6,  size: 1.4,  name: '🛡️ แมวเกราะซึ้งนึ่งมาแล้ว! ทนมาก ใช้อาวุธแรงๆ' },
-  shadow: { from: 7, w: 3,  hp: 0.8, v: 2.4,  size: 1.0,  name: '🗡️ แมวนินจาเงามาแล้ว! เร็วที่สุด หลบได้บางที' },
-  steel:  { from: 9, w: 2,  hp: 5,   v: 0.5,  size: 1.45, name: '🪖 แมวเกราะเหล็กมาแล้ว! ทนสุดๆ ใช้หม้อหุงข้าว/ไฟช็อต' },
-  tray:   { from: 2, w: 4,  hp: 1.2, v: 0.95, size: 1.1,  name: '🍽️ แมวถือถาดมาแล้ว! ถาดกันของที่ปาได้ 4 ที' },
-  cart:   { from: 5, w: 2,  hp: 4,   v: 0.45, size: 1.7,  name: '🌶️ รถยิงพริกมาแล้ว! ยิงหินใส่กำแพง บางทียิงแมวข้ามกำแพงมาเลย!' },
-  healer: { from: 8, w: 2,  hp: 1.4, v: 0.85, size: 1.1,  name: '🍜 แมวพ่อครัวต้มยำมาแล้ว! ป้อนต้มยำฮีลเพื่อน รีบล้มก่อน' },
-  pitcher: { from: 6, w: 2, hp: 1.1, v: 0.9, size: 1.05, name: 'แมวปาลูกชิ้น' },
-  boxer:  { from: 7, w: 2,  hp: 2,   v: 1.0,  size: 1.15, name: 'แมวนักมวย' },
-  glider: { from: 10, w: 3, hp: 1,   v: 1.05, size: 1.05, name: '🪂 แมวร่มกระชอนมาแล้ว! กระโดดข้ามกำแพงได้' },
-  ladder: { from: 3, w: 4,  hp: 1.2, v: 0.9,  size: 1.1,  name: '🪜 แมวแบกบันไดมาแล้ว! พาดกำแพงแล้วปีนเข้าเมือง' },
-  ram:    { from: 4, w: 2,  hp: 7,   v: 0.42, size: 1.7,  name: '🪵 รถกระทุ้งประตูมาแล้ว! ยิงมันก่อนถึงประตู' },
-  mole:   { from: 7, w: 3,  hp: 1.0, v: 1.25, size: 1.05, name: '⛏️ แมวขอมดำดินมาแล้ว! มุดดินมาโผล่หน้าประตู เป็ดมองไม่เห็นจนกว่าจะโผล่' },
-  para:   { from: 8, w: 3,  hp: 1.1, v: 1.0,  size: 1.05, name: '🪂 แมวโดดร่มมาแล้ว! ลงตรงหน้าประตูเลย' },
+  cat:    { from: 1, w: 10, hp: 1,   v: 1,    size: 1.1,  name: tr("แมวหม้อ") },
+  ninja:  { from: 3, w: 5,  hp: 0.6, v: 1.9,  size: 1.0,  name: tr("🥷 แมวนินจาผ้าแดงมาแล้ว! วิ่งเร็วมาก") },
+  knight: { from: 4, w: 5,  hp: 1.8, v: 0.9,  size: 1.15, name: tr("⚔️ แมวอัศวินแดงมาแล้ว! มีโล่กันดาเมจนิดหน่อย") },
+  tank:   { from: 6, w: 3,  hp: 3.2, v: 0.6,  size: 1.4,  name: tr("🛡️ แมวเกราะซึ้งนึ่งมาแล้ว! ทนมาก ใช้อาวุธแรงๆ") },
+  shadow: { from: 7, w: 3,  hp: 0.8, v: 2.4,  size: 1.0,  name: tr("🗡️ แมวนินจาเงามาแล้ว! เร็วที่สุด หลบได้บางที") },
+  steel:  { from: 9, w: 2,  hp: 5,   v: 0.5,  size: 1.45, name: tr("🪖 แมวเกราะเหล็กมาแล้ว! ทนสุดๆ ใช้หม้อหุงข้าว/ไฟช็อต") },
+  tray:   { from: 2, w: 4,  hp: 1.2, v: 0.95, size: 1.1,  name: tr("🍽️ แมวถือถาดมาแล้ว! ถาดกันของที่ปาได้ 4 ที") },
+  cart:   { from: 5, w: 2,  hp: 4,   v: 0.45, size: 1.7,  name: tr("🌶️ รถยิงพริกมาแล้ว! ยิงหินใส่กำแพง บางทียิงแมวข้ามกำแพงมาเลย!") },
+  healer: { from: 8, w: 2,  hp: 1.4, v: 0.85, size: 1.1,  name: tr("🍜 แมวพ่อครัวต้มยำมาแล้ว! ป้อนต้มยำฮีลเพื่อน รีบล้มก่อน") },
+  pitcher: { from: 6, w: 2, hp: 1.1, v: 0.9, size: 1.05, name: tr("แมวปาลูกชิ้น") },
+  boxer:  { from: 7, w: 2,  hp: 2,   v: 1.0,  size: 1.15, name: tr("แมวนักมวย") },
+  glider: { from: 10, w: 3, hp: 1,   v: 1.05, size: 1.05, name: tr("🪂 แมวร่มกระชอนมาแล้ว! กระโดดข้ามกำแพงได้") },
+  ladder: { from: 3, w: 4,  hp: 1.2, v: 0.9,  size: 1.1,  name: tr("🪜 แมวแบกบันไดมาแล้ว! พาดกำแพงแล้วปีนเข้าเมือง") },
+  ram:    { from: 4, w: 2,  hp: 7,   v: 0.42, size: 1.7,  name: tr("🪵 รถกระทุ้งประตูมาแล้ว! ยิงมันก่อนถึงประตู") },
+  mole:   { from: 7, w: 3,  hp: 1.0, v: 1.25, size: 1.05, name: tr("⛏️ แมวขอมดำดินมาแล้ว! มุดดินมาโผล่หน้าประตู เป็ดมองไม่เห็นจนกว่าจะโผล่") },
+  para:   { from: 8, w: 3,  hp: 1.1, v: 1.0,  size: 1.05, name: tr("🪂 แมวโดดร่มมาแล้ว! ลงตรงหน้าประตูเลย") },
 };
 const OLD_IMG = { knight: 'k_knight', shadow: 'k_shadow', steel: 'k_steel' };
 // what each kitchen cat wears and swings (the plain cats get a random silly outfit)
@@ -370,12 +370,12 @@ function pickKind(n) {
 }
 const PATTERNS = {
   blob:   { from: 1, w: 6 },
-  row:    { from: 2, w: 3, name: '➖ แมวเรียงหน้ากระดาน!' },
-  column: { from: 2, w: 3, name: '⬇️ แมวเดินแถวเรียงหนึ่ง!' },
-  zigzag: { from: 3, w: 2, name: '〰️ แมวเดินส่ายหลบ!' },
-  v:      { from: 4, w: 2, name: '🔻 แมวจัดทัพรูปตัววี!' },
-  flank:  { from: 5, w: 2, name: '↔️ แมวตีขนาบสองข้าง!' },
-  rush:   { from: 6, w: 2, name: '💨 แมวบุกตะลุย!!' },
+  row:    { from: 2, w: 3, name: tr("➖ แมวเรียงหน้ากระดาน!") },
+  column: { from: 2, w: 3, name: tr("⬇️ แมวเดินแถวเรียงหนึ่ง!") },
+  zigzag: { from: 3, w: 2, name: tr("〰️ แมวเดินส่ายหลบ!") },
+  v:      { from: 4, w: 2, name: tr("🔻 แมวจัดทัพรูปตัววี!") },
+  flank:  { from: 5, w: 2, name: tr("↔️ แมวตีขนาบสองข้าง!") },
+  rush:   { from: 6, w: 2, name: tr("💨 แมวบุกตะลุย!!") },
 };
 function pickPattern(n) {
   const list = Object.entries(PATTERNS).filter(([, p]) => n >= p.from);
@@ -484,7 +484,7 @@ function tdUpdate(dt) {
           // pops up right in front of the gate: the ducks only notice it now
           c.under = false; c.y = FENCE_Y - 1.15;
           c.emerge = 0.7; c.stun = Math.max(c.stun || 0, 0.7); c.jumped = true; D.holes.push({ x: c.x, y: c.y, t: 0 }); D.shake = Math.max(D.shake, 0.12); addFx('dust', c.x, c.y, '#a8865a'); burst(c.x, c.y, ['#8a6a3a', '#a8865a', '#6a4a2a'], 16, 4, 1.3); SFX.play('crack'); SFX.play('meow');
-          if (!save.seenMoleTip) { save.seenMoleTip = true; persist(); toast('⛏️ แมวขอมดำดินโผล่หน้าประตู! ตอนมุดอยู่เป็ดมองไม่เห็น'); }
+          if (!save.seenMoleTip) { save.seenMoleTip = true; persist(); toast(tr("⛏️ แมวขอมดำดินโผล่หน้าประตู! ตอนมุดอยู่เป็ดมองไม่เห็น")); }
         }
         continue;
       }
@@ -534,7 +534,7 @@ function tdUpdate(dt) {
         if (c.plantT <= 0) {
           const L = { x: c.x, t: 0, push: 0, down: false, fallT: 0 }; D.ladders.push(L);
           c.hasLadder = false; c.st = 'climb'; c.climb = { t: 0, L }; SFX.play('wood'); addFx('dust', c.x, FENCE_Y - 0.3, '#d9c49a');
-          if (!save.seenLadderTip) { save.seenLadderTip = true; persist(); toast('🪜 แมวพาดบันได! พาเป็ดหัวหน้าไปยืนใต้บันไดเพื่อผลักล้ม'); }
+          if (!save.seenLadderTip) { save.seenLadderTip = true; persist(); toast(tr("🪜 แมวพาดบันได! พาเป็ดหัวหน้าไปยืนใต้บันไดเพื่อผลักล้ม")); }
         }
         continue;
       }
@@ -619,7 +619,7 @@ function tdUpdate(dt) {
             wall.hp -= c.boss ? 8 : ram ? (wall.gate ? 7 + T.wave * 0.7 : 4 + T.wave * 0.4) : c.kind === 'chief' || c.kind === 'boxer' ? 3 : 1; wall.hit = ram ? 0.35 : 0.2; SFX.play(c.boss ? 'crack' : ram ? 'slam' : Math.random() < 0.5 ? 'hit' : 'wood');
             if (ram) { D.shake = Math.max(D.shake, 0.22); addFx('dust', c.x, FENCE_Y - 0.1, '#c8b89a'); }
             for (let i = 0; i < (c.boss ? 10 : 2); i++) splinter(wall.x, FENCE_Y);
-            if (wall.hp <= 0) { wall.hp = 0; SFX.play('crack'); addFx('ring', wall.x, FENCE_Y, '#ffcf8a'); for (let i = 0; i < 14; i++) splinter(wall.x, FENCE_Y); D.shake = Math.max(D.shake, 0.3); toast(wall.gate ? 'ประตูเมืองพัง!! 🚪 พาเป็ดหัวหน้าไปซ่อมที่วงกลม 🔧' : 'กำแพงพัง! พาเป็ดหัวหน้าไปยืนวงกลม 🔧 เพื่อซ่อม'); }
+            if (wall.hp <= 0) { wall.hp = 0; SFX.play('crack'); addFx('ring', wall.x, FENCE_Y, '#ffcf8a'); for (let i = 0; i < 14; i++) splinter(wall.x, FENCE_Y); D.shake = Math.max(D.shake, 0.3); toast(wall.gate ? tr("ประตูเมืองพัง!! 🚪 พาเป็ดหัวหน้าไปซ่อมที่วงกลม 🔧") : tr("กำแพงพัง! พาเป็ดหัวหน้าไปยืนวงกลม 🔧 เพื่อซ่อม")); }
           } else {
             const ed = c.boss ? 4 : c.kind === 'chief' || c.kind === 'ram' ? 2 : 1;
             D.houseHp -= ed; D.flinchT = 0.35; D.eggHit = 0.3; D.shake = Math.max(D.shake, 0.15); SFX.play('hit');
@@ -647,7 +647,7 @@ function tdUpdate(dt) {
         e.wall.hp = Math.max(0, e.wall.hp - 2); e.wall.hit = 0.2; SFX.play('crack');
         for (let i = 0; i < 5; i++) splinter(e.tx, e.ty);
         addFx(e.type === 'chili' ? 'fire' : 'dust', e.tx, e.ty, e.type === 'chili' ? '#ff5a2a' : '#c8b89a');
-        if (e.wall.hp <= 0) toast('กำแพงพังเพราะรถยิงพริก! 🔧');
+        if (e.wall.hp <= 0) toast(tr("กำแพงพังเพราะรถยิงพริก! 🔧"));
       } else {
         D.houseHp -= 1; D.eggHit = 0.3; D.shake = Math.max(D.shake, 0.2); SFX.play('hit');
         addFx(e.type === 'chili' ? 'fire' : 'dust', e.tx, e.ty, '#ff7a3a');
@@ -827,7 +827,7 @@ function hurtCat(c, dmg, src) {
     // nearby duck archers cheer
     if (c.boss) {
       SFX.play('bossDie'); D.shake = 0.6; D.slowT = 1.8; D.flashT = 0.35;
-      D.banner = 2.2; D.bannerTxt = 'ราชาแมวล้มแล้ว!! 🎉';
+      D.banner = 2.2; D.bannerTxt = tr("ราชาแมวล้มแล้ว!! 🎉");
       addFx('ring', c.x, c.y, '#ffd84a'); addFx('boom', c.x, c.y, '#ffd84a');
       for (let i = 0; i < 40; i++) confetti(c.x, c.y);
     } else {
@@ -906,7 +906,7 @@ function pitchSkewer(c) {
   SFX.play('shoot');
 }
 function placeTrap(x, y) {
-  if ((T.traps || 0) <= 0) { toast('กับดักปลาทูหมดแล้ว ซื้อเพิ่มที่บ้าน 🏠'); SFX.play('gateBad'); return; }
+  if ((T.traps || 0) <= 0) { toast(tr("กับดักปลาทูหมดแล้ว ซื้อเพิ่มที่บ้าน 🏠")); SFX.play('gateBad'); return; }
   T.traps--; persist();
   D.traps.push({ x, y, t: 0, fuse: 6 });
   SFX.play('thud'); addFx('dust', x, y, '#d9c49a');
@@ -929,7 +929,7 @@ function trapUpdate(dt) {
         c.launch = { t: 0, dur: 1.0, x0: c.x, y0: c.y, x1: Math.max(-CAT_X, Math.min(CAT_X, c.x + (Math.random() - 0.5) * 2.5)), y1: c.y - back, dmg: 1.5 + T.wave * 0.5 + tr.lvl * 0.4, spin: (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 6) };
         if (c.st !== 'walk') c.st = 'walk';
         tr.tilt = 1; tr.uses--; SFX.play('wood'); SFX.play('catScared'); addFx('dust', tr.x, tr.y, '#d9c49a');
-        D.floats.push({ x: tr.x, y: tr.y - 0.3, t: 0, text: 'ดึ๋ง!', color: '#ffe680', small: true });
+        D.floats.push({ x: tr.x, y: tr.y - 0.3, t: 0, text: tr("ดึ๋ง!"), color: '#ffe680', small: true });
         if (tr.uses <= 0) { tr.broken = true; tr.brokeT = -0.3; }
         break;
       }
@@ -955,7 +955,7 @@ function canClimb(c) { return !c.boss && c.kind !== 'ram' && c.kind !== 'cart' &
 function ladderNear(x, r) { let best = null, bd = r; for (const l of D.ladders) { if (l.down) continue; const d = Math.abs(l.x - x); if (d < bd) { bd = d; best = l; } } return best; }
 function knockLadder(lad) {
   lad.down = true; lad.fallT = 0; SFX.play('wood'); SFX.play('catScared'); D.shake = Math.max(D.shake, 0.12);
-  D.floats.push({ x: lad.x, y: FENCE_Y - 0.4, t: 0, text: 'ผลักล้ม!', color: '#ffe680' });
+  D.floats.push({ x: lad.x, y: FENCE_Y - 0.4, t: 0, text: tr("ผลักล้ม!"), color: '#ffe680' });
   for (const c of D.cats) if (c.climb && c.climb.L === lad && c.hp > 0) {
     c.st = 'walk'; c.climb = null; c.y = FENCE_Y - 0.9; c.lift = 0; c.stun = 1.2; hurtCat(c, 2 + T.wave * 0.3, 'lead');
   }
@@ -1184,7 +1184,7 @@ function victoryUpdate(dt) {
 function startDefeat() {
   if (D.phase !== 'wave') return;
   D.phase = 'defeat'; D.defT = 0; D.shake = 0.6; SFX.play('crack');
-  D.banner = 2.5; D.bannerTxt = 'แมวแย่งไข่ทองคำไปแล้ว!! 😿';
+  D.banner = 2.5; D.bannerTxt = tr("แมวแย่งไข่ทองคำไปแล้ว!! 😿");
   let th = null, bd = 99; for (const c of D.cats) if (c.hp > 0 && !c.boss && c.kind !== 'ram' && c.kind !== 'cart') { const d = Math.hypot(c.x, c.y - EGG_Y); if (d < bd) { bd = d; th = c; } }
   D.thief = th; if (th) { th.st = 'flee'; th.fleeT = 0; th.fled = true; th.dance = 0; th.lift = 0; th.climb = null; SFX.play('catScared'); }
 }
@@ -1224,10 +1224,10 @@ function drawVictoryStars() {
   }
   if (D.vicShown >= 3) {
     ctx.font = '900 18px Mitr,system-ui,sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
-    const tx = `ล้มแมว ${D.killed} ตัว • 🪙 +${Math.floor(D.earned)}`;
+    const tx = tr("ล้มแมว {0} ตัว • 🪙 +{1}", D.killed, Math.floor(D.earned));
     ctx.strokeText(tx, cx, cy + 56); ctx.fillStyle = '#fff'; ctx.fillText(tx, cx, cy + 56);
     ctx.font = '700 12px Mitr,system-ui,sans-serif'; ctx.globalAlpha = 0.8 + Math.sin(performance.now() / 200) * 0.2;
-    ctx.strokeText('แตะเพื่อไปต่อ', cx, cy + 82); ctx.fillText('แตะเพื่อไปต่อ', cx, cy + 82);
+    ctx.strokeText(tr("แตะเพื่อไปต่อ"), cx, cy + 82); ctx.fillText(tr("แตะเพื่อไปต่อ"), cx, cy + 82);
   }
   ctx.restore();
 }
@@ -1262,27 +1262,27 @@ function endWave(won) {
 }
 function showWaveResult(won, bonus) {
   const earned = D.earned;
-  $('rTitle').textContent = won ? `ผ่านวันที่ ${T.wave}! ${'⭐'.repeat(D.vicStars || 3)}` : 'แมวแย่งไข่ทองคำไปแล้ว! 😿';
+  $('rTitle').textContent = won ? tr("ผ่านวันที่ {0}! {1}", T.wave, '⭐'.repeat(D.vicStars || 3)) : tr("แมวแย่งไข่ทองคำไปแล้ว! 😿");
   $('rTitle').style.color = won ? '#ffd84a' : '#ff7a7a';
-  $('rInfo').textContent = won ? `ล้มแมว ${D.killed} ตัว • โบนัส 🪙${bonus}` : `ล้มแมวได้ ${D.killed} ตัว • ยังเหลือแมวอีก ${D.cats.filter(c => c.hp > 0).length + D.queue.length} ตัว`;
+  $('rInfo').textContent = won ? tr("ล้มแมว {0} ตัว • โบนัส 🪙{1}", D.killed, bonus) : tr("ล้มแมวได้ {0} ตัว • ยังเหลือแมวอีก {1} ตัว", D.killed, D.cats.filter(c => c.hp > 0).length + D.queue.length);
   $('rCoins').textContent = earned;
   const ab = $('adBtn'), nx = $('next');
   ab.classList.remove('hidden');
   if (won) {
-    ab.innerHTML = `🎬 ดูโฆษณา รับ x3<small>+🪙${earned * 2} เพิ่ม</small>`;
+    ab.innerHTML = tr("🎬 ดูโฆษณา รับ x3<small>+🪙{0} เพิ่ม</small>", earned * 2);
     ab.onclick = () => Ads.show(ok => {
       if (!ok) return;
       save.coins += earned * 2; persist(); SFX.play('reward');
       $('rCoins').textContent = earned * 3; ab.classList.add('hidden');
-      toast(`ได้เหรียญ x3! +🪙${earned * 2}`); renderTdHud();
+      toast(tr("ได้เหรียญ x3! +🪙{0}", earned * 2)); renderTdHud();
     });
-    nx.textContent = `▶ ไปวันที่ ${T.wave + 1}`;
+    nx.textContent = tr("▶ ไปวันที่ {0}", T.wave + 1);
     nx.onclick = () => { hide('result'); enterTD(); };
   } else {
     ab.classList.toggle('hidden', D.revived);
-    ab.innerHTML = '🎬 ดูโฆษณา สู้ต่อ!<small>ซ่อมบ้านกับกำแพงเต็ม แล้วสู้วันนี้ต่อ</small>';
+    ab.innerHTML = tr("🎬 ดูโฆษณา สู้ต่อ!<small>ซ่อมบ้านกับกำแพงเต็ม แล้วสู้วันนี้ต่อ</small>");
     ab.onclick = () => Ads.show(ok => { if (ok) revive(); });
-    nx.textContent = '🔁 เริ่มวันนี้ใหม่';
+    nx.textContent = tr("🔁 เริ่มวันนี้ใหม่");
     nx.onclick = () => { hide('result'); resetWave(); enterTD(); };
   }
   hide('tdUi'); show('result'); state = 'tdresult';
@@ -1300,7 +1300,7 @@ function revive() {
   D.ladders = []; D.thief = null;
   addFx('shock', 0, FENCE_Y, '#bfe6ff'); addFx('shock2', 0, FENCE_Y, '#ffffff'); D.shake = 0.3;
   hide('result'); show('tdUi'); state = 'td';
-  toast('สู้ต่อ! ไข่ทองคำกลับมาแล้ว กำแพงซ่อมเต็มแล้ว');
+  toast(tr("สู้ต่อ! ไข่ทองคำกลับมาแล้ว กำแพงซ่อมเต็มแล้ว"));
 }
 function resetWave() {
   D.phase = 'build'; D.cats = []; D.shots = []; D.queue = []; D.ladders = []; D.thief = null; D.troops = []; D.traps = []; D.tops = []; D.strikes = []; D.sky = null; D.ufo = null;
@@ -1336,7 +1336,7 @@ function tapField(cx, cy) {
   if (D.trapMode && D.phase === 'wave') {
     const q = dinv(cx, cy); D.trapMode = false;
     if (q.y < FENCE_Y - 0.6) placeTrap(Math.max(-FIELD_X + 0.4, Math.min(FIELD_X - 0.4, q.x)), q.y);
-    else toast('วางกับดักได้แค่หน้ากำแพง (ฝั่งแมว)');
+    else toast(tr("วางกับดักได้แค่หน้ากำแพง (ฝั่งแมว)"));
     return;
   }
   const p = dinv(cx, cy);
@@ -1346,7 +1346,7 @@ function tapField(cx, cy) {
     if (best) {
       SFX.play('click'); closeSheet();
       D.lead.goal = { id: best.id, x: best.x, y: best.y, fresh: true }; D.padLock = null;
-      if (save.coins < 1 && (T.pads[best.id] || 0) < best.cost) toast('เหรียญไม่พอ 🪙 ล้มแมวเพิ่มก่อนนะ');
+      if (save.coins < 1 && (T.pads[best.id] || 0) < best.cost) toast(tr("เหรียญไม่พอ 🪙 ล้มแมวเพิ่มก่อนนะ"));
       if (!save.td.walked) { save.td.walked = true; persist(); }
       return;
     } }
@@ -1359,7 +1359,7 @@ function tapField(cx, cy) {
       openBaseMenu(s); return;
     }
   }
-  if (D.moveFrom !== undefined && D.moveFrom !== null) { D.moveFrom = null; toast('ยกเลิกการย้าย'); return; }
+  if (D.moveFrom !== undefined && D.moveFrom !== null) { D.moveFrom = null; toast(tr("ยกเลิกการย้าย")); return; }
   // tents
   for (let i = 0; i < CAMP_POS.length; i++) { const cp = CAMP_POS[i]; if (Math.hypot(p.x - cp.x, (p.y - cp.y + 0.4) * 0.8) < 0.95) { SFX.play('click'); openCamp(i); return; } }
   // a hurt wall segment: repair on the spot
@@ -1377,23 +1377,23 @@ function padListOld() {
   const L = [];
   for (let s = 0; s < SLOTS; s++) {
     const pl = platAt(s), { x, y } = slotPad(s);
-    if (!pl) L.push({ id: 'b' + s, x, y, icon: '🪵', label: 'สร้างป้อมบนกำแพง', cost: buildCost(), apply: () => {
-      T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast('เป็ดขึ้นกำแพงแล้ว! 🦆');
+    if (!pl) L.push({ id: 'b' + s, x, y, icon: '🪵', label: tr("สร้างป้อมบนกำแพง"), cost: buildCost(), apply: () => {
+      T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast(tr("เป็ดขึ้นกำแพงแล้ว! 🦆"));
     } });
     else if (pl.lvl < 10) L.push({ id: 'u' + s, x, y, icon: WEAPON[pl.w].icon, label: `Lv.${pl.lvl + 1}`, cost: lvlCost(pl), apply: () => {
       const before = tierOf(pl.lvl); pl.lvl++; const after = tierOf(pl.lvl);
-      if (after > before) { toast(`แท่นใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); const q = platPos(s); for (let i = 0; i < 30; i++) confetti(q.x, q.y); addFx('ring', q.x, q.y, '#ffd84a'); }
+      if (after > before) { toast(tr("แท่นใหม่: {0}! {1}", PLAT_NAME[after], PLAT_SKILL[after])); const q = platPos(s); for (let i = 0; i < 30; i++) confetti(q.x, q.y); addFx('ring', q.x, q.y, '#ffd84a'); }
     } });
   }
   CAMP_POS.forEach((cp, i) => {
     const cm = T.camps[i], x = cp.x + (i ? -0.2 : 0.4), y = cp.y + 1.15;
-    if (!cm) L.push({ id: 'cb' + i, x, y, icon: '⛺', label: 'ค่ายเป็ดวางกับดัก', cost: 500, apply: () => { T.camps[i] = { lvl: 1 }; toast('ตั้งค่ายแล้ว! เป็ดจะออกไปวางไม้กระดกกับระเบิดปลาทู 🪤'); SFX.play('quack'); } });
-    else if (cm.lvl < 10) L.push({ id: 'cu' + i, x, y, icon: '🪖', label: `ค่าย Lv.${cm.lvl + 1}`, cost: Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4), apply: () => { cm.lvl++; SFX.play('upgrade'); if (cm.lvl === 5 || cm.lvl === 10) toast(cm.lvl === 5 ? 'ค่ายได้เป็ดวางกับดักเพิ่ม 1 ตัว!' : 'กับดักแรงขึ้น + เป็ดเพิ่มอีกตัว!'); } });
+    if (!cm) L.push({ id: 'cb' + i, x, y, icon: '⛺', label: tr("ค่ายเป็ดวางกับดัก"), cost: 500, apply: () => { T.camps[i] = { lvl: 1 }; toast(tr("ตั้งค่ายแล้ว! เป็ดจะออกไปวางไม้กระดกกับระเบิดปลาทู 🪤")); SFX.play('quack'); } });
+    else if (cm.lvl < 10) L.push({ id: 'cu' + i, x, y, icon: '🪖', label: tr("ค่าย Lv.{0}", cm.lvl + 1), cost: Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4), apply: () => { cm.lvl++; SFX.play('upgrade'); if (cm.lvl === 5 || cm.lvl === 10) toast(cm.lvl === 5 ? tr("ค่ายได้เป็ดวางกับดักเพิ่ม 1 ตัว!") : tr("กับดักแรงขึ้น + เป็ดเพิ่มอีกตัว!")); } });
   });
-  L.push({ id: 'house', x: -2.0, y: EGG_Y + 1.45, icon: '🥚', label: `เกราะไข่ Lv.${T.house + 1}`, cost: 80 * T.house, apply: () => { T.house++; SFX.play('upgrade'); D.houseHp = D.houseMax = houseMax(); } });
+  L.push({ id: 'house', x: -2.0, y: EGG_Y + 1.45, icon: '🥚', label: tr("เกราะไข่ Lv.{0}", T.house + 1), cost: 80 * T.house, apply: () => { T.house++; SFX.play('upgrade'); D.houseHp = D.houseMax = houseMax(); } });
   for (const w of D.walls) if (w.hp < w.max) {
     const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
-    L.push({ id: 'w' + w.i, x: w.x + (w.i === NWALL - 1 ? -0.9 : 0.9), y: WALL_FOOT + 0.55, icon: '🔧', label: w.gate ? 'ซ่อมประตู' : 'ซ่อมกำแพง', cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
+    L.push({ id: 'w' + w.i, x: w.x + (w.i === NWALL - 1 ? -0.9 : 0.9), y: WALL_FOOT + 0.55, icon: '🔧', label: w.gate ? tr("ซ่อมประตู") : tr("ซ่อมกำแพง"), cost, small: true, apply: () => { w.hp = w.max; SFX.play('plus'); } });
   }
   return L;
 }
@@ -1533,19 +1533,19 @@ function sellValue(p) {
 }
 function finishMove(t) {
   const f = D.moveFrom; D.moveFrom = null;
-  if (t === f) { toast('ยกเลิกการย้าย'); return; }
+  if (t === f) { toast(tr("ยกเลิกการย้าย")); return; }
   const a = platAt(f), b = platAt(t);
   if (!a) return;
   a.slot = t; if (b) b.slot = f;
   shooter(t).arrive = 1; if (b) shooter(f).arrive = 1;
   SFX.play('quack'); addFx('ring', platPos(t).x, platPos(t).y, '#ffd84a'); persist();
-  toast(b ? '🔀 สลับที่ป้อมแล้ว' : '🔀 ย้ายป้อมแล้ว');
+  toast(b ? tr("🔀 สลับที่ป้อมแล้ว") : tr("🔀 ย้ายป้อมแล้ว"));
 }
 function repairWall(w) {
   const cost = Math.max(5, Math.round((20 + T.fence * 6) * (1 - w.hp / w.max)));
-  if (save.coins < cost) { toast(`ซ่อมต้องใช้ 🪙${cost}`); SFX.play('gateBad'); return; }
+  if (save.coins < cost) { toast(tr("ซ่อมต้องใช้ 🪙{0}", cost)); SFX.play('gateBad'); return; }
   save.coins -= cost; w.hp = w.max; SFX.play('plus'); addFx('ring', w.x, FENCE_Y + 0.5, '#7dff8a');
-  D.floats.push({ x: w.x, y: FENCE_Y, t: 0, text: `🔧 ซ่อมแล้ว -🪙${cost}`, color: '#7dff8a' }); persist(); renderTdHud();
+  D.floats.push({ x: w.x, y: FENCE_Y, t: 0, text: tr("🔧 ซ่อมแล้ว -🪙{0}", cost), color: '#7dff8a' }); persist(); renderTdHud();
 }
 function openGate() {
   sheetFor = 'gate';
@@ -1553,32 +1553,32 @@ function openGate() {
   const g = D.walls[GATE], wt = WALL_TIERS[wallTierOf(T.fence)];
   $('sheetTitle').textContent = `🏰 ${wt.name} Lv.${T.fence}`;
   const info = document.createElement('div'); info.className = 'sinfo';
-  info.innerHTML = `แมวเข้าเมืองได้ทาง<b>ประตู</b>เท่านั้น (ยกเว้นปีนบันได มุดดิน หรือโดดร่ม) • ประตูทน <b>${Math.ceil(g.hp)}/${g.max}</b> • 🪙 ${Math.floor(save.coins).toLocaleString()}`;
+  info.innerHTML = tr("แมวเข้าเมืองได้ทาง<b>ประตู</b>เท่านั้น (ยกเว้นปีนบันได มุดดิน หรือโดดร่ม) • ประตูทน <b>{0}/{1}</b> • 🪙 {2}", Math.ceil(g.hp), g.max, Math.floor(save.coins).toLocaleString());
   body.appendChild(info);
   if (g.hp < g.max) { const c = Math.max(5, Math.round((20 + T.fence * 6) * (1 - g.hp / g.max)));
-    body.appendChild(btn(g.hp <= 0 ? '🔧 สร้างประตูใหม่' : '🔧 ซ่อมประตู', `🪙${c}`, save.coins >= c, () => { save.coins -= c; g.hp = g.max; SFX.play('plus'); addFx('ring', g.x, FENCE_Y + 0.5, '#7dff8a'); })); }
+    body.appendChild(btn(g.hp <= 0 ? tr("🔧 สร้างประตูใหม่") : tr("🔧 ซ่อมประตู"), `🪙${c}`, save.coins >= c, () => { save.coins -= c; g.hp = g.max; SFX.play('plus'); addFx('ring', g.x, FENCE_Y + 0.5, '#7dff8a'); })); }
   const fc = 50 * T.fence;
-  body.appendChild(btn(`🧱 อัปเกรดกำแพงเมือง Lv.${T.fence + 1}`, `ประตูทน ${wallMax(GATE)} → ${Math.round((30 + T.fence * 18) * (1.4 + (T.gatehouse || 0) * 0.6))}${WALL_LOOK_AT.includes(T.fence + 1) ? ` • โฉมใหม่: ${WALL_TIERS[wallTierOf(T.fence + 1)].name}` : ''} • 🪙${fc}`, save.coins >= fc, () => {
+  body.appendChild(btn(tr("🧱 อัปเกรดกำแพงเมือง Lv.{0}", T.fence + 1), tr("ประตูทน {0} → {1}{2} • 🪙{3}", wallMax(GATE), Math.round((30 + T.fence * 18) * (1.4 + (T.gatehouse || 0) * 0.6)), WALL_LOOK_AT.includes(T.fence + 1) ? tr(" • โฉมใหม่: {0}", WALL_TIERS[wallTierOf(T.fence + 1)].name) : '', fc), save.coins >= fc, () => {
     save.coins -= fc; const before = wallTierOf(T.fence); T.fence++; for (const w of D.walls) { w.max = wallMax(w.i); w.hp = w.gate ? Math.min(w.max, w.hp + 18) : w.max; }
     SFX.play('upgrade');
-    if (wallTierOf(T.fence) > before) { toast(`🏰 กำแพงโฉมใหม่: ${WALL_TIERS[wallTierOf(T.fence)].name}!`); for (let i = 0; i < 30; i++) confetti((Math.random() - 0.5) * 8, FENCE_Y); }
+    if (wallTierOf(T.fence) > before) { toast(tr("🏰 กำแพงโฉมใหม่: {0}!", WALL_TIERS[wallTierOf(T.fence)].name)); for (let i = 0; i < 30; i++) confetti((Math.random() - 0.5) * 8, FENCE_Y); }
   }));
-  if (T.gatehouse < 3) body.appendChild(btn(`🏯 ${['สร้างซุ้มประตูเมือง', 'ซุ้มประตูหิน', 'ซุ้มประตูทองคำ'][T.gatehouse]}`, T.wave < 3 ? 'ปลดล็อกวันที่ 3' : `ประตูทนขึ้นอีกมาก • 🪙${gateCost()}`, T.wave >= 3 && save.coins >= gateCost(), () => { save.coins -= gateCost(); T.gatehouse++; g.max = wallMax(GATE); g.hp = g.max; SFX.play('upgrade'); toast('🏯 ประตูเมืองแข็งแรงขึ้นแล้ว!'); }));
-  if (T.expand < MAX_EXPAND) body.appendChild(btn(`🏰 สร้างกำแพงข้าง (ตัว U) ${T.expand + 1}/${MAX_EXPAND}`, T.wave < expandDay() ? `ปลดล็อกวันที่ ${expandDay()} • ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด` : `ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด วางป้อมได้ทันที • 🪙${expandCost()}`, T.wave >= expandDay() && save.coins >= expandCost(), () => { save.coins -= expandCost(); expandTown(); }));
+  if (T.gatehouse < 3) body.appendChild(btn(`🏯 ${[tr("สร้างซุ้มประตูเมือง"), tr("ซุ้มประตูหิน"), tr("ซุ้มประตูทองคำ")][T.gatehouse]}`, T.wave < 3 ? tr("ปลดล็อกวันที่ 3") : tr("ประตูทนขึ้นอีกมาก • 🪙{0}", gateCost()), T.wave >= 3 && save.coins >= gateCost(), () => { save.coins -= gateCost(); T.gatehouse++; g.max = wallMax(GATE); g.hp = g.max; SFX.play('upgrade'); toast(tr("🏯 ประตูเมืองแข็งแรงขึ้นแล้ว!")); }));
+  if (T.expand < MAX_EXPAND) body.appendChild(btn(tr("🏰 สร้างกำแพงข้าง (ตัว U) {0}/{1}", T.expand + 1, MAX_EXPAND), T.wave < expandDay() ? tr("ปลดล็อกวันที่ {0} • ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด", expandDay()) : tr("ได้จุดตั้งป้อมเป็ดเพิ่ม 2 จุด วางป้อมได้ทันที • 🪙{0}", expandCost()), T.wave >= expandDay() && save.coins >= expandCost(), () => { save.coins -= expandCost(); expandTown(); }));
   $('sheet').classList.remove('hidden');
 }
 function openCamp(i) {
   sheetFor = { camp: i };
   const body = $('sheetBody'); body.innerHTML = '';
   const cm = T.camps[i];
-  $('sheetTitle').textContent = cm ? `⛺ ค่ายเป็ดวางกับดัก Lv.${cm.lvl}` : '⛺ ค่ายเป็ดวางกับดัก';
+  $('sheetTitle').textContent = cm ? tr("⛺ ค่ายเป็ดวางกับดัก Lv.{0}", cm.lvl) : tr("⛺ ค่ายเป็ดวางกับดัก");
   const info = document.createElement('div'); info.className = 'sinfo';
-  info.innerHTML = 'เป็ดจากค่ายจะปีนกำแพงออกไปวาง<b>ไม้กระดก</b> (แมวเหยียบแล้วดีดกระเด็น) สลับกับ<b>ระเบิดปลาทู</b> ไว้หน้าแมว';
+  info.innerHTML = tr("เป็ดจากค่ายจะปีนกำแพงออกไปวาง<b>ไม้กระดก</b> (แมวเหยียบแล้วดีดกระเด็น) สลับกับ<b>ระเบิดปลาทู</b> ไว้หน้าแมว");
   body.appendChild(info);
-  if (!cm) body.appendChild(btn('⛺ ตั้งค่าย', 'เป็ดวางกับดัก 1 ตัว • 🪙500', save.coins >= 500, () => { save.coins -= 500; T.camps[i] = { lvl: 1 }; SFX.play('quack'); toast('ตั้งค่ายแล้ว! 🪤'); }));
+  if (!cm) body.appendChild(btn(tr("⛺ ตั้งค่าย"), tr("เป็ดวางกับดัก 1 ตัว • 🪙500"), save.coins >= 500, () => { save.coins -= 500; T.camps[i] = { lvl: 1 }; SFX.play('quack'); toast(tr("ตั้งค่ายแล้ว! 🪤")); }));
   else if (cm.lvl < 10) { const c = Math.round(55 * Math.pow(cm.lvl, 1.5) * 1.4);
-    body.appendChild(btn(`⬆️ อัปเกรดค่าย Lv.${cm.lvl + 1}`, `กับดักแรงขึ้น • Lv.5, 10 ได้เป็ดเพิ่ม • 🪙${c}`, save.coins >= c, () => { save.coins -= c; cm.lvl++; SFX.play('upgrade'); if (cm.lvl === 5 || cm.lvl === 10) toast('ได้เป็ดวางกับดักเพิ่ม 1 ตัว!'); })); }
-  else { const d = document.createElement('div'); d.className = 'sinfo'; d.textContent = '⭐ เลเวลเต็มแล้ว'; body.appendChild(d); }
+    body.appendChild(btn(tr("⬆️ อัปเกรดค่าย Lv.{0}", cm.lvl + 1), tr("กับดักแรงขึ้น • Lv.5, 10 ได้เป็ดเพิ่ม • 🪙{0}", c), save.coins >= c, () => { save.coins -= c; cm.lvl++; SFX.play('upgrade'); if (cm.lvl === 5 || cm.lvl === 10) toast(tr("ได้เป็ดวางกับดักเพิ่ม 1 ตัว!")); })); }
+  else { const d = document.createElement('div'); d.className = 'sinfo'; d.textContent = tr("⭐ เลเวลเต็มแล้ว"); body.appendChild(d); }
   $('sheet').classList.remove('hidden');
 }
 function closeBaseMenu() { const m = document.getElementById('baseMenu'); if (m) m.remove(); }
@@ -1596,24 +1596,24 @@ function openBaseMenu(s) {
     m.appendChild(b); return b;
   };
   if (!p) {
-    mk('🏰', 'สร้างป้อม', `🪙${buildCost()}`, save.coins >= buildCost(), () => { save.coins -= buildCost(); T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast('เป็ดขึ้นป้อมแล้ว! 🦆'); persist(); closeBaseMenu(); renderTdHud(); });
+    mk('🏰', tr("สร้างป้อม"), `🪙${buildCost()}`, save.coins >= buildCost(), () => { save.coins -= buildCost(); T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast(tr("เป็ดขึ้นป้อมแล้ว! 🦆")); persist(); closeBaseMenu(); renderTdHud(); });
   } else {
     if (p.lvl < 10) mk('⬆️', `Lv.${p.lvl + 1}`, `🪙${lvlCost(p)}`, save.coins >= lvlCost(p), () => {
       const before = tierOf(p.lvl); save.coins -= lvlCost(p); p.lvl++; const after = tierOf(p.lvl);
       addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('upgrade'); D.floats.push({ x: q.x, y: q.y, t: 0, text: `⬆️ Lv.${p.lvl}`, color: '#ffe680', big: true });
-      if (after > before) { toast(`ป้อมใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); for (let i = 0; i < 30; i++) confetti(q.x, q.y); }
+      if (after > before) { toast(tr("ป้อมใหม่: {0}! {1}", PLAT_NAME[after], PLAT_SKILL[after])); for (let i = 0; i < 30; i++) confetti(q.x, q.y); }
       persist(); renderTdHud(); openBaseMenu(s);
     });
-    else mk('⭐', 'เต็มแล้ว', '', false, () => {});
-    mk('⚔️', 'อาวุธ', WEAPON[p.w].icon, true, () => { closeBaseMenu(); openSlot(s); });
+    else mk('⭐', tr("เต็มแล้ว"), '', false, () => {});
+    mk('⚔️', tr("อาวุธ"), WEAPON[p.w].icon, true, () => { closeBaseMenu(); openSlot(s); });
     const idle = D.phase !== 'wave';
-    mk('🔀', 'ย้าย', '', idle, () => { D.moveFrom = s; closeBaseMenu(); toast('🔀 แตะจุดบนกำแพงที่จะย้ายไป'); });
+    mk('🔀', tr("ย้าย"), '', idle, () => { D.moveFrom = s; closeBaseMenu(); toast(tr("🔀 แตะจุดบนกำแพงที่จะย้ายไป")); });
     let sure = false; const sv = sellValue(p);
-    const sb = mk('💰', 'ขาย', `+${sv}`, idle, () => {
-      if (!sure) { sure = true; sb.querySelector('b').textContent = 'ยืนยัน?'; sb.style.background = 'linear-gradient(#ff8a5a,#d8452a)'; SFX.play('click'); return; }
-      save.coins += sv; T.plats = T.plats.filter(x => x !== p); D.shooters.delete(s); SFX.play('coin'); toast(`ขายป้อมแล้ว +🪙${sv}`); persist(); closeBaseMenu(); renderTdHud();
+    const sb = mk('💰', tr("ขาย"), `+${sv}`, idle, () => {
+      if (!sure) { sure = true; sb.querySelector('b').textContent = tr("ยืนยัน?"); sb.style.background = 'linear-gradient(#ff8a5a,#d8452a)'; SFX.play('click'); return; }
+      save.coins += sv; T.plats = T.plats.filter(x => x !== p); D.shooters.delete(s); SFX.play('coin'); toast(tr("ขายป้อมแล้ว +🪙{0}", sv)); persist(); closeBaseMenu(); renderTdHud();
     });
-    if (!idle) { const n = document.createElement('div'); n.style.cssText = 'position:absolute;left:0;right:0;top:100%;text-align:center;font:700 10px Mitr,system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000;margin-top:2px'; n.textContent = 'ย้าย/ขายได้ตอนพัก'; m.appendChild(n); }
+    if (!idle) { const n = document.createElement('div'); n.style.cssText = 'position:absolute;left:0;right:0;top:100%;text-align:center;font:700 10px Mitr,system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000;margin-top:2px'; n.textContent = tr("ย้าย/ขายได้ตอนพัก"); m.appendChild(n); }
   }
   document.body.appendChild(m);
   const r = m.getBoundingClientRect(); m.style.left = Math.max(r.width / 2 + 6, Math.min(W - r.width / 2 - 6, sp.x)) + 'px';
@@ -1623,45 +1623,45 @@ function openSlot(s) {
   const body = $('sheetBody'); body.innerHTML = '';
   const p = platAt(s);
   if (!p) {
-    $('sheetTitle').textContent = '🏰 สร้างป้อมเป็ดตรงนี้';
+    $('sheetTitle').textContent = tr("🏰 สร้างป้อมเป็ดตรงนี้");
     const info = document.createElement('div'); info.className = 'sinfo';
-    info.innerHTML = `เป็ดถือตะเกียบจะขึ้นมาประจำป้อมนี้ แล้วค่อยเปลี่ยนอาวุธทีหลังได้ • มีเหรียญ 🪙 <b>${Math.floor(save.coins).toLocaleString()}</b>`;
+    info.innerHTML = tr("เป็ดถือตะเกียบจะขึ้นมาประจำป้อมนี้ แล้วค่อยเปลี่ยนอาวุธทีหลังได้ • มีเหรียญ 🪙 <b>{0}</b>", Math.floor(save.coins).toLocaleString());
     body.appendChild(info);
-    body.appendChild(btn('🏰 สร้างป้อม + เป็ดยิง', `🪙${buildCost()}`, save.coins >= buildCost(), () => {
-      save.coins -= buildCost(); T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast('เป็ดขึ้นป้อมแล้ว! 🦆'); closeSheet();
+    body.appendChild(btn(tr("🏰 สร้างป้อม + เป็ดยิง"), `🪙${buildCost()}`, save.coins >= buildCost(), () => {
+      save.coins -= buildCost(); T.plats.push({ slot: s, w: 'bow', lvl: 1 }); shooter(s).arrive = 1; SFX.play('quack'); toast(tr("เป็ดขึ้นป้อมแล้ว! 🦆")); closeSheet();
     }));
   } else {
     const W0 = WEAPON[p.w];
     $('sheetTitle').textContent = `${W0.icon} ${PLAT_NAME[tierOf(p.lvl)]} • ${W0.name} Lv.${p.lvl}`;
     const info = document.createElement('div'); info.className = 'sinfo';
-    info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • ดาเมจ ${wDmg(p).toFixed(1)} • ยิง ${W0.rate}/วิ • ระยะ ${Math.round(W0.range)}${W0.splash ? ' • ระเบิด' : ''}${W0.multi ? ' • 3 ดอก' : ''}`;
+    info.innerHTML = tr("🪙 <b>{0}</b> • ดาเมจ {1} • ยิง {2}/วิ • ระยะ {3}{4}{5}", Math.floor(save.coins).toLocaleString(), wDmg(p).toFixed(1), W0.rate, Math.round(W0.range), W0.splash ? tr(" • ระเบิด") : '', W0.multi ? tr(" • 3 ดอก") : '');
     body.appendChild(info);
     const pk = PERKS[p.w], perk = document.createElement('div'); perk.className = 'sinfo';
-    perk.innerHTML = `⭐ Lv.5: ${pk[0]} ${p.lvl >= 5 ? '✅' : '🔒'}<br>🌟 Lv.10: ${pk[1]} ${p.lvl >= 10 ? '✅' : '🔒'}<br><small>เลเวล 4, 7, 10 เอฟเฟกต์ยิงจะสวยขึ้น</small>`;
+    perk.innerHTML = tr("⭐ Lv.5: {0} {1}<br>🌟 Lv.10: {2} {3}<br><small>เลเวล 4, 7, 10 เอฟเฟกต์ยิงจะสวยขึ้น</small>", pk[0], p.lvl >= 5 ? '✅' : '🔒', pk[1], p.lvl >= 10 ? '✅' : '🔒');
     body.appendChild(perk);
-    if (p.lvl < 10) body.appendChild(btn(`⬆️ อัปเกรดเป็น Lv.${p.lvl + 1}`, `${[4, 7, 10].includes(p.lvl + 1) ? `ป้อมเปลี่ยนเป็น${PLAT_NAME[tierOf(p.lvl + 1)]}! • ` : ''}🪙${lvlCost(p)}`, save.coins >= lvlCost(p), () => {
+    if (p.lvl < 10) body.appendChild(btn(tr("⬆️ อัปเกรดเป็น Lv.{0}", p.lvl + 1), `${[4, 7, 10].includes(p.lvl + 1) ? tr("ป้อมเปลี่ยนเป็น{0}! • ", PLAT_NAME[tierOf(p.lvl + 1)]) : ''}🪙${lvlCost(p)}`, save.coins >= lvlCost(p), () => {
       const before = tierOf(p.lvl); save.coins -= lvlCost(p); p.lvl++; const after = tierOf(p.lvl); const q = platPos(s);
       addFx('ring', q.x, q.y, '#ffd84a'); SFX.play('upgrade');
-      if (after > before) { toast(`ป้อมใหม่: ${PLAT_NAME[after]}! ${PLAT_SKILL[after]}`); for (let i = 0; i < 30; i++) confetti(q.x, q.y); }
+      if (after > before) { toast(tr("ป้อมใหม่: {0}! {1}", PLAT_NAME[after], PLAT_SKILL[after])); for (let i = 0; i < 30; i++) confetti(q.x, q.y); }
     }));
-    else { const mx = document.createElement('div'); mx.className = 'sinfo'; mx.textContent = '⭐ เลเวลเต็มแล้ว! ' + PLAT_SKILL[3]; body.appendChild(mx); }
+    else { const mx = document.createElement('div'); mx.className = 'sinfo'; mx.textContent = tr("⭐ เลเวลเต็มแล้ว! ") + PLAT_SKILL[3]; body.appendChild(mx); }
     const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px';
-    const mv = btn('🔀 ย้าย / สลับ', 'แตะป้อมปลายทาง', D.phase !== 'wave', () => { D.moveFrom = s; closeSheet(); toast('🔀 แตะจุดบนกำแพงที่จะย้ายไป (แตะที่อื่นเพื่อยกเลิก)'); });
+    const mv = btn(tr("🔀 ย้าย / สลับ"), tr("แตะป้อมปลายทาง"), D.phase !== 'wave', () => { D.moveFrom = s; closeSheet(); toast(tr("🔀 แตะจุดบนกำแพงที่จะย้ายไป (แตะที่อื่นเพื่อยกเลิก)")); });
     let sure = false; const sv = sellValue(p);
-    const sl = btn('💰 ขาย', `+🪙${sv}`, D.phase !== 'wave', () => {});
-    sl.onclick = e => { e.stopPropagation(); if (D.phase === 'wave') { toast('ย้าย/ขายได้ตอนพักระหว่างวัน'); return; }
-      if (!sure) { sure = true; sl.querySelector('b').textContent = '💰 แตะอีกครั้งเพื่อขาย'; SFX.play('click'); return; }
-      save.coins += sv; T.plats = T.plats.filter(q => q !== p); D.shooters.delete(s); SFX.play('coin'); toast(`ขายป้อมแล้ว +🪙${sv}`); persist(); closeSheet(); renderTdHud(); };
-    if (D.phase === 'wave') mv.onclick = e => { e.stopPropagation(); toast('ย้าย/ขายได้ตอนพักระหว่างวัน'); };
+    const sl = btn(tr("💰 ขาย"), `+🪙${sv}`, D.phase !== 'wave', () => {});
+    sl.onclick = e => { e.stopPropagation(); if (D.phase === 'wave') { toast(tr("ย้าย/ขายได้ตอนพักระหว่างวัน")); return; }
+      if (!sure) { sure = true; sl.querySelector('b').textContent = tr("💰 แตะอีกครั้งเพื่อขาย"); SFX.play('click'); return; }
+      save.coins += sv; T.plats = T.plats.filter(q => q !== p); D.shooters.delete(s); SFX.play('coin'); toast(tr("ขายป้อมแล้ว +🪙{0}", sv)); persist(); closeSheet(); renderTdHud(); };
+    if (D.phase === 'wave') mv.onclick = e => { e.stopPropagation(); toast(tr("ย้าย/ขายได้ตอนพักระหว่างวัน")); };
     mv.style.flex = sl.style.flex = '1'; row.appendChild(mv); row.appendChild(sl); body.appendChild(row);
     const head = document.createElement('div'); head.className = 'sinfo'; head.style.marginTop = '10px';
-    head.textContent = 'เปลี่ยนอาวุธ (เลเวลยังอยู่เหมือนเดิม)';
+    head.textContent = tr("เปลี่ยนอาวุธ (เลเวลยังอยู่เหมือนเดิม)");
     body.appendChild(head);
     for (const w of WEAPONS) {
       if (w.id === p.w) continue;
       const better = WEAPONS.indexOf(w) > WEAPONS.indexOf(W0);
-      body.appendChild(btn(`${w.icon} ${w.name}`, `ดาเมจ ${w.dmg} • ยิง ${w.rate}/วิ${w.splash ? ' • ระเบิด' : ''}${w.multi ? ' • 3 ดอก' : ''} • 🪙${w.cost}`, save.coins >= w.cost, () => {
-        save.coins -= w.cost; p.w = w.id; SFX.play(better ? 'gateGood' : 'click'); toast(`เปลี่ยนเป็น${w.name}!`);
+      body.appendChild(btn(`${w.icon} ${w.name}`, tr("ดาเมจ {0} • ยิง {1}/วิ{2}{3} • 🪙{4}", w.dmg, w.rate, w.splash ? tr(" • ระเบิด") : '', w.multi ? tr(" • 3 ดอก") : '', w.cost), save.coins >= w.cost, () => {
+        save.coins -= w.cost; p.w = w.id; SFX.play(better ? 'gateGood' : 'click'); toast(tr("เปลี่ยนเป็น{0}!", w.name));
       }));
     }
   }
@@ -1670,31 +1670,31 @@ function openSlot(s) {
 function openHouse() {
   sheetFor = 'house';
   const body = $('sheetBody'); body.innerHTML = '';
-  $('sheetTitle').textContent = '🏠 บ้านเป็ด';
+  $('sheetTitle').textContent = tr("🏠 บ้านเป็ด");
   const info = document.createElement('div'); info.className = 'sinfo';
-  info.innerHTML = `🪙 <b>${Math.floor(save.coins).toLocaleString()}</b> • เป็ดยิง ${T.plats.length} ตัว • วันถัดไป ${T.wave}`;
+  info.innerHTML = tr("🪙 <b>{0}</b> • เป็ดยิง {1} ตัว • วันถัดไป {2}", Math.floor(save.coins).toLocaleString(), T.plats.length, T.wave);
   body.appendChild(info);
   const fc = 50 * T.fence, bc = 60 * T.bomb;
-  const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = '🦆 <b>เป็ดหัวหน้า</b> (แตะวงกลมซื้อของ เป็ดจะเดินไปจ่ายเอง ลากนิ้วก็ยังบังคับเดินได้ และฟาดแมวด้วยทัพพี)'; body.appendChild(lh);
+  const lh = document.createElement('div'); lh.className = 'sinfo'; lh.innerHTML = tr("🦆 <b>เป็ดหัวหน้า</b> (แตะวงกลมซื้อของ เป็ดจะเดินไปจ่ายเอง ลากนิ้วก็ยังบังคับเดินได้ และฟาดแมวด้วยทัพพี)"); body.appendChild(lh);
   const la = 70 * T.lead.atk, ls = 60 * T.lead.spd, lm = 50 * T.lead.mag;
-  body.appendChild(btn(`🥄 ทัพพี Lv.${T.lead.atk}${T.lead.atk >= 5 ? ' → กระทะ' : ''}`, `ฟาดแรง ${leadDmg().toFixed(1)} • 🪙${la}`, save.coins >= la, () => { save.coins -= la; T.lead.atk++; SFX.play('upgrade'); if (T.lead.atk === 5) toast('ได้กระทะ! ฟาดแรงขึ้น 🍳'); }));
-  body.appendChild(btn(`👟 วิ่งไว Lv.${T.lead.spd}`, `ความเร็ว ${leadSpeed().toFixed(1)} • 🪙${ls}`, save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; SFX.play('upgrade'); }));
-  const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = '🏰 เมืองเป็ด'; body.appendChild(hh);
-  body.appendChild(btn(`🥚 เสริมเกราะไข่ทองคำ Lv.${T.house + 1}`, `ทน ${houseMax()} → ${houseMax() + 12} • 🪙${80 * T.house}`, save.coins >= 80 * T.house, () => { save.coins -= 80 * T.house; T.house++; SFX.play('upgrade'); D.houseHp = D.houseMax = houseMax(); }));
-  { const wh = document.createElement('div'); wh.className = 'sinfo'; wh.textContent = '🧱 อัปเกรดกำแพง ประตูเมือง และกำแพงข้าง: แตะที่ตัวกำแพงได้เลย'; body.appendChild(wh); }
-  body.appendChild(btn(`🐟 กับดักปลาทูระเบิด (มี ${T.traps})`, `ซื้อเพิ่ม 1 อัน • 🪙120`, save.coins >= 120, () => { save.coins -= 120; T.traps++; }));
-  body.appendChild(btn(`🌶️ ระเบิดพริก Lv.${T.bomb}`, `แรง ${bombDmg()} • 🪙${bc}`, save.coins >= bc, () => { save.coins -= bc; T.bomb++; SFX.play('upgrade'); }));
+  body.appendChild(btn(tr("🥄 ทัพพี Lv.{0}{1}", T.lead.atk, T.lead.atk >= 5 ? tr(" → กระทะ") : ''), tr("ฟาดแรง {0} • 🪙{1}", leadDmg().toFixed(1), la), save.coins >= la, () => { save.coins -= la; T.lead.atk++; SFX.play('upgrade'); if (T.lead.atk === 5) toast(tr("ได้กระทะ! ฟาดแรงขึ้น 🍳")); }));
+  body.appendChild(btn(tr("👟 วิ่งไว Lv.{0}", T.lead.spd), tr("ความเร็ว {0} • 🪙{1}", leadSpeed().toFixed(1), ls), save.coins >= ls, () => { save.coins -= ls; T.lead.spd++; SFX.play('upgrade'); }));
+  const hh = document.createElement('div'); hh.className = 'sinfo'; hh.style.marginTop = '10px'; hh.textContent = tr("🏰 เมืองเป็ด"); body.appendChild(hh);
+  body.appendChild(btn(tr("🥚 เสริมเกราะไข่ทองคำ Lv.{0}", T.house + 1), tr("ทน {0} → {1} • 🪙{2}", houseMax(), houseMax() + 12, 80 * T.house), save.coins >= 80 * T.house, () => { save.coins -= 80 * T.house; T.house++; SFX.play('upgrade'); D.houseHp = D.houseMax = houseMax(); }));
+  { const wh = document.createElement('div'); wh.className = 'sinfo'; wh.textContent = tr("🧱 อัปเกรดกำแพง ประตูเมือง และกำแพงข้าง: แตะที่ตัวกำแพงได้เลย"); body.appendChild(wh); }
+  body.appendChild(btn(tr("🐟 กับดักปลาทูระเบิด (มี {0})", T.traps), tr("ซื้อเพิ่ม 1 อัน • 🪙120"), save.coins >= 120, () => { save.coins -= 120; T.traps++; }));
+  body.appendChild(btn(tr("🌶️ ระเบิดพริก Lv.{0}", T.bomb), tr("แรง {0} • 🪙{1}", bombDmg(), bc), save.coins >= bc, () => { save.coins -= bc; T.bomb++; SFX.play('upgrade'); }));
   const rp = document.createElement('button'); rp.className = 'sbtn'; rp.style.background = '#6d8fc9'; rp.style.boxShadow = '0 4px 0 #3f62a3';
-  rp.innerHTML = '<b>🎬 ดูเรื่องราวตอนต้นอีกครั้ง</b>'; rp.onclick = () => { closeSheet(); playIntro(); }; body.appendChild(rp);
-  const ver = document.createElement('div'); ver.className = 'sinfo'; ver.style.opacity = '.7'; ver.textContent = `เกม ${gameVersion()} • อัปเดตอัตโนมัติเมื่อมีแพตใหม่`; body.appendChild(ver);
+  rp.innerHTML = tr("<b>🎬 ดูเรื่องราวตอนต้นอีกครั้ง</b>"); rp.onclick = () => { closeSheet(); playIntro(); }; body.appendChild(rp);
+  const ver = document.createElement('div'); ver.className = 'sinfo'; ver.style.opacity = '.7'; ver.textContent = tr("เกม {0} • อัปเดตอัตโนมัติเมื่อมีแพตใหม่", gameVersion()); body.appendChild(ver);
   $('sheet').classList.remove('hidden');
 }
 function renderItemBar() {
   const bar = $('itemBar'); if (!bar || !D) return;
   const wave = D.phase === 'wave';
   const list = [
-    { k: 'bomb', i: '🌶️', n: 'พริก', c: null, off: !wave || D.bombCd > 0, cd: wave ? Math.max(0, D.bombCd / 7) : 0 },
-    { k: 'trap', i: '🐟', n: 'ปลาทู', c: T.traps, off: !wave || T.traps <= 0, on: D.trapMode },
+    { k: 'bomb', i: '🌶️', n: tr("พริก"), c: null, off: !wave || D.bombCd > 0, cd: wave ? Math.max(0, D.bombCd / 7) : 0 },
+    { k: 'trap', i: '🐟', n: tr("ปลาทู"), c: T.traps, off: !wave || T.traps <= 0, on: D.trapMode },
     ...['bolt', 'top', 'ufo'].filter(k => (T.items[k] || 0) > 0).map(k => ({ k, i: ITEM_INFO[k].icon, n: ITEM_INFO[k].short, c: T.items[k], off: !wave || itemBusy(k) })),
   ];
   const key = list.map(x => [x.k, x.c, x.off, x.on, Math.round((x.cd || 0) * 10)].join(':')).join('|');
@@ -1705,9 +1705,9 @@ function renderItemBar() {
     b.innerHTML = `${it.cd ? `<span class="cd" style="transform:scaleY(${it.cd})"></span>` : ''}<i>${it.i}</i><small>${it.n}</small>${it.c !== null ? `<b>${it.c}</b>` : ''}`;
     b.onclick = e => {
       e.stopPropagation(); SFX.init();
-      if (D.phase !== 'wave') { toast(`${it.i} ${it.n}: ใช้ได้ตอนสู้`); return; }
-      if (it.k === 'bomb') { toast('🌶️ แตะที่พื้นตรงไหนก็ได้เพื่อปาระเบิดพริก'); return; }
-      if (it.k === 'trap') { if (T.traps <= 0) { toast('กับดักปลาทูหมดแล้ว ซื้อเพิ่มที่บ้าน 🏠'); return; } D.trapMode = !D.trapMode; SFX.play('click'); renderItemBar(); return; }
+      if (D.phase !== 'wave') { toast(tr("{0} {1}: ใช้ได้ตอนสู้", it.i, it.n)); return; }
+      if (it.k === 'bomb') { toast(tr("🌶️ แตะที่พื้นตรงไหนก็ได้เพื่อปาระเบิดพริก")); return; }
+      if (it.k === 'trap') { if (T.traps <= 0) { toast(tr("กับดักปลาทูหมดแล้ว ซื้อเพิ่มที่บ้าน 🏠")); return; } D.trapMode = !D.trapMode; SFX.play('click'); renderItemBar(); return; }
       useItem(it.k); renderItemBar();
     };
     bar.appendChild(b);
@@ -1722,7 +1722,7 @@ function renderTdHud() {
   $('tdWave').textContent = T.wave;
   $('waveBtn').classList.toggle('hidden', D.phase !== 'build');
   for (const id of ['raidBtn', 'houseBtn', 'helpBtn']) { const el = $(id); if (el) el.style.visibility = D.phase === 'intro' ? 'hidden' : ''; }
-  $('waveBtn').textContent = `▶ เริ่มวันที่ ${T.wave} ${WEATHERS[weatherOf(T.wave)].icon}${T.wave % 5 === 0 ? ' 👑' : ''}`;
+  $('waveBtn').textContent = tr("▶ เริ่มวันที่ {0} {1}{2}", T.wave, WEATHERS[weatherOf(T.wave)].icon, T.wave % 5 === 0 ? ' 👑' : '');
 }
 
 // ---------- drawing ----------
@@ -1869,13 +1869,13 @@ function drawLaneTrees(g, fy) {
 }
 // ---------- weather: every day looks a little different ----------
 const WEATHERS = {
-  sun:    { icon: '☀️', name: 'แดดสดใส' },
-  wind:   { icon: '🍃', name: 'ลมแรง ใบไม้ปลิว' },
-  rain:   { icon: '🌧️', name: 'ฝนตก' },
-  fog:    { icon: '🌫️', name: 'หมอกลง' },
-  sunset: { icon: '🌇', name: 'ตอนเย็น' },
-  night:  { icon: '🌙', name: 'กลางคืน' },
-  storm:  { icon: '⛈️', name: 'พายุฟ้าคะนอง!' },
+  sun:    { icon: '☀️', name: tr("แดดสดใส") },
+  wind:   { icon: '🍃', name: tr("ลมแรง ใบไม้ปลิว") },
+  rain:   { icon: '🌧️', name: tr("ฝนตก") },
+  fog:    { icon: '🌫️', name: tr("หมอกลง") },
+  sunset: { icon: '🌇', name: tr("ตอนเย็น") },
+  night:  { icon: '🌙', name: tr("กลางคืน") },
+  storm:  { icon: '⛈️', name: tr("พายุฟ้าคะนอง!") },
 };
 function weatherOf(day) {
   if (day <= 2) return 'sun';
@@ -2094,7 +2094,7 @@ function drawFence(w) {
   if (w.hp <= 0) {
     for (const f of [-0.3, 0.05, 0.35]) if (ready(IMG.fence_stump)) drawAt(IMG.fence_stump, c.x + f * dk * WALL_W, c.y + 2, dk * 0.42);
     ctx.font = '900 12px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)';
-    ctx.strokeText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.4); ctx.fillStyle = '#ffe2a8'; ctx.fillText('🔧 พาเป็ดมาซ่อม', c.x, c.y - hgt * 0.4);
+    ctx.strokeText(tr("🔧 พาเป็ดมาซ่อม"), c.x, c.y - hgt * 0.4); ctx.fillStyle = '#ffe2a8'; ctx.fillText(tr("🔧 พาเป็ดมาซ่อม"), c.x, c.y - hgt * 0.4);
     return;
   }
   const fimg = IMG[T.fence >= 6 ? 'k_fence3' : T.fence >= 3 ? 'k_fence2' : 'k_fence1'];
@@ -2940,10 +2940,10 @@ function drawGatehouse() {
 const WALL_COL = { face: '#c4b193', faceDark: '#a8957a', top: '#e6d8bb', merlon: '#d8c7a6', cap: '#efe3c8', out: '#4a3a2c' };
 // the wall changes look as it is upgraded: sandstone -> grey stone with banners -> granite with towers -> white marble and gold
 const WALL_TIERS = [
-  { name: 'กำแพงดินเผา', face: '#c4b193', top: '#e6d8bb', merlon: '#d8c7a6', cap: '#efe3c8', out: '#4a3a2c', mh: 0.42 },
-  { name: 'กำแพงหิน + ธง', face: '#a9a8a2', top: '#d6d4cc', merlon: '#bdbbb3', cap: '#dedcd4', out: '#3a3a40', mh: 0.48, banner: '#d8352a' },
-  { name: 'ป้อมหินมีหอคอย', face: '#8b93a3', top: '#c3c8d2', merlon: '#a3aab8', cap: '#d0d5de', out: '#2a2e3a', mh: 0.52, banner: '#2f6fd6', towers: '#c8463a' },
-  { name: 'กำแพงหินอ่อนทองคำ', face: '#ece6da', top: '#fbf7ee', merlon: '#f4eee2', cap: '#f2c440', out: '#7a5a1a', mh: 0.56, banner: '#7a3ad6', towers: '#f2b318', gold: true },
+  { name: tr("กำแพงดินเผา"), face: '#c4b193', top: '#e6d8bb', merlon: '#d8c7a6', cap: '#efe3c8', out: '#4a3a2c', mh: 0.42 },
+  { name: tr("กำแพงหิน + ธง"), face: '#a9a8a2', top: '#d6d4cc', merlon: '#bdbbb3', cap: '#dedcd4', out: '#3a3a40', mh: 0.48, banner: '#d8352a' },
+  { name: tr("ป้อมหินมีหอคอย"), face: '#8b93a3', top: '#c3c8d2', merlon: '#a3aab8', cap: '#d0d5de', out: '#2a2e3a', mh: 0.52, banner: '#2f6fd6', towers: '#c8463a' },
+  { name: tr("กำแพงหินอ่อนทองคำ"), face: '#ece6da', top: '#fbf7ee', merlon: '#f4eee2', cap: '#f2c440', out: '#7a5a1a', mh: 0.56, banner: '#7a3ad6', towers: '#f2b318', gold: true },
 ];
 const WALL_LOOK_AT = [3, 6, 9];
 function wallTierOf(lv) { return lv >= 9 ? 3 : lv >= 6 ? 2 : lv >= 3 ? 1 : 0; }
@@ -3372,22 +3372,22 @@ function drawTdHud() {
     // first-time hint until the player drags once
     const p = dproj(D.lead.x, D.lead.y), b = Math.sin(performance.now() / 250) * 6;
     ctx.font = '900 14px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
-    const tx = '👆 ลากนิ้วพาเป็ดหัวหน้าไปฟาดแมว'; ctx.strokeText(tx, p.x, p.y + dk * 0.9 + b); ctx.fillStyle = '#fff'; ctx.fillText(tx, p.x, p.y + dk * 0.9 + b);
+    const tx = tr("👆 ลากนิ้วพาเป็ดหัวหน้าไปฟาดแมว"); ctx.strokeText(tx, p.x, p.y + dk * 0.9 + b); ctx.fillStyle = '#fff'; ctx.fillText(tx, p.x, p.y + dk * 0.9 + b);
   }
   if (D.joy && D.joy.moved && !save.td.walked) { save.td.walked = true; persist(); }
   if (D.phase === 'wave') {
     const alive = D.cats.filter(c => c.hp > 0).length + D.queue.length;
     ctx.font = '900 16px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)';
-    const t1 = `🐱 เหลือ ${alive}`;
+    const t1 = tr("🐱 เหลือ {0}", alive);
     ctx.strokeText(t1, W / 2, 62); ctx.fillStyle = '#fff'; ctx.fillText(t1, W / 2, 62);
-    if (D.trapMode) { ctx.font = '900 14px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 110); ctx.fillStyle = '#ffe680'; ctx.fillText('แตะพื้นด้านบนเพื่อวางกับดัก', W / 2, H - 110); }
+    if (D.trapMode) { ctx.font = '900 14px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(tr("แตะพื้นด้านบนเพื่อวางกับดัก"), W / 2, H - 110); ctx.fillStyle = '#ffe680'; ctx.fillText(tr("แตะพื้นด้านบนเพื่อวางกับดัก"), W / 2, H - 110); }
     ctx.textBaseline = 'alphabetic';
   }
   if (D.banner > 0) {
     ctx.globalAlpha = Math.min(1, D.banner);
     ctx.font = '900 30px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(80,0,0,.75)';
-    const txt = D.bannerTxt || (D.bossBanner ? 'ราชาแมวมาแล้ว!! 👑' : 'แมวบุกมาแล้ว!');
+    const txt = D.bannerTxt || (D.bossBanner ? tr("ราชาแมวมาแล้ว!! 👑") : tr("แมวบุกมาแล้ว!"));
     ctx.strokeText(txt, W / 2, H * 0.2); ctx.fillStyle = '#ff6a5a'; ctx.fillText(txt, W / 2, H * 0.2);
     ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
   }
@@ -3395,9 +3395,9 @@ function drawTdHud() {
 
 // ---------- star rating, victory title, treasure chest and power-up items ----------
 const ITEM_INFO = {
-  bolt: { short: 'ฟ้าผ่า', name: 'ฟ้าผ่า', icon: '⚡', tip: 'ฟ้าผ่าแมวทีละตัว ช็อตจนเห็นกระดูก!' },
-  top:  { short: 'ลูกข่าง', name: 'ลูกข่างยักษ์', icon: '🌀', tip: 'หมุนวิ่งไปทั่วทาง ชนแมวกระเด็น' },
-  ufo:  { short: 'จานบิน', name: 'จานบิน', icon: '🛸', tip: 'ดูดแมวขึ้นฟ้าไปทีละตัว' },
+  bolt: { short: tr("ฟ้าผ่า"), name: tr("ฟ้าผ่า"), icon: '⚡', tip: tr("ฟ้าผ่าแมวทีละตัว ช็อตจนเห็นกระดูก!") },
+  top:  { short: tr("ลูกข่าง"), name: tr("ลูกข่างยักษ์"), icon: '🌀', tip: tr("หมุนวิ่งไปทั่วทาง ชนแมวกระเด็น") },
+  ufo:  { short: tr("จานบิน"), name: tr("จานบิน"), icon: '🛸', tip: tr("ดูดแมวขึ้นฟ้าไปทีละตัว") },
 };
 function itemButtons() {
   if (!D || D.phase !== 'wave') return [];
@@ -3407,8 +3407,8 @@ function itemButtons() {
 }
 function itemBusy(k) { return k === 'bolt' ? !!D.sky : k === 'top' ? D.tops.length > 0 : !!D.ufo; }
 function useItem(k) {
-  if (itemBusy(k)) { toast(`${ITEM_INFO[k].icon} ยังทำงานอยู่`); return; }
-  if (!D.cats.some(c => c.hp > 0)) { toast('ยังไม่มีแมวให้จัดการ'); return; }
+  if (itemBusy(k)) { toast(tr("{0} ยังทำงานอยู่", ITEM_INFO[k].icon)); return; }
+  if (!D.cats.some(c => c.hp > 0)) { toast(tr("ยังไม่มีแมวให้จัดการ")); return; }
   T.items[k]--; persist(); SFX.init();
   if (k === 'bolt') {
     const list = D.cats.filter(c => c.hp > 0 && !c.abduct && !c.launch && !c.under).sort((a, b) => b.y - a.y).slice(0, 8);
@@ -3648,7 +3648,7 @@ function drawVictoryTitle() {
   const pop = t < 0.35 ? 0.3 + (t / 0.35) * 1.0 : 1 + Math.sin((t - 0.35) * 9) * Math.exp(-(t - 0.35) * 4) * 0.25;
   ctx.save(); ctx.translate(cx, cy); ctx.scale(pop, pop); ctx.rotate(Math.sin(t * 3) * 0.03);
   ctx.font = '900 54px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-  const txt = D.vicStars >= 3 ? 'สุดยอด!!' : 'ชนะแล้ว!';
+  const txt = D.vicStars >= 3 ? tr("สุดยอด!!") : tr("ชนะแล้ว!");
   ctx.lineWidth = 12; ctx.strokeStyle = '#6a3a08'; ctx.strokeText(txt, 0, 4);
   const gr = ctx.createLinearGradient(0, -28, 0, 28); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(0.45, '#ffd84a'); gr.addColorStop(1, '#f29a18');
   ctx.fillStyle = gr; ctx.fillText(txt, 0, 0);
@@ -3657,7 +3657,7 @@ function drawVictoryTitle() {
   ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(sx, -40); ctx.lineTo(sx + 26, -40); ctx.lineTo(sx - 4, 40); ctx.lineTo(sx - 30, 40); ctx.closePath(); ctx.fill();
   ctx.globalCompositeOperation = 'source-over';
   // ribbon with the day
-  ctx.font = '900 17px Mitr,system-ui,sans-serif'; const rt = `ผ่านวันที่ ${T.wave} 🎉`, rw = ctx.measureText(rt).width + 40;
+  ctx.font = '900 17px Mitr,system-ui,sans-serif'; const rt = tr("ผ่านวันที่ {0} 🎉", T.wave), rw = ctx.measureText(rt).width + 40;
   ctx.fillStyle = '#d8352a'; ctx.strokeStyle = '#6a1a10'; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(-rw / 2 - 14, 42); ctx.lineTo(-rw / 2, 32); ctx.lineTo(rw / 2, 32); ctx.lineTo(rw / 2 + 14, 42); ctx.lineTo(rw / 2, 52); ctx.lineTo(-rw / 2, 52); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#fff'; ctx.fillText(rt, 0, 43);
@@ -3701,11 +3701,7 @@ function openChest(done) {
   const reward = rollReward();
   const el = document.createElement('div'); el.id = 'chest';
   el.style.cssText = 'position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,rgba(90,50,10,.85),rgba(10,5,20,.92));font-family:Mitr,system-ui,sans-serif;color:#fff;text-align:center';
-  el.innerHTML = `<div style="font:900 26px Mitr,system-ui,sans-serif;color:#ffd84a;text-shadow:0 3px 0 #6a3a08">⭐⭐⭐ 3 ดาว!</div>
-    <div class="ct" style="font:800 16px Mitr,system-ui,sans-serif;margin-top:4px">ได้หีบสมบัติ! แตะเพื่อเปิด</div>
-    <canvas width="640" height="640" style="width:min(80vw,320px);height:min(80vw,320px)"></canvas>
-    <div class="cr" style="min-height:58px;font:900 22px Mitr,system-ui,sans-serif;color:#ffe680;text-shadow:0 2px 0 #000"></div>
-    <button class="cb" style="display:none;margin-top:8px;border:0;border-radius:18px;padding:12px 30px;font:900 20px Mitr,system-ui,sans-serif;color:#fff;background:linear-gradient(#5fd06a,#2f9a3e);box-shadow:0 5px 0 #1f6a2a">รับรางวัล ✓</button>`;
+  el.innerHTML = tr("<div style=\"font:900 26px Mitr,system-ui,sans-serif;color:#ffd84a;text-shadow:0 3px 0 #6a3a08\">⭐⭐⭐ 3 ดาว!</div>\n    <div class=\"ct\" style=\"font:800 16px Mitr,system-ui,sans-serif;margin-top:4px\">ได้หีบสมบัติ! แตะเพื่อเปิด</div>\n    <canvas width=\"640\" height=\"640\" style=\"width:min(80vw,320px);height:min(80vw,320px)\"></canvas>\n    <div class=\"cr\" style=\"min-height:58px;font:900 22px Mitr,system-ui,sans-serif;color:#ffe680;text-shadow:0 2px 0 #000\"></div>\n    <button class=\"cb\" style=\"display:none;margin-top:8px;border:0;border-radius:18px;padding:12px 30px;font:900 20px Mitr,system-ui,sans-serif;color:#fff;background:linear-gradient(#5fd06a,#2f9a3e);box-shadow:0 5px 0 #1f6a2a\">รับรางวัล ✓</button>");
   document.body.appendChild(el);
   const cv2 = el.querySelector('canvas'), g = cv2.getContext('2d'), ct = el.querySelector('.ct'), cr = el.querySelector('.cr'), cb = el.querySelector('.cb');
   const st = { phase: 'wait', t: 0, open: 0, shake: 0, sparks: [] };
@@ -3734,9 +3730,9 @@ function openChest(done) {
     requestAnimationFrame(frame);
   }
   function grant() {
-    if (reward.k === 'coins') { save.coins += reward.n; cr.textContent = `🪙 ${reward.n} เหรียญ!`; }
-    else { T.items[reward.k] = (T.items[reward.k] || 0) + 1; cr.innerHTML = `${ITEM_INFO[reward.k].icon} ${ITEM_INFO[reward.k].name} x1!<div style="font:700 13px Mitr,system-ui,sans-serif;color:#fff;margin-top:4px">${ITEM_INFO[reward.k].tip}<br>ใช้ได้ตอนสู้ กดปุ่มทางขวาของจอ</div>`; }
-    persist(); SFX.play('reward'); ct.textContent = 'ได้รางวัล!';
+    if (reward.k === 'coins') { save.coins += reward.n; cr.textContent = tr("🪙 {0} เหรียญ!", reward.n); }
+    else { T.items[reward.k] = (T.items[reward.k] || 0) + 1; cr.innerHTML = tr("{0} {1} x1!<div style=\"font:700 13px Mitr,system-ui,sans-serif;color:#fff;margin-top:4px\">{2}<br>ใช้ได้ตอนสู้ กดปุ่มทางขวาของจอ</div>", ITEM_INFO[reward.k].icon, ITEM_INFO[reward.k].name, ITEM_INFO[reward.k].tip); }
+    persist(); SFX.play('reward'); ct.textContent = tr("ได้รางวัล!");
     setTimeout(() => { cb.style.display = ''; }, 500);
   }
   requestAnimationFrame(frame);
@@ -3754,20 +3750,20 @@ window.onMoltPatch = v => {
     b.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:50;border:0;border-radius:16px;padding:10px 18px;font:900 15px Mitr,system-ui,sans-serif;color:#fff;background:linear-gradient(#5fd06a,#2f9a3e);box-shadow:0 4px 0 #1f6a2a,0 8px 18px rgba(0,0,0,.35)';
     document.body.appendChild(b);
   }
-  b.innerHTML = `🔄 อัปเดตใหม่พร้อมแล้ว (รุ่น ${v})<br><small style="font-weight:700">แตะเพื่อโหลดเกมใหม่</small>`;
+  b.innerHTML = tr("🔄 อัปเดตใหม่พร้อมแล้ว (รุ่น {0})<br><small style=\"font-weight:700\">แตะเพื่อโหลดเกมใหม่</small>", v);
   b.onclick = () => {
-    if (D && (D.phase === 'wave' || D.phase === 'intro')) { toast('สู้วันนี้ให้จบก่อน แล้วค่อยอัปเดตนะ'); return; }
+    if (D && (D.phase === 'wave' || D.phase === 'intro')) { toast(tr("สู้วันนี้ให้จบก่อน แล้วค่อยอัปเดตนะ")); return; }
     persist(); if (window.AndroidPatch) AndroidPatch.reload();
   };
 };
-function gameVersion() { try { return window.AndroidPatch ? 'รุ่น ' + AndroidPatch.version() : 'เว็บ'; } catch (e) { return '?'; } }
+function gameVersion() { try { return window.AndroidPatch ? tr("รุ่น ") + AndroidPatch.version() : tr("เว็บ"); } catch (e) { return '?'; } }
 
 // ---------- buttons ----------
 $('waveBtn').onclick = e => { e.stopPropagation(); startWave(); };
 $('houseBtn').onclick = e => { e.stopPropagation(); SFX.init(); SFX.play('click'); openHouse(); };
 $('sheetClose').onclick = closeSheet;
 $('raidBtn').onclick = () => {
-  if (D && D.phase === 'wave') { toast('สู้วันนี้ให้จบก่อน'); return; }
+  if (D && D.phase === 'wave') { toast(tr("สู้วันนี้ให้จบก่อน")); return; }
   SFX.init(); SFX.play('click'); closeSheet(); hide('tdUi');
   state = 'menu'; renderMenu(); preview(); show('menu');
 };

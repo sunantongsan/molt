@@ -97,6 +97,15 @@
   #starRow span{transition:transform .25s}
   #starRow span.off{filter:grayscale(1) brightness(.75);opacity:.75}
   #starRow span.pop{transform:scale(1.5)}
+  #settingsBtn{position:fixed;right:8px;bottom:76px;z-index:5;border:0;border-radius:12px;width:44px;height:44px;background:#fff3cf;color:#453015;font-size:23px;cursor:pointer}
+  #settings{border:0;border-radius:20px;padding:20px;width:min(85vw,350px);background:#fffaf0;color:#39270f;font:700 15px Mitr,system-ui,sans-serif}
+  #settings::backdrop{background:#0009}
+  #settings h2{margin:0 0 12px}
+  #settings label{display:block;margin-bottom:5px}
+  #settings select,#settings button{font:inherit;padding:8px 10px;border:1px solid #d0bd98;border-radius:8px}
+  #settings select{width:100%}
+  #settings p{font-weight:400}
+  #settings button{display:block;margin-left:auto;background:#f6dcaa;cursor:pointer}
 </style>
 </head>
 <body>
@@ -104,55 +113,68 @@
 
 <div id="menu" class="ui">
   <h1>MOLT</h1>
-  <div class="sub">เลือกเส้นทาง • สร้างกองทัพ • บุกปราสาทศัตรู</div>
+  <div class="sub" data-tr="เลือกเส้นทาง • สร้างกองทัพ • บุกปราสาทศัตรู">เลือกเส้นทาง • สร้างกองทัพ • บุกปราสาทศัตรู</div>
   <div class="coins">🪙 <span id="mCoins">0</span></div>
   <div class="lvls" id="lvls"></div>
   <div class="ups" id="ups"></div>
   <div class="lvname" id="mName"></div>
-  <button class="btn" id="play">เล่นด่าน <span id="mLevel">1</span></button>
-  <div class="sub" style="font-size:13px;margin-top:4px">ลากนิ้วซ้าย-ขวาเพื่อบังคับ</div>
-  <button class="btn ghost" id="homeBtn">🦆 กลับบ้านเป็ด</button>
+  <button class="btn" id="play"><span data-tr="เล่นด่าน">เล่นด่าน</span> <span id="mLevel">1</span></button>
+  <div class="sub" style="font-size:13px;margin-top:4px" data-tr="ลากนิ้วซ้าย-ขวาเพื่อบังคับ">ลากนิ้วซ้าย-ขวาเพื่อบังคับ</div>
+  <button class="btn ghost" id="homeBtn" data-tr="🦆 กลับบ้านเป็ด">🦆 กลับบ้านเป็ด</button>
 </div>
 
-<button id="mute" aria-label="sound"></button>
+<button id="mute" data-label="เสียง"></button>
 <div id="tdUi" class="hidden">
   <div id="starRow"><span>⭐</span><span>⭐</span><span>⭐</span></div>
   <div class="hud">
-    <span>📅 วันที่ <b id="tdWave">1</b></span><span>🪙 <b id="tdCoins">0</b></span>
+    <span><span data-tr="📅 วันที่">📅 วันที่</span> <b id="tdWave">1</b></span><span>🪙 <b id="tdCoins">0</b></span>
   </div>
   <div class="raid">
-    <button class="btn" id="waveBtn">▶ เริ่มวันที่ 1</button>
+    <button class="btn" id="waveBtn" data-tr="▶ เริ่มวันที่ 1">▶ เริ่มวันที่ 1</button>
   </div>
-  <button id="houseBtn" class="roundbtn">🏠<small>บ้าน</small></button>
-  <button id="raidBtn" class="roundbtn raidb">⚔️<small>บุกแมว</small></button>
-  <button id="helpBtn" class="roundbtn help">❓<small>วิธีเล่น</small></button>
+  <button id="houseBtn" class="roundbtn">🏠<small data-tr="บ้าน">บ้าน</small></button>
+  <button id="raidBtn" class="roundbtn raidb">⚔️<small data-tr="บุกแมว">บุกแมว</small></button>
+  <button id="helpBtn" class="roundbtn help">❓<small data-tr="วิธีเล่น">วิธีเล่น</small></button>
+  <button id="settingsBtn" type="button" data-label="ตั้งค่า">⚙️</button>
   <div id="itemBar"></div>
 </div>
+<dialog id="settings">
+  <h2 data-tr="ตั้งค่า"></h2>
+  <label for="gameLanguage" data-tr="ภาษา"></label>
+  <select id="gameLanguage">
+    <option value="auto" data-tr="ตามภาษาเครื่อง"></option>
+    <option value="th" lang="th">ไทย</option>
+    <option value="en" lang="en">English</option>
+  </select>
+  <p data-tr="จะใช้ภาษาอังกฤษเมื่อภาษาของเครื่องไม่ใช่ภาษาไทย"></p>
+  <form method="dialog"><button data-tr="ปิด"></button></form>
+</dialog>
 <div id="sheet" class="hidden">
-  <div class="shead"><b id="sheetTitle"></b><button id="sheetClose">✕</button></div>
+  <div class="shead"><b id="sheetTitle"></b><button id="sheetClose" data-label="ปิด">✕</button></div>
   <div id="sheetBody"></div>
 </div>
 <div id="toast" class="hidden"></div>
-<div id="introUi" class="hidden"><button id="introSkip">ข้าม ▶▶</button><div class="introHint">แตะเพื่อไปต่อ</div></div>
+<div id="introUi" class="hidden"><button id="introSkip" data-tr="ข้าม ▶▶">ข้าม ▶▶</button><div class="introHint" data-tr="แตะเพื่อไปต่อ">แตะเพื่อไปต่อ</div></div>
 <div id="tut" class="hidden">
   <div id="tutSpot"></div>
   <div id="tutHand">👆</div>
-  <div id="tutBox"><div id="tutText"></div><div class="tutBtns"><button id="tutSkip">ข้าม</button><button id="tutNext">ต่อไป ▶</button></div><div id="tutDots"></div></div>
+  <div id="tutBox"><div id="tutText"></div><div class="tutBtns"><button id="tutSkip" data-tr="ข้าม">ข้าม</button><button id="tutNext" data-tr="ต่อไป ▶">ต่อไป ▶</button></div><div id="tutDots"></div></div>
 </div>
 <div id="result" class="ui hidden">
-  <h2 id="rTitle">ชนะ!</h2>
+  <h2 id="rTitle" data-tr="ชนะ!">ชนะ!</h2>
   <div id="rInfo" class="sub"></div>
   <div class="big">+<span id="rCoins">0</span> 🪙</div>
-  <button class="btn ad" id="adBtn">🎬 ดูโฆษณา รับ x3</button>
-  <button class="btn" id="next">🦆 กลับบ้านเป็ด</button>
+  <button class="btn ad" id="adBtn" data-tr="🎬 ดูโฆษณา รับ x3">🎬 ดูโฆษณา รับ x3</button>
+  <button class="btn" id="next" data-tr="🦆 กลับบ้านเป็ด">🦆 กลับบ้านเป็ด</button>
 </div>
 <div id="adFake" class="ui hidden">
-  <div class="sub" style="font-size:13px;opacity:.7">โฆษณา (ตัวอย่าง — ในแอปจะเป็นโฆษณาจริง)</div>
+  <div class="sub" style="font-size:13px;opacity:.7" data-tr="โฆษณา (ตัวอย่าง — ในแอปจะเป็นโฆษณาจริง)">โฆษณา (ตัวอย่าง — ในแอปจะเป็นโฆษณาจริง)</div>
   <div style="font-size:64px">🦆📺</div>
   <div class="big" id="adCount">5</div>
-  <button class="btn ghost" id="adClose" disabled>ปิด</button>
+  <button class="btn ghost" id="adClose" disabled data-tr="ปิด">ปิด</button>
 </div>
 
+<script src="i18n.js"></script>
 <script>
 "use strict";
 // ---------- Save ----------
@@ -162,9 +184,9 @@ try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
 const UPGRADES = [
-  { key: 'army',    name: 'ทหารเริ่มต้น', desc: lv => `เริ่ม ${1 + lv * 2} คน`, cost: lv => Math.round(40 * Math.pow(1.35, lv)) },
-  { key: 'archery', name: 'ธนูไว',        desc: lv => `ยิงเร็ว x${(1 + lv * 0.15).toFixed(2)}`, cost: lv => Math.round(60 * Math.pow(1.4, lv)) },
-  { key: 'income',  name: 'รายได้',       desc: lv => `เหรียญ x${(1 + lv * 0.2).toFixed(1)}`, cost: lv => Math.round(80 * Math.pow(1.45, lv)) },
+  { key: 'army',    name: tr("ทหารเริ่มต้น"), desc: lv => tr("เริ่ม {0} คน", 1 + lv * 2), cost: lv => Math.round(40 * Math.pow(1.35, lv)) },
+  { key: 'archery', name: tr("ธนูไว"),        desc: lv => tr("ยิงเร็ว x{0}", (1 + lv * 0.15).toFixed(2)), cost: lv => Math.round(60 * Math.pow(1.4, lv)) },
+  { key: 'income',  name: tr("รายได้"),       desc: lv => tr("เหรียญ x{0}", (1 + lv * 0.2).toFixed(1)), cost: lv => Math.round(80 * Math.pow(1.45, lv)) },
 ];
 
 // ---------- Sound (synthesised, no files) ----------
@@ -341,16 +363,16 @@ const Ads = {
     if (window.AndroidAds) {
       let shown = false;
       try { shown = AndroidAds.showRewarded(); } catch (e) {}
-      if (!shown) { Ads.cb = null; if (typeof toast === 'function') toast('โฆษณายังไม่พร้อม ลองใหม่อีกสักครู่'); }
+      if (!shown) { Ads.cb = null; if (typeof toast === 'function') toast(tr("โฆษณายังไม่พร้อม ลองใหม่อีกสักครู่")); }
       return;
     }
     const box = document.getElementById('adFake'), cnt = document.getElementById('adCount'), close = document.getElementById('adClose');
     let n = 5; cnt.textContent = n; close.disabled = true; box.classList.remove('hidden');
     const tick = setInterval(() => {
       n--; cnt.textContent = Math.max(0, n);
-      if (n <= 0) { clearInterval(tick); close.disabled = false; close.textContent = 'รับรางวัล ✔'; }
+      if (n <= 0) { clearInterval(tick); close.disabled = false; close.textContent = tr("รับรางวัล ✔"); }
     }, 1000);
-    close.onclick = () => { box.classList.add('hidden'); close.textContent = 'ปิด'; Ads.finish(true); };
+    close.onclick = () => { box.classList.add('hidden'); close.textContent = tr("ปิด"); Ads.finish(true); };
   },
   finish(ok) { const cb = Ads.cb; Ads.cb = null; if (cb) cb(!!ok); },
 };
@@ -368,22 +390,22 @@ const THEMES = [
 ];
 // seq: tiles(x,count) gates(left,right) barrier(x,hp) wall(hp = full width) squad(x,count)
 const LEVELS = [
-  { name: 'ทุ่งเริ่มต้น', theme: 0, boss: 14, seq: [['tiles', -1.6, 6], ['gates', '+5', '-2'], ['tiles', 1.6, 6], ['gates', '+3', '+8'], ['squad', 0, 5], ['gates', 'x2', '-5']] },
-  { name: 'สะพานไม้', theme: 0, boss: 28, seq: [['tiles', 1.6, 7], ['barrier', -1.5, 5], ['gates', '+6', '÷2'], ['squad', -1, 8], ['tiles', -1.6, 8], ['barrier', 1.5, 8], ['gates', '-6', '+10'], ['squad', 1, 10], ['gates', 'x2', '+12']] },
-  { name: 'ป้อมยามชายฝั่ง', theme: 1, boss: 45, seq: [['tiles', -1.6, 8], ['wall', 6], ['gates', '+10', '-8'], ['squad', 0, 12], ['tiles', 1.6, 9], ['barrier', -1.5, 10], ['gates', 'x2', '÷2'], ['squad', -1, 15], ['gates', '+15', '+5']] },
-  { name: 'ทัพหน้าแมว', theme: 1, boss: 65, seq: [['tiles', 1.6, 8], ['squad', -1.3, 8], ['squad', 1.3, 8], ['gates', '+12', '-10'], ['tiles', -1.6, 10], ['wall', 10], ['gates', 'x2', '-15'], ['squad', 0, 20], ['tiles', 1.6, 8], ['gates', '+20', 'x2']] },
-  { name: 'ทะเลอัสดง', theme: 2, boss: 90, seq: [['tiles', -1.6, 9], ['gates', '+8', 'x2'], ['barrier', 1.5, 12], ['squad', -1, 14], ['tiles', 1.6, 10], ['gates', '-20', '+15'], ['wall', 14], ['squad', 1, 20], ['gates', 'x2', '÷2'], ['squad', 0, 25]] },
-  { name: 'ด่านหอคอยคู่', theme: 2, boss: 120, seq: [['tiles', 1.6, 10], ['barrier', -1.5, 10], ['gates', 'x2', '+10'], ['squad', -1.3, 15], ['squad', 1.3, 15], ['tiles', -1.6, 10], ['wall', 18], ['gates', '+25', '-25'], ['squad', 0, 30], ['gates', 'x2', '+20']] },
-  { name: 'แสงสนธยา', theme: 3, boss: 160, seq: [['tiles', -1.6, 10], ['gates', '÷2', 'x2'], ['squad', 1, 20], ['tiles', 1.6, 10], ['barrier', -1.5, 16], ['gates', '+30', '-30'], ['wall', 22], ['squad', -1, 30], ['tiles', -1.6, 10], ['gates', 'x2', '+25'], ['squad', 0, 40]] },
-  { name: 'คืนแมวพราง', theme: 4, boss: 180, seq: [['tiles', 1.6, 12], ['gates', 'x2', '-20'], ['squad', 0, 14], ['wall', 18], ['tiles', -1.6, 12], ['squad', -1.3, 22], ['squad', 1.3, 22], ['gates', '+35', 'x2'], ['barrier', 1.5, 25], ['squad', 0, 45], ['gates', 'x2', '÷2']] },
-  { name: 'พายุเหล็ก', theme: 4, boss: 280, seq: [['tiles', -1.6, 12], ['gates', 'x2', '+15'], ['squad', 1, 18], ['tiles', 1.6, 12], ['wall', 22], ['gates', '-40', '+40'], ['squad', -1.3, 30], ['squad', 1.3, 30], ['wall', 30], ['gates', 'x2', '+30'], ['squad', 0, 60], ['gates', 'x2', '-50']] },
-  { name: 'ปราสาทราชาแมว', theme: 5, boss: 330, seq: [['tiles', 1.6, 12], ['gates', 'x2', '+20'], ['squad', 0, 25], ['tiles', -1.6, 12], ['wall', 30], ['gates', '+50', '-50'], ['squad', -1.3, 40], ['squad', 1.3, 40], ['tiles', 1.6, 12], ['gates', 'x2', '÷2'], ['wall', 45], ['squad', 0, 80], ['gates', 'x2', '+60']] },
+  { name: tr("ทุ่งเริ่มต้น"), theme: 0, boss: 14, seq: [['tiles', -1.6, 6], ['gates', '+5', '-2'], ['tiles', 1.6, 6], ['gates', '+3', '+8'], ['squad', 0, 5], ['gates', 'x2', '-5']] },
+  { name: tr("สะพานไม้"), theme: 0, boss: 28, seq: [['tiles', 1.6, 7], ['barrier', -1.5, 5], ['gates', '+6', '÷2'], ['squad', -1, 8], ['tiles', -1.6, 8], ['barrier', 1.5, 8], ['gates', '-6', '+10'], ['squad', 1, 10], ['gates', 'x2', '+12']] },
+  { name: tr("ป้อมยามชายฝั่ง"), theme: 1, boss: 45, seq: [['tiles', -1.6, 8], ['wall', 6], ['gates', '+10', '-8'], ['squad', 0, 12], ['tiles', 1.6, 9], ['barrier', -1.5, 10], ['gates', 'x2', '÷2'], ['squad', -1, 15], ['gates', '+15', '+5']] },
+  { name: tr("ทัพหน้าแมว"), theme: 1, boss: 65, seq: [['tiles', 1.6, 8], ['squad', -1.3, 8], ['squad', 1.3, 8], ['gates', '+12', '-10'], ['tiles', -1.6, 10], ['wall', 10], ['gates', 'x2', '-15'], ['squad', 0, 20], ['tiles', 1.6, 8], ['gates', '+20', 'x2']] },
+  { name: tr("ทะเลอัสดง"), theme: 2, boss: 90, seq: [['tiles', -1.6, 9], ['gates', '+8', 'x2'], ['barrier', 1.5, 12], ['squad', -1, 14], ['tiles', 1.6, 10], ['gates', '-20', '+15'], ['wall', 14], ['squad', 1, 20], ['gates', 'x2', '÷2'], ['squad', 0, 25]] },
+  { name: tr("ด่านหอคอยคู่"), theme: 2, boss: 120, seq: [['tiles', 1.6, 10], ['barrier', -1.5, 10], ['gates', 'x2', '+10'], ['squad', -1.3, 15], ['squad', 1.3, 15], ['tiles', -1.6, 10], ['wall', 18], ['gates', '+25', '-25'], ['squad', 0, 30], ['gates', 'x2', '+20']] },
+  { name: tr("แสงสนธยา"), theme: 3, boss: 160, seq: [['tiles', -1.6, 10], ['gates', '÷2', 'x2'], ['squad', 1, 20], ['tiles', 1.6, 10], ['barrier', -1.5, 16], ['gates', '+30', '-30'], ['wall', 22], ['squad', -1, 30], ['tiles', -1.6, 10], ['gates', 'x2', '+25'], ['squad', 0, 40]] },
+  { name: tr("คืนแมวพราง"), theme: 4, boss: 180, seq: [['tiles', 1.6, 12], ['gates', 'x2', '-20'], ['squad', 0, 14], ['wall', 18], ['tiles', -1.6, 12], ['squad', -1.3, 22], ['squad', 1.3, 22], ['gates', '+35', 'x2'], ['barrier', 1.5, 25], ['squad', 0, 45], ['gates', 'x2', '÷2']] },
+  { name: tr("พายุเหล็ก"), theme: 4, boss: 280, seq: [['tiles', -1.6, 12], ['gates', 'x2', '+15'], ['squad', 1, 18], ['tiles', 1.6, 12], ['wall', 22], ['gates', '-40', '+40'], ['squad', -1.3, 30], ['squad', 1.3, 30], ['wall', 30], ['gates', 'x2', '+30'], ['squad', 0, 60], ['gates', 'x2', '-50']] },
+  { name: tr("ปราสาทราชาแมว"), theme: 5, boss: 330, seq: [['tiles', 1.6, 12], ['gates', 'x2', '+20'], ['squad', 0, 25], ['tiles', -1.6, 12], ['wall', 30], ['gates', '+50', '-50'], ['squad', -1.3, 40], ['squad', 1.3, 40], ['tiles', 1.6, 12], ['gates', 'x2', '÷2'], ['wall', 45], ['squad', 0, 80], ['gates', 'x2', '+60']] },
 ];
 const SIEGE_FROM = 30;
 function levelInfo(l) {
   if (LEVELS[l - 1]) return LEVELS[l - 1];
-  if (l >= SIEGE_FROM) return { name: 'ตั้งรับ! แมวบุก', theme: l % 2 ? 5 : 4, siege: true };
-  return { name: 'ด่านไม่รู้จบ', theme: (l - 1) % THEMES.length };
+  if (l >= SIEGE_FROM) return { name: tr("ตั้งรับ! แมวบุก"), theme: l % 2 ? 5 : 4, siege: true };
+  return { name: tr("ด่านไม่รู้จบ"), theme: (l - 1) % THEMES.length };
 }
 function parseGate(t) { return { op: t[0] === 'x' ? 'x' : t[0], v: Number(t.slice(1)) }; }
 
@@ -866,18 +888,18 @@ function showResult() {
   if (won && level >= save.level) save.level = level + 1;
   if (won) sel = level + 1;
   persist();
-  document.getElementById('rTitle').textContent = won ? 'ชนะ! 🏰' : 'กองทัพแตก!';
+  document.getElementById('rTitle').textContent = won ? tr("ชนะ! 🏰") : tr("กองทัพแตก!");
   document.getElementById('rTitle').style.color = won ? '#ffd84a' : '#ff7a7a';
   document.getElementById('rInfo').textContent = won
-    ? `ด่าน ${level} ผ่าน • เหลือทหาร ${army} คน`
-    : `ไปได้ ${Math.round(progress() * 100)}% • ล้มศัตรู ${killed}`;
+    ? tr("ด่าน {0} ผ่าน • เหลือทหาร {1} คน", level, army)
+    : tr("ไปได้ {0}% • ล้มศัตรู {1}", Math.round(progress() * 100), killed);
   document.getElementById('rInfo').textContent += loot;
   document.getElementById('rCoins').textContent = earned;
-  document.getElementById('next').textContent = '🦆 กลับบ้านเป็ด';
+  document.getElementById('next').textContent = tr("🦆 กลับบ้านเป็ด");
   document.getElementById('next').onclick = () => { hide('result'); enterTD(); };
   const ab = document.getElementById('adBtn');
   ab.classList.toggle('hidden', earned <= 0);
-  ab.innerHTML = `🎬 ดูโฆษณา รับ x3<small>+🪙${earned * 2} เพิ่ม</small>`;
+  ab.innerHTML = tr("🎬 ดูโฆษณา รับ x3<small>+🪙{0} เพิ่ม</small>", earned * 2);
   ab.onclick = () => Ads.show(ok => {
     if (!ok) return;
     save.coins += earned * 2; persist(); SFX.play('reward');
@@ -1150,7 +1172,7 @@ function drawBoss(o) {
   ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(p.x - bw / 2, by, bw, 12, 6); ctx.fill();
   ctx.fillStyle = '#ff4a3a'; roundRect(p.x - bw / 2 + 2, by + 2, (bw - 4) * Math.max(0, o.hp / o.max), 8, 4); ctx.fill();
   ctx.font = '900 13px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#fff';
-  ctx.fillText('บอส ' + Math.max(0, Math.ceil(o.hp)), p.x, by - 2);
+  ctx.fillText(tr("บอส ") + Math.max(0, Math.ceil(o.hp)), p.x, by - 2);
 }
 function drawCastle(o) {
   if (ready(IMG.castle)) { const p = proj(0, o.z); drawAt(IMG.castle, p.x, p.y + p.s * 0.6, p.s * (ROAD * 2 + 3)); return; }
@@ -1283,12 +1305,12 @@ function draw() {
     ctx.fillStyle = 'rgba(0,0,0,.28)'; roundRect(W / 2 - 110, top, 220, 14, 7); ctx.fill();
     ctx.fillStyle = '#ffd84a'; roundRect(W / 2 - 108, top + 2, 216 * progress(), 10, 5); ctx.fill();
     ctx.font = '900 18px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillStyle = '#fff'; ctx.fillText('ด่าน ' + level + ' • ' + levelInfo(level).name, W / 2, top + 20);
+    ctx.fillStyle = '#fff'; ctx.fillText(tr("ด่าน ") + level + ' • ' + levelInfo(level).name, W / 2, top + 20);
     ctx.textAlign = 'right'; ctx.fillStyle = '#ffd84a'; ctx.fillText('🪙 ' + save.coins, W - 14, top);
     if (siege && runT < 3) {
       ctx.globalAlpha = Math.min(1, (3 - runT) / 0.8);
       ctx.font = '900 26px Mitr,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(80,0,0,.7)';
-      ctx.strokeText('แมวบุกเข้ามาแล้ว!', W / 2, H * 0.3); ctx.fillStyle = '#ff6a5a'; ctx.fillText('แมวบุกเข้ามาแล้ว!', W / 2, H * 0.3);
+      ctx.strokeText(tr("แมวบุกเข้ามาแล้ว!"), W / 2, H * 0.3); ctx.fillStyle = '#ff6a5a'; ctx.fillText(tr("แมวบุกเข้ามาแล้ว!"), W / 2, H * 0.3);
       ctx.globalAlpha = 1;
     }
   }
@@ -1300,7 +1322,7 @@ function hide(id) { document.getElementById(id).classList.add('hidden'); }
 function renderMenu() {
   document.getElementById('mCoins').textContent = save.coins;
   document.getElementById('mLevel').textContent = sel;
-  document.getElementById('mName').textContent = levelInfo(sel).name + (typeof raidFood === 'function' ? ` • ใช้ 🍗${raidFood(sel)}` : '');
+  document.getElementById('mName').textContent = levelInfo(sel).name + (typeof raidFood === 'function' ? tr(" • ใช้ 🍗{0}", raidFood(sel)) : '');
   const lb = document.getElementById('lvls'); lb.innerHTML = '';
   const cnt = Math.max(10, save.level + 4);
   for (let i = 1; i <= cnt; i++) {
@@ -1325,7 +1347,7 @@ function renderMenu() {
 document.getElementById('play').onclick = startLevel;
 const muteBtn = document.getElementById('mute');
 muteBtn.innerHTML = SFX.muted ? '<i>🔇</i>' : '';
-muteBtn.onclick = e => { e.stopPropagation(); SFX.init(); const m = SFX.toggle(); muteBtn.innerHTML = m ? '<i>🔇</i>' : ''; if (window.toast) toast(m ? '🔇 ปิดเสียงแล้ว' : '🔊 เปิดเสียงแล้ว'); };
+muteBtn.onclick = e => { e.stopPropagation(); SFX.init(); const m = SFX.toggle(); muteBtn.innerHTML = m ? '<i>🔇</i>' : ''; if (window.toast) toast(m ? tr("🔇 ปิดเสียงแล้ว") : tr("🔊 เปิดเสียงแล้ว")); };
 document.getElementById('next').onclick = () => { hide('result'); enterTD(); };
 
 function preview() {

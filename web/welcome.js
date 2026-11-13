@@ -32,18 +32,14 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
   @keyframes wbusy{from{margin-left:0}to{margin-left:65%}}`;
   document.head.appendChild(css);
   const el = document.createElement('div'); el.id = 'welcome';
-  el.innerHTML = `<div class="wbg"></div><img class="wart" src="img/shrine.webp" alt="">
-    <div class="wtitle"><b>MOLT</b><span>🦆 เป็ดพิทักษ์ไข่ทองคำ 🥚</span></div>
-    <div class="wbox"><div class="wmsg">กำลังโหลด…</div><div class="wbar"><div class="wfill"></div></div>
-    <button class="wgo" style="display:none">แตะเพื่อเริ่มเล่น ▶</button><button class="wskip" style="display:none">เล่นเลย (อัปเดตต่อเบื้องหลัง)</button></div>
-    <div class="wver"></div>`;
+  el.innerHTML = tr("<div class=\"wbg\"></div><img class=\"wart\" src=\"img/shrine.webp\" alt=\"\">\n    <div class=\"wtitle\"><b>MOLT</b><span>🦆 เป็ดพิทักษ์ไข่ทองคำ 🥚</span></div>\n    <div class=\"wbox\"><div class=\"wmsg\">กำลังโหลด…</div><div class=\"wbar\"><div class=\"wfill\"></div></div>\n    <button class=\"wgo\" style=\"display:none\">แตะเพื่อเริ่มเล่น ▶</button><button class=\"wskip\" style=\"display:none\">เล่นเลย (อัปเดตต่อเบื้องหลัง)</button></div>\n    <div class=\"wver\"></div>");
   document.body.appendChild(el);
   // a painted welcome picture (img/welcome.jpg) replaces the drawn title screen once it exists
   const pic = new Image();
   pic.onload = () => { el.querySelector('.wbg').style.backgroundImage = 'url(img/welcome.jpg)'; el.querySelector('.wart').style.display = 'none'; el.querySelector('.wtitle').style.display = 'none'; };
   pic.src = 'img/welcome.jpg';
   const msg = el.querySelector('.wmsg'), fill = el.querySelector('.wfill'), go = el.querySelector('.wgo'), skip = el.querySelector('.wskip');
-  try { el.querySelector('.wver').textContent = window.AndroidPatch ? 'รุ่น ' + AndroidPatch.version() : ''; } catch (e) {}
+  try { el.querySelector('.wver').textContent = window.AndroidPatch ? tr("รุ่น ") + AndroidPatch.version() : ''; } catch (e) {}
 
   function imgProgress() {
     const all = Object.values(typeof IMG !== 'undefined' ? IMG : {});
@@ -53,17 +49,17 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
   function setReady(text) {
     if (WEL.ready) return; WEL.ready = true;
     fill.classList.remove('busy'); fill.style.width = '100%';
-    msg.textContent = text || 'พร้อมแล้ว!'; go.style.display = ''; skip.style.display = 'none';
+    msg.textContent = text || tr("พร้อมแล้ว!"); go.style.display = ''; skip.style.display = 'none';
   }
   function curVersion() { try { return window.AndroidPatch ? AndroidPatch.version() : 0; } catch (e) { return 0; } }
   function restartInto(v) {
     // already running this version (the app remembers "ready" until it is closed): don't reload again
-    if (v && v <= curVersion()) { setReady('เกมเป็นรุ่นล่าสุดแล้ว ✅'); return; }
+    if (v && v <= curVersion()) { setReady(tr("เกมเป็นรุ่นล่าสุดแล้ว ✅")); return; }
     let tries = 0; try { tries = +(sessionStorage.getItem('molt_reload_' + v) || 0); sessionStorage.setItem('molt_reload_' + v, tries + 1); } catch (e) {}
-    if (tries >= 1) { setReady('พร้อมแล้ว!'); return; }
+    if (tries >= 1) { setReady(tr("พร้อมแล้ว!")); return; }
     if (WEL.auto) return; WEL.auto = true;
     fill.classList.remove('busy'); fill.style.width = '100%';
-    msg.textContent = `✨ โหลดรุ่นใหม่ ${v ? '(' + v + ') ' : ''}เสร็จแล้ว กำลังเปิดเกมใหม่…`;
+    msg.textContent = tr("✨ โหลดรุ่นใหม่ {0}เสร็จแล้ว กำลังเปิดเกมใหม่…", v ? '(' + v + ') ' : '');
     go.style.display = 'none'; skip.style.display = 'none';
     setTimeout(() => { try { persist(); } catch (e) {} try { AndroidPatch.reload(); } catch (e) { location.reload(); } }, 700);
   }
@@ -76,18 +72,18 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
     const ip = imgProgress();
     if (hasState) {
       let st = {}; try { st = JSON.parse(AndroidPatch.state()); } catch (e) {}
-      if (st.s === 'checking' || st.s === 'idle') { msg.textContent = 'กำลังตรวจหาอัปเดต…'; fill.style.width = Math.round(ip * 30) + '%'; }
-      else if (st.s === 'download') { const k = st.total ? st.done / st.total : 0; msg.textContent = `📥 กำลังโหลดอัปเดต ${st.done}/${st.total} ไฟล์`; fill.style.width = Math.round(30 + k * 70) + '%'; }
+      if (st.s === 'checking' || st.s === 'idle') { msg.textContent = tr("กำลังตรวจหาอัปเดต…"); fill.style.width = Math.round(ip * 30) + '%'; }
+      else if (st.s === 'download') { const k = st.total ? st.done / st.total : 0; msg.textContent = tr("📥 กำลังโหลดอัปเดต {0}/{1} ไฟล์", st.done, st.total); fill.style.width = Math.round(30 + k * 70) + '%'; }
       else if (st.s === 'ready') { restartInto(st.v); if (!WEL.auto) return; return; }
-      else if (st.s === 'none' || st.s === 'offline') { if (ip >= 1) { setReady(st.s === 'offline' ? 'ออฟไลน์อยู่ เล่นรุ่นเดิมได้เลย' : 'เกมเป็นรุ่นล่าสุดแล้ว ✅'); return; } msg.textContent = 'กำลังโหลดภาพ…'; fill.style.width = Math.round(30 + ip * 70) + '%'; }
+      else if (st.s === 'none' || st.s === 'offline') { if (ip >= 1) { setReady(st.s === 'offline' ? tr("ออฟไลน์อยู่ เล่นรุ่นเดิมได้เลย") : tr("เกมเป็นรุ่นล่าสุดแล้ว ✅")); return; } msg.textContent = tr("กำลังโหลดภาพ…"); fill.style.width = Math.round(30 + ip * 70) + '%'; }
     } else if (window.AndroidPatch) {
       // older app: it can only tell us when a patch is done, so give it a few seconds
       const t = (performance.now() - WEL.t0) / 1000;
-      msg.textContent = 'กำลังตรวจหาอัปเดต…'; fill.classList.add('busy');
-      if (t > 4.5 && ip >= 1) { setReady('พร้อมแล้ว!'); return; }
+      msg.textContent = tr("กำลังตรวจหาอัปเดต…"); fill.classList.add('busy');
+      if (t > 4.5 && ip >= 1) { setReady(tr("พร้อมแล้ว!")); return; }
     } else {
-      fill.style.width = Math.round(ip * 100) + '%'; msg.textContent = 'กำลังโหลดภาพ…';
-      if (ip >= 1 && performance.now() - WEL.t0 > 700) { setReady('พร้อมแล้ว!'); return; }
+      fill.style.width = Math.round(ip * 100) + '%'; msg.textContent = tr("กำลังโหลดภาพ…");
+      if (ip >= 1 && performance.now() - WEL.t0 > 700) { setReady(tr("พร้อมแล้ว!")); return; }
     }
     if (!WEL.ready && performance.now() - WEL.t0 > 9000) skip.style.display = '';
     setTimeout(tick, 150);
