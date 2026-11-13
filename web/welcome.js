@@ -44,7 +44,9 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
   function imgProgress() {
     const all = Object.values(typeof IMG !== 'undefined' ? IMG : {});
     if (!all.length) return 1;
-    return all.filter(i => i.complete).length / all.length;
+    // sprites cut from sheets are <canvas> (no .complete), so count them as loaded;
+    // a picture that failed to load also counts, so one missing file can't hang the screen
+    return all.filter(i => i instanceof HTMLCanvasElement || i.complete).length / all.length;
   }
   function setReady(text) {
     if (WEL.ready) return; WEL.ready = true;
@@ -85,6 +87,8 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
       fill.style.width = Math.round(ip * 100) + '%'; msg.textContent = tr("กำลังโหลดภาพ…");
       if (ip >= 1 && performance.now() - WEL.t0 > 700) { setReady(tr("พร้อมแล้ว!")); return; }
     }
+    // safety net: never keep the player waiting on pictures for more than 6 s once the update check is over
+    if (!WEL.ready && performance.now() - WEL.t0 > 6000 && !(hasState && /checking|idle|download/.test((() => { try { return JSON.parse(AndroidPatch.state()).s; } catch (e) { return ''; } })()))) { setReady(tr("พร้อมแล้ว!")); return; }
     if (!WEL.ready && performance.now() - WEL.t0 > 9000) skip.style.display = '';
     setTimeout(tick, 150);
   }
