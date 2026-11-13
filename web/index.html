@@ -1359,11 +1359,16 @@ function preview() {
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (state === 'intro') { introUpdate(dt); introDraw(); }
-  else if (state === 'td' || state === 'tdresult') { if (!window.tutPause) tdUpdate(dt); tdDraw(); }
-
-  else { if (state === 'play' || state === 'ending') update(dt); draw(); }
+  // schedule the next frame first, so one bad frame can never stop the game for good
   requestAnimationFrame(frame);
+  try {
+    if (state === 'intro') { introUpdate(dt); introDraw(); }
+    else if (state === 'td' || state === 'tdresult') { if (!window.tutPause) tdUpdate(dt); tdDraw(); }
+    else { if (state === 'play' || state === 'ending') update(dt); draw(); }
+  } catch (e) {
+    try { ctx.restore(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; } catch (e2) {}
+    if (!window.__errLogged) { window.__errLogged = true; console.error('MOLT frame error', e); }
+  }
 }
 renderMenu(); preview();
 requestAnimationFrame(frame);

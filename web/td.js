@@ -419,8 +419,19 @@ function buildWave(n) {
     if (n >= 8 && Math.random() < 0.15) q.push({ t: Math.random() * t, a: (Math.random() - 0.5) * 4, hp: 40 + n * 12, boss: true });
   }
   q.sort((x, y) => x.t - y.t);
+  // later days used to send thousands of cats (it grew with day x day) and froze phones:
+  // cap the head count and fold the cats we drop into tougher cats instead
+  const MAXC = Math.min(170, 50 + n * 4);
+  const plain = q.filter(e => !e.boss && e.kind !== 'chief' && e.kind !== 'cart' && e.kind !== 'ram');
+  if (plain.length > MAXC) {
+    const k = plain.length / MAXC, drop = new Set();
+    plain.forEach((e, i) => { if (Math.floor((i + 1) / k) === Math.floor(i / k)) drop.add(e); });
+    for (const e of q) if (!drop.has(e) && plain.includes(e)) e.hp = Math.round(e.hp * Math.min(k, 3));
+    return q.filter(e => !drop.has(e));
+  }
   return q;
 }
+const MAX_ALIVE = 40;
 function spawnCatOrig(c) {
   const topY = Math.min(-8, dinv(0, 40).y - 1.2);
   const kind = c.kind || 'cat';
@@ -460,7 +471,9 @@ function tdUpdate(dt) {
   if (D.phase === 'wave' || D.phase === 'build' || D.phase === 'victory') leadUpdate(dt);
   camFollow(dt);
   if (D.phase === 'wave') {
-    while (D.queue.length && D.queue[0].t <= D.t - 1.2) spawnCat(D.queue.shift());
+    // keep the number of cats on the field small enough for a phone: the rest wait at the top and walk in as space frees up
+    { let alive = 0; for (const c of D.cats) if (c.hp > 0) alive++;
+      let n = 0; while (D.queue.length && D.queue[0].t <= D.t - 1.2 && (alive < MAX_ALIVE || D.queue[0].boss || D.queue[0].kind === 'chief') && n < 3) { spawnCat(D.queue.shift()); alive++; n++; } }
     if (D.bombCd > 0) D.bombCd -= dt;
     for (const c of D.cats) {
       if (c.hp <= 0) continue;
@@ -782,7 +795,7 @@ function tdUpdate(dt) {
   for (const c of D.cats) { if (c.squash) c.squash = Math.max(0, c.squash - dt * 6); if (c.fly) { c.fly.t += dt; } }
   D.cats = D.cats.filter(c => c.hp > 0 || (c.deadT = (c.deadT || 0) + dt) < ((c.boss || c.kind === 'chief') ? (c.y > dinv(0, 30).y ? 99 : 0) : c.shockDead ? 0.9 : 0.6));
   for (const p of D.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.h += p.vh * dt; p.vh -= 14 * dt; p.t += dt; if (p.h < 0) { p.h = 0; p.vh *= -0.3; p.vx *= 0.6; p.vy *= 0.6; } }
-  D.parts = D.parts.filter(p => p.t < p.life);
+  D.parts = D.parts.filter(p => p.t < p.life); if (D.parts.length > 260) D.parts.splice(0, D.parts.length - 260);
   for (const b of D.bolts) b.t += dt;
   D.bolts = D.bolts.filter(b => b.t < 0.25);
   for (const c of D.coins) c.t += dt;
@@ -795,9 +808,9 @@ function tdUpdate(dt) {
   D.fx = D.fx.filter(f => f.t < (f.life || 0.5));
   D.fx.forEach(f => { if ((f.type === 'dust' || f.type === 'shock') && f.t > 0.45) f.t = 0.5; });
   for (const f of D.floats) f.t += dt;
-  D.floats = D.floats.filter(f => f.t < 1.1);
+  D.floats = D.floats.filter(f => f.t < 1.1); if (D.floats.length > 60) D.floats.splice(0, D.floats.length - 60);
   for (const w of D.walls) { w.hit = Math.max(0, w.hit - dt); if (!w.gate) w.hp = w.max; }
-  for (const k of D.cracks) k.t += dt; D.cracks = D.cracks.filter(k => k.t < 7);
+  for (const k of D.cracks) k.t += dt; D.cracks = D.cracks.filter(k => k.t < 7); if (D.cracks.length > 120) D.cracks.splice(0, D.cracks.length - 120);
   for (const h of D.holes) h.t += dt; D.holes = D.holes.filter(h => h.t < 6);
   D.shake = Math.max(0, D.shake - dt); D.eggHit = Math.max(0, (D.eggHit || 0) - dt);
   if (D.phase === 'wave' && !D.queue.length && !D.cats.some(c => c.hp > 0)) startVictory();
