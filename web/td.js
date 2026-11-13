@@ -925,37 +925,37 @@ function placeTrap(x, y) {
   SFX.play('thud'); addFx('dust', x, y, '#d9c49a');
 }
 function trapUpdate(dt) {
-  for (const tr of D.traps) {
-    tr.t += dt;
-    if (tr.type === 'seesaw') {
-      tr.tilt = Math.max(0, tr.tilt - dt * 2.5);
-      if (tr.broken) { if ((tr.brokeT += dt) > 0.4) tr.done = true; continue; }
+  for (const trap of D.traps) {
+    trap.t += dt;
+    if (trap.type === 'seesaw') {
+      trap.tilt = Math.max(0, trap.tilt - dt * 2.5);
+      if (trap.broken) { if ((trap.brokeT += dt) > 0.4) trap.done = true; continue; }
       for (const c of D.cats) {
         if (c.hp <= 0 || c.launch || c.st === 'flee' || c.lift || c.under || c.drop) continue;
-        if (Math.abs(c.x - tr.x) > 0.5 || Math.abs(c.y - tr.y) > 0.3) continue;
+        if (Math.abs(c.x - trap.x) > 0.5 || Math.abs(c.y - trap.y) > 0.3) continue;
         if (c.boss || c.kind === 'ram' || c.kind === 'cart' || c.kind === 'steel') {
           // too heavy: the board snaps
-          tr.broken = true; tr.brokeT = 0; SFX.play('crack'); for (let i = 0; i < 8; i++) splinter(tr.x, tr.y); if (!c.boss) c.stun = Math.max(c.stun, 0.5); break;
+          trap.broken = true; trap.brokeT = 0; SFX.play('crack'); for (let i = 0; i < 8; i++) splinter(trap.x, trap.y); if (!c.boss) c.stun = Math.max(c.stun, 0.5); break;
         }
         // BOING: the cat goes flying back up the lane
         const back = 4 + Math.random() * 2.5;
-        c.launch = { t: 0, dur: 1.0, x0: c.x, y0: c.y, x1: Math.max(-CAT_X, Math.min(CAT_X, c.x + (Math.random() - 0.5) * 2.5)), y1: c.y - back, dmg: 1.5 + T.wave * 0.5 + tr.lvl * 0.4, spin: (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 6) };
+        c.launch = { t: 0, dur: 1.0, x0: c.x, y0: c.y, x1: Math.max(-CAT_X, Math.min(CAT_X, c.x + (Math.random() - 0.5) * 2.5)), y1: c.y - back, dmg: 1.5 + T.wave * 0.5 + trap.lvl * 0.4, spin: (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 6) };
         if (c.st !== 'walk') c.st = 'walk';
-        tr.tilt = 1; tr.uses--; SFX.play('wood'); SFX.play('catScared'); addFx('dust', tr.x, tr.y, '#d9c49a');
-        D.floats.push({ x: tr.x, y: tr.y - 0.3, t: 0, text: tr("ดึ๋ง!"), color: '#ffe680', small: true });
-        if (tr.uses <= 0) { tr.broken = true; tr.brokeT = -0.3; }
+        trap.tilt = 1; trap.uses--; SFX.play('wood'); SFX.play('catScared'); addFx('dust', trap.x, trap.y, '#d9c49a');
+        D.floats.push({ x: trap.x, y: trap.y - 0.3, t: 0, text: tr("ดึ๋ง!"), color: '#ffe680', small: true });
+        if (trap.uses <= 0) { trap.broken = true; trap.brokeT = -0.3; }
         break;
       }
       continue;
     }
-    const around = D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - tr.x, c.y - tr.y) < 0.8).length;
+    const around = D.cats.filter(c => c.hp > 0 && Math.hypot(c.x - trap.x, c.y - trap.y) < 0.8).length;
     if (around) SFX.play('purr');   // happy cats munching the mackerel
-    if (around >= 3 || tr.t >= tr.fuse) {
-      tr.done = true;
-      const dmg = (10 + T.wave * 1.6) * (tr.dmgMul || 1);
-      for (const c of D.cats) if (c.hp > 0 && !c.lift && Math.hypot(c.x - tr.x, c.y - tr.y) < 2.1) { hurtCat(c, c.boss ? dmg * 0.5 : dmg); if (!c.boss) c.stun = Math.max(c.stun, 0.8); }
-      addFx('boom', tr.x, tr.y, '#ffb347', 1.6); addFx('shock', tr.x, tr.y, '#ffe2a8'); D.shake = Math.max(D.shake, 0.35);
-      burst(tr.x, tr.y, ['#c8a060', '#8a9aa8', '#ffcf6a'], 16, 4.5, 1.3);
+    if (around >= 3 || trap.t >= trap.fuse) {
+      trap.done = true;
+      const dmg = (10 + T.wave * 1.6) * (trap.dmgMul || 1);
+      for (const c of D.cats) if (c.hp > 0 && !c.lift && Math.hypot(c.x - trap.x, c.y - trap.y) < 2.1) { hurtCat(c, c.boss ? dmg * 0.5 : dmg); if (!c.boss) c.stun = Math.max(c.stun, 0.8); }
+      addFx('boom', trap.x, trap.y, '#ffb347', 1.6); addFx('shock', trap.x, trap.y, '#ffe2a8'); D.shake = Math.max(D.shake, 0.35);
+      burst(trap.x, trap.y, ['#c8a060', '#8a9aa8', '#ffcf6a'], 16, 4.5, 1.3);
       SFX.play('break'); SFX.play('catScared');
     }
   }
