@@ -1,12 +1,11 @@
-name: Build MOLT APK
+name: Build MOLT Alpha 56
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [play-alpha-56]
 permissions:
-  contents: write
+  contents: read
 jobs:
-  build:
+  bundle:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,74 +13,25 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
-          log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Install Android SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Write game manifest (version + file hashes, used by the patch system)
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Prepare the existing Play package
         run: |
           python3 - <<'PY'
-          import hashlib, json, os
-          root = 'web'; files = {}
-          for d, _, names in os.walk(root):
-              for n in names:
-                  p = os.path.join(d, n); rel = os.path.relpath(p, root).replace(os.sep, '/')
-                  if rel == 'manifest.json': continue
-                  files[rel] = hashlib.sha1(open(p, 'rb').read()).hexdigest()
-          json.dump({'version': int(os.environ['GITHUB_RUN_NUMBER']), 'files': files}, open(os.path.join(root, 'manifest.json'), 'w'))
-          print(len(files), 'files')
+          import hashlib, json
+          from pathlib import Path
+          config = Path('app/build.gradle')
+          config.write_text(config.read_text().replace("applicationId 'com.sunantongsan.molt'", "applicationId 'com.sunantongsan.ghostmatch3'").replace('versionCode 2', 'versionCode 56').replace("versionName '0.2.0'", "versionName '1.0.0'"))
+          web = Path('web')
+          files = {p.relative_to(web).as_posix(): hashlib.sha1(p.read_bytes()).hexdigest() for p in web.rglob('*') if p.is_file() and p != web / 'manifest.json'}
+          (web / 'manifest.json').write_text(json.dumps({'version': 62, 'files': files}))
           PY
-      - name: Build APK
-        run: gradle :app:assembleDebug --no-daemon
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk "molt-${{ github.run_number }}.apk"
-      # APK goes to Releases (not Actions artifacts) so it doesn't eat the 500 MB Actions storage.
-      - name: Publish APK to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "build-${{ github.run_number }}" "molt-${{ github.run_number }}.apk" --target "$GITHUB_SHA" --prerelease --title "MOLT build ${{ github.run_number }}" --notes "Test APK — open this on your phone and install."
-      - name: Keep only the 3 newest builds
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release list --limit 100 --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[3:] | .[].tagName' |
-          while read -r tag; do gh release delete "$tag" --yes --cleanup-tag || true; done
-
-  # Publish the game folder to GitHub Pages: installed apps download it as an over-the-air patch.
-  # Needs the repo to be public and Settings > Pages > Source = "GitHub Actions".
-  patch:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-    steps:
-      - uses: actions/checkout@v4
-      - name: Write game manifest (version + file hashes, used by the patch system)
-        run: |
-          python3 - <<'PY'
-          import hashlib, json, os
-          root = 'web'; files = {}
-          for d, _, names in os.walk(root):
-              for n in names:
-                  p = os.path.join(d, n); rel = os.path.relpath(p, root).replace(os.sep, '/')
-                  if rel == 'manifest.json': continue
-                  files[rel] = hashlib.sha1(open(p, 'rb').read()).hexdigest()
-          json.dump({'version': int(os.environ['GITHUB_RUN_NUMBER']), 'files': files}, open(os.path.join(root, 'manifest.json'), 'w'))
-          print(len(files), 'files')
-          PY
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - run: gradle :app:bundleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
         with:
-          path: web
-      # give GitHub a moment to register the uploaded artifact (deploy sometimes can't see it straight away)
-      - run: sleep 15
-      - uses: actions/deploy-pages@v4
+          name: MOLT-56-unsigned
+          path: app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 3
