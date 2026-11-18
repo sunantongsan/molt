@@ -4,6 +4,9 @@
 "use strict";
 
 const WEL = { open: true, after: [], ready: false, auto: false, t0: performance.now() };
+// the version of the game files this page was loaded from (read before any background download can finish;
+// after a patch reload the app reports the new number, and the sessionStorage guard below stops loops)
+window.MOLT_RUNNING_V = (() => { try { const v = window.AndroidPatch ? +AndroidPatch.version() : 0; const st = window.AndroidPatch && AndroidPatch.state ? JSON.parse(AndroidPatch.state()) : {}; return st.s === 'ready' && st.v === v && !sessionStorage.getItem('molt_reload_' + v) ? v - 1 : v; } catch (e) { return 0; } })();
 function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
 
 (function () {
@@ -39,7 +42,7 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
   pic.onload = () => { el.querySelector('.wbg').style.backgroundImage = 'url(img/welcome.jpg)'; el.querySelector('.wart').style.display = 'none'; el.querySelector('.wtitle').style.display = 'none'; };
   pic.src = 'img/welcome.jpg';
   const msg = el.querySelector('.wmsg'), fill = el.querySelector('.wfill'), go = el.querySelector('.wgo'), skip = el.querySelector('.wskip');
-  try { el.querySelector('.wver').textContent = window.AndroidPatch ? tr("รุ่น ") + AndroidPatch.version() : ''; } catch (e) {}
+  try { el.querySelector('.wver').textContent = window.AndroidPatch ? tr("รุ่น ") + window.MOLT_RUNNING_V : ''; } catch (e) {}
 
   function imgProgress() {
     const all = Object.values(typeof IMG !== 'undefined' ? IMG : {});
@@ -55,8 +58,10 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
   }
   function curVersion() { try { return window.AndroidPatch ? AndroidPatch.version() : 0; } catch (e) { return 0; } }
   function restartInto(v) {
-    // already running this version (the app remembers "ready" until it is closed): don't reload again
-    if (v && v <= curVersion()) { setReady(tr("เกมเป็นรุ่นล่าสุดแล้ว ✅")); return; }
+    // already running this version: don't reload again. Compare with the version this page STARTED as —
+    // AndroidPatch.version() already reports the new number the moment the download finishes, even though
+    // the old game is still on screen (that hid every patch until the app was force-closed).
+    if (v && v <= (window.MOLT_RUNNING_V || 0)) { setReady(tr("เกมเป็นรุ่นล่าสุดแล้ว ✅")); return; }
     let tries = 0; try { tries = +(sessionStorage.getItem('molt_reload_' + v) || 0); sessionStorage.setItem('molt_reload_' + v, tries + 1); } catch (e) {}
     if (tries >= 1) { setReady(tr("พร้อมแล้ว!")); return; }
     if (WEL.auto) return; WEL.auto = true;

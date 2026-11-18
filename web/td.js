@@ -3769,7 +3769,7 @@ window.onMoltPatch = v => {
     persist(); if (window.AndroidPatch) AndroidPatch.reload();
   };
 };
-function gameVersion() { try { return window.AndroidPatch ? tr("รุ่น ") + AndroidPatch.version() : tr("เว็บ"); } catch (e) { return '?'; } }
+function gameVersion() { try { return window.AndroidPatch ? tr("รุ่น ") + (window.MOLT_RUNNING_V || AndroidPatch.version()) : tr("เว็บ"); } catch (e) { return '?'; } }
 
 // ---------- buttons ----------
 $('waveBtn').onclick = e => { e.stopPropagation(); startWave(); };
