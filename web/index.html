@@ -174,6 +174,7 @@
   <button class="btn ghost" id="adClose" disabled data-tr="ปิด">ปิด</button>
 </div>
 
+<script>window.addEventListener('error',e=>{try{localStorage.setItem('molt_err',String(e.message||e.error||'?').slice(0,160)+' @'+String(e.filename||'').split('/').pop()+':'+e.lineno)}catch(x){}});</script>
 <script src="i18n.js"></script>
 <script>
 "use strict";

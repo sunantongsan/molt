@@ -245,7 +245,7 @@ function recycleTile(c) { if (TILE_POOL.length < 8) TILE_POOL.push(c); else { c.
 function releaseTiles() { if (X && X.tiles) { for (const c of X.tiles.values()) { c.width = c.height = 0; } X.tiles.clear(); } for (const c of TILE_POOL) { c.width = c.height = 0; } TILE_POOL.length = 0; }
 function bgTile(ti) {
   let c = X.tiles.get(ti); if (c) return c;
-  const th = TILE_M * xk * XYS, dpr = Math.min(2, window.devicePixelRatio || 1);
+  const th = TILE_M * xk * XYS, dpr = Math.min(1.5, window.devicePixelRatio || 1);
   c = TILE_POOL.pop() || document.createElement('canvas'); c.width = Math.ceil(W * dpr); c.height = Math.ceil(th * dpr) + 2;
   const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.scale(dpr, dpr);
   const y0 = ti * TILE_M, y1 = y0 + TILE_M;            // world rows covered
@@ -317,7 +317,7 @@ const ART = new Map();
 function art(key, wM, hM, paint) {
   const k = key + '@' + Math.round(xk); let c = ART.get(k);
   if (c) return c;
-  const dpr = Math.min(2, window.devicePixelRatio || 1), w = wM * xk, h = hM * xk;
+  const dpr = Math.min(1.5, window.devicePixelRatio || 1), w = wM * xk, h = hM * xk;
   c = document.createElement('canvas'); c.width = Math.ceil(w * dpr); c.height = Math.ceil(h * dpr);
   const g = c.getContext('2d'); g.scale(dpr, dpr);
   const keep = ctx; try { ctx = g; paint(g, w, h); } finally { ctx = keep; }
@@ -471,6 +471,7 @@ function endExpedition(won) {
 // stars: keep the war camp healthy AND win quickly
 function expStars() { const r = X.camp.hp / X.camp.max, t = X.t; return r >= 0.75 && t <= 220 ? 3 : r >= 0.35 && t <= 340 ? 2 : 1; }
 function showExpResult() {
+  try { localStorage.removeItem('molt_trace'); } catch (e) {}
   const won = X.phase === 'won', st = expStars();
   let bonus = 0;
   if (won) {
@@ -508,6 +509,7 @@ function reviveExpedition() {
   toast(xt("สู้ต่อ! ค่ายใหญ่ซ่อมเต็มแล้ว"));
 }
 function leaveExpedition() {
+  try { localStorage.removeItem('molt_trace'); } catch (e) {}
   closeExpModal(); hide('expUi'); releaseTiles(); X = null;
   persist(); enterTD(); renderTdHud();
 }
@@ -698,7 +700,6 @@ function hurt(t, dmg, from) {
     floatText(t.x, t.y + 2.6, '+' + coin + '🪙', '#ffd84a'); for (let i = 0; i < 6; i++) coinPop(t.x, t.y);
     X.rubble.push({ x: t.x, y: t.y, t: 0, big: t.kind === 'fortress' }); dust(t.x, t.y, 26); debris(t.x, t.y, 18);
     X.shake = Math.max(X.shake, t.kind === 'fortress' ? 0.6 : 0.3); SFX.play('break'); setTimeout(() => SFX.play('thud'), 90);
-    if (navigator.vibrate) try { navigator.vibrate(t.kind === 'fortress' ? [40, 30, 60] : 25); } catch (e) {}
     if (t.kind === 'fortress') endExpedition(true); else checkUnlocks();
   } else if (t.slot) {
     t.slot.hut = null; dust(t.x, t.y, 16); debris(t.x, t.y, 10); SFX.play('crack'); X.rubble.push({ x: t.x, y: t.y, t: 0, small: true });
@@ -1020,6 +1021,9 @@ function expUpdate(dt) {
     X.camY += (want - X.camY) * Math.min(1, dt * 1.6);
   }
   X.uiT = (X.uiT || 0) - dt; if (X.uiT <= 0) { X.uiT = 0.2; renderExpUi(); }
+  // crash breadcrumb: if the app dies mid-battle, the welcome screen shows where it happened next time
+  X.traceT = (X.traceT || 0) - dt;
+  if (X.traceT <= 0) { X.traceT = 2; try { localStorage.setItem('molt_trace', JSON.stringify({ day: T.wave, t: Math.round(X.t), forts: X.forts.filter(f => !f.alive).length + '/' + X.forts.length, cats: X.cats.length, ducks: X.ducks.length, huts: X.huts.length, fx: X.parts.length, mem: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : -1, at: Date.now() })); } catch (e) {} }
 }
 
 // ---------- effects ----------
@@ -1194,7 +1198,7 @@ function expDraw() {
   ctx.fillStyle = '#6dbf43'; ctx.fillRect(-20, -20, W + 40, H + 40);
   const th = TILE_M * xk * XYS, yTop = xinv(0, -20).y, yBot = xinv(0, H + 20).y;
   const tLo = Math.floor(yBot / TILE_M), tHi = Math.floor(yTop / TILE_M);
-  for (let ti = tLo; ti <= tHi; ti++) { const c = bgTile(ti), sy = xp(0, ti * TILE_M).y - th; ctx.drawImage(c, 0, sy, W, th + 2 / Math.min(2, window.devicePixelRatio || 1)); }
+  for (let ti = tLo; ti <= tHi; ti++) { const c = bgTile(ti), sy = xp(0, ti * TILE_M).y - th; ctx.drawImage(c, 0, sy, W, th + 2 / Math.min(1.5, window.devicePixelRatio || 1)); }
   for (const [ti, c] of X.tiles) if (ti < tLo - 1 || ti > tHi + 1) { X.tiles.delete(ti); recycleTile(c); }
   // top: the cat country fades into a dark-green forest edge
   { const p = xp(0, XL + 1.5); if (p.y > -40) { const gr = ctx.createLinearGradient(0, p.y - 60, 0, p.y + 30); gr.addColorStop(0, '#2f6a2a'); gr.addColorStop(1, 'rgba(47,106,42,0)'); ctx.fillStyle = gr; ctx.fillRect(0, -20, W, p.y + 50); } }
