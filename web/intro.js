@@ -12,8 +12,7 @@ const CAPS = [
 ];
 const LOGO_AT = 33.2;
 const vid = document.createElement('video');
-vid.muted = true; vid.playsInline = true; vid.setAttribute('playsinline', ''); vid.setAttribute('webkit-playsinline', ''); vid.preload = 'auto';
-vid.src = 'img/intro.mp4';
+vid.muted = true; vid.playsInline = true; vid.setAttribute('playsinline', ''); vid.setAttribute('webkit-playsinline', ''); vid.preload = 'none';   // the story video is only loaded when it is actually played (saves memory during battles)
 
 let introOn = false, introDone = null, introT = 0, introEnd = false;
 function playIntro(done) {
@@ -21,12 +20,13 @@ function playIntro(done) {
   state = 'intro';
   ['tdUi', 'menu', 'result', 'tut'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.add('hidden'); });
   document.getElementById('introUi').classList.remove('hidden');
+  if (!vid.src) { vid.preload = 'auto'; vid.src = 'img/intro.mp4'; }
   try { vid.currentTime = 0; const p = vid.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
 }
 function endIntro() {
   if (!introOn) return;
   introOn = false;
-  try { vid.pause(); } catch (e) {}
+  try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch (e) {}
   document.getElementById('introUi').classList.add('hidden');
   save.introSeen = true; persist();
   enterTD();

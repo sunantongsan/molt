@@ -633,9 +633,12 @@ function spawnDuck(h) {
   const d = { side: 'duck', type: HUTS[h.type].unit, x: h.x + (Math.random() - 0.5) * 0.3, y: h.y - 0.3, idx, off: (Math.random() - 0.5) * 1.4, hp: B.hp * k, max: B.hp * k, dmg: B.dmg * k, B, cd: Math.random() * 0.5, atkT: 0, walk: Math.random() * 4, face: h.x > X.path[idx].x ? -1 : 1, hut: h, hitT: 0, scan: Math.random() * 0.2, target: null, born: 0 };
   X.ducks.push(d); h.pop = 0.35; return d;
 }
+const CAT_CAP = 28, DUCK_CAP = 30;
 function spawnCat(kind, x, y) {
   const B = CATS[kind], m = kind === 'chief' ? X.hpMul : X.hpMul;
   const c = { side: 'cat', kind, x, y, idx: nearestIdx(x, y), off: (Math.random() - 0.5) * 1.3, hp: B.hp * m, max: B.hp * m, dmg: B.dmg * X.dmgMul, B, cd: Math.random() * 0.6, atkT: 0, walk: Math.random() * 4, hitT: 0, scan: Math.random() * 0.2, target: null, gear: catGearX(kind), walkDistance: 0, st: 'walk', mx: 0, my: 1, squash: 0, ph: Math.random() * 6, born: 0 };
+  // hard cap on live cats: phones choke on huge crowds (each cat is several pictures per frame)
+  if (X.cats.reduce((n, o) => n + (o.hp > 0 ? 1 : 0), 0) >= CAT_CAP && kind !== 'chief') { c.hp = 0; c.deadT = 9; return c; }
   X.cats.push(c); return c;
 }
 function raidKind(n) {
@@ -709,7 +712,8 @@ function hurt(t, dmg, from) {
   t.hp -= dmg; t.hitT = 0.18; if (t.squash !== undefined) t.squash = 0.6;
   // damage numbers: at most a few per second per target, so big brawls stay readable
   t.dmgAcc = (t.dmgAcc || 0) + dmg;
-  if (X.t - (t.lastFloat || -9) > 0.45 || t.hp <= 0) { floatText(t.x + (Math.random() - 0.5) * 0.4, t.y + (t.kind && FORTS[t.kind] ? 2 : t.kind === 'chief' ? 2.2 : 1.3), '-' + Math.max(1, Math.round(t.dmgAcc)), t.side === 'duck' || t.slot || t === X.camp ? '#ff9a9a' : '#fff'); t.lastFloat = X.t; t.dmgAcc = 0; }
+  const showDmg = !!(t.kind && FORTS[t.kind]) || !!t.slot || t === X.camp || (t.B && (t.B.boss || t.B.crown));
+  if (showDmg && (X.t - (t.lastFloat || -9) > 0.6 || t.hp <= 0)) { floatText(t.x + (Math.random() - 0.5) * 0.4, t.y + (t.kind && FORTS[t.kind] ? 2 : t.kind === 'chief' ? 2.2 : 1.3), '-' + Math.max(1, Math.round(t.dmgAcc)), t.side === 'duck' || t.slot || t === X.camp ? '#ff9a9a' : '#fff'); t.lastFloat = X.t; t.dmgAcc = 0; }
   if (t === X.camp) { X.shake = Math.max(X.shake, 0.12); if (t.hp <= 0) { t.hp = 0; endExpedition(false); } return; }
   if (t.hp > 0) return;
   // something died
@@ -991,7 +995,7 @@ function catEvents(dt) {
     if (X.brawlT <= 0) {
       X.brawlT = Math.max(45, 80 - n * 2);
       const from = X.forts.filter(f => f.alive).sort((a, b) => a.y - b.y)[0];
-      if (from && X.cats.length < 40 && X.ducks.filter(d => d.hp > 0).length >= 4) {
+      if (from && X.cats.length < CAT_CAP + 10 && X.ducks.filter(d => d.hp > 0).length >= 4) {
         const size = Math.min(14, 6 + n);
         for (let i = 0; i < size; i++) { const c = spawnCat(raidKind(n), from.x + (Math.random() - 0.5) * 2.4, from.y - fortRad(from) - 0.3 - (i % 4) * 0.4); c.raider = true; c.rally = 8; }
         for (const d of X.ducks) if (d.hp > 0) d.rally = 10;
@@ -1030,9 +1034,8 @@ function drawCatFx() {
     // flailing weapons and stars
     const icons = ['it_spatula', 'it_chopsticks', 'it_fork', 'it_pan', 'it_ladle'];
     for (let i = 0; i < 4; i++) { const a = t * (4 + i) + i * 1.7; drawItem(icons[(i + Math.floor(t * 2)) % icons.length], p.x + Math.cos(a) * R * 0.95, cy + Math.sin(a) * R * 0.55, xk * 0.45, a * 2); }
-    ctx.font = `${Math.round(xk * 0.42)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(['💥', '⭐', '💢'][Math.floor(t * 6) % 3], p.x + Math.sin(t * 11) * R * 0.5, cy - R * 0.6);
-    ctx.fillText('⭐', p.x - Math.cos(t * 7) * R * 0.7, cy + R * 0.2);
+    drawStar(p.x + Math.sin(t * 11) * R * 0.5, cy - R * 0.6, xk * 0.2, t * 5, '#ffd23a');
+    drawStar(p.x - Math.cos(t * 7) * R * 0.7, cy + R * 0.2, xk * 0.15, -t * 4, '#fff6b0');
     ctx.restore();
     if (Math.random() < 0.05) throttle('bonk', 0.15);
   }
@@ -1057,7 +1060,7 @@ function expUpdate(dt) {
     if (H0.unit) {
       h.spawnT -= dt;
       const mine = X.ducks.filter(d => d.hut === h && d.hp > 0).length;
-      if (h.spawnT <= 0 && mine < H0.cap && X.ducks.length < 46) { spawnDuck(h); h.spawnT = H0.every / (1 + X.fast[h.type] * 0.25); }
+      if (h.spawnT <= 0 && mine < H0.cap && X.ducks.length < DUCK_CAP) { spawnDuck(h); h.spawnT = H0.every / (1 + X.fast[h.type] * 0.25); }
       else if (h.spawnT <= 0) h.spawnT = 0.5;
     } else if (H0.tower) {
       h.cd -= dt; h.shootT = Math.max(0, h.shootT - dt);
@@ -1183,7 +1186,7 @@ function updateFx(dt) {
   for (const f of X.floats) f.t += dt; X.floats = X.floats.filter(f => f.t < 1.1);
   for (const r of X.rubble) r.t += dt;
 }
-function addPart(o) { if (X.parts.length < 320) X.parts.push(o); }
+function addPart(o) { if (X.parts.length < 140) X.parts.push(o); }
 function burst(x, y, cols, n, sp) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, v = sp * (0.4 + Math.random()); addPart({ x, y, z: 0.6, vx: Math.cos(a) * v * 0.4, vy: Math.sin(a) * v * 0.4, vz: 2 + Math.random() * 2, t: 0, life: 0.6 + Math.random() * 0.4, col: cols[i % cols.length], size: 3 + Math.random() * 2 }); } }
 function sparks(x, y, n) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28; addPart({ x, y, z: 0.7, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, vz: Math.random() * 2, t: 0, life: 0.25, col: i % 2 ? '#fff6b0' : '#ffffff', size: 2.2, kind: 'spark' }); } }
 function sparkle(x, y, n) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28; addPart({ x: x + Math.cos(a) * 0.6, y: y + Math.sin(a) * 0.4, z: 0.2, vx: Math.cos(a) * 0.6, vy: Math.sin(a) * 0.4, vz: 2.2 + Math.random() * 1.8, t: 0, life: 0.9, col: ['#fff6b0', '#ffd23a', '#a8fff1', '#ffffff'][i % 4], size: 2.8, kind: 'spark' }); } }
@@ -1192,7 +1195,14 @@ function debris(x, y, n) { burst(x, y, ['#8a5a2a', '#c08a55', '#7a7f88', '#5e667
 function splat(x, y, cols, n) { burst(x, y, cols, n, 3); }
 function coinPop(x, y) { addPart({ x, y, z: 1, vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1, vz: 4 + Math.random() * 2, t: 0, life: 0.9, col: '#ffd23a', size: 5, kind: 'coin' }); throttle('coin', 0.12); }
 function confetto(f) { const x = f ? f.x : 0, y = f ? f.y : XL - 3; const a = Math.random() * 6.28; addPart({ x: x + Math.cos(a) * 2, y: y + Math.sin(a) * 1.5, z: 2 + Math.random() * 2, vx: Math.cos(a) * 1.5, vy: Math.sin(a), vz: 3 + Math.random() * 3, t: 0, life: 2.2, col: ['#ffd23a', '#ff5a7a', '#4ad0ff', '#8dff6a', '#ffffff'][Math.floor(Math.random() * 5)], size: 4, kind: 'conf' }); }
-function floatText(x, y, txt, col) { if (X.floats.length > 34) X.floats.shift(); X.floats.push({ x, y, txt, col, t: 0 }); }
+// emoji glyphs are slow to draw on phones every frame: stars are paths, coins use the coin picture
+function drawStar(x, y, r, rot, col) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0); ctx.fillStyle = col; ctx.strokeStyle = '#6a4a00'; ctx.lineWidth = Math.max(1, r * 0.15);
+  ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+}
+function floatText(x, y, txt, col) {
+  const coin = txt.indexOf('🪙') >= 0; if (coin) txt = txt.replace('🪙', ''); if (X.floats.length > 14) X.floats.shift(); X.floats.push({ x, y, txt, col, t: 0, coin }); }
 function throttle(name, gap) { const now = performance.now() / 1000; if ((X.sndT[name] || 0) > now) return; X.sndT[name] = now + gap; try { SFX.play(name); } catch (e) {} }
 
 // ---------- drawing ----------
@@ -1212,7 +1222,7 @@ function duckSprite(type, x, y, h, walk, atk, moving, hitT) {
 function drawDuck(d) {
   const p = xp(d.x, d.y), h = xk * 0.95;
   if (p.y < -60 || p.y > H + 60) return;
-  if (d.stun > 0 && d.hp > 0) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', p.x + Math.cos(X.t * 8) * h * 0.2, p.y - h * 1.25); }
+  if (d.stun > 0 && d.hp > 0) { drawStar(p.x + Math.cos(X.t * 8) * h * 0.25, p.y - h * 1.2, h * 0.12, X.t * 6, '#ffd23a'); drawStar(p.x - Math.cos(X.t * 8) * h * 0.25, p.y - h * 1.15, h * 0.09, -X.t * 6, '#fff6b0'); }
   ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.24, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   ctx.save(); ctx.translate(p.x, p.y);
   if (d.hp <= 0) { const k = Math.min(1, d.deadT / 0.5); ctx.globalAlpha = 1 - Math.max(0, d.deadT - 0.5) / 0.4; ctx.rotate(-k * 1.3 * d.face); }
@@ -1241,7 +1251,6 @@ function drawCatX(c) {
     drawFrame(c.B.art, c.moving ? Math.floor(c.walk * 1.4) % 4 : 0, 0, 0, hh, false);
     if (c.B.crown && c.hp > 0) drawCrown(0, -hh * 0.98, hh * 0.32);
     if (c.charge > 0) { ctx.globalAlpha = 0.35; drawFrame(c.B.art, 1, -h * 0.4 * (c.mx > 0 ? -1 : 1), 0, hh, false); ctx.globalAlpha = 1; }
-    if (c.kind === 'shadow' && c.hp > 0) { ctx.globalAlpha = 0.25; drawFrame(c.B.art, Math.floor(c.walk * 1.4 + 1) % 4, h * 0.25, 0, hh, false); }
   } else if (boss && ready(IMG.chief_walk)) {
     ctx.translate(p.x, p.y); if ((c.mx || 0) < 0) ctx.scale(-1, 1);
     const sq = c.atkT > 0 ? 0.12 : 0; ctx.scale(1 + sq, 1 - sq);
@@ -1310,7 +1319,7 @@ function drawPads() {
     ctx.fillStyle = open ? 'rgba(255,240,170,.35)' : 'rgba(60,60,60,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
     ctx.setLineDash(open ? [7, 5] : [4, 6]); ctx.lineDashOffset = -t * 18; ctx.lineWidth = 2.5; ctx.strokeStyle = open ? '#fff3b0' : 'rgba(255,255,255,.35)'; ctx.stroke(); ctx.setLineDash([]);
     if (open) { const b = Math.sin(t * 4 + s.id) * 2; ctx.fillStyle = '#fff'; ctx.font = `900 ${Math.round(xk * 0.5)}px Mitr,system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.strokeStyle = '#6a4a10'; ctx.lineWidth = 3; ctx.strokeText('+', p.x, p.y - 2 + b); ctx.fillText('+', p.x, p.y - 2 + b); }
-    else { ctx.font = `${Math.round(xk * 0.38)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = 0.6; ctx.fillText('🔒', p.x, p.y - 2); }
+    else { const r = xk * 0.13; ctx.globalAlpha = 0.6; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x, p.y - r * 1.4, r * 0.75, Math.PI, 0); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillRect(p.x - r, p.y - r * 1.4, r * 2, r * 1.6); }
     ctx.restore();
   }
 }
@@ -1338,11 +1347,19 @@ function drawFloats() {
   for (const f of X.floats) {
     const p = xp(f.x, f.y), u = f.t / 1.1, sc = u < 0.15 ? 0.5 + u / 0.15 * 0.7 : u < 0.25 ? 1.2 - (u - 0.15) * 2 : 1;
     ctx.save(); ctx.globalAlpha = u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1; ctx.translate(p.x, p.y - u * 30); ctx.scale(sc, sc);
-    ctx.font = `900 ${f.txt.length > 6 ? 13 : 15}px Mitr,system-ui`; ctx.lineWidth = 4; ctx.strokeStyle = '#2a1a0a'; ctx.strokeText(f.txt, 0, 0); ctx.fillStyle = f.col; ctx.fillText(f.txt, 0, 0); ctx.restore();
+    ctx.font = `900 ${f.txt.length > 6 ? 13 : 15}px Mitr,system-ui`; ctx.lineWidth = 4; ctx.strokeStyle = '#2a1a0a'; ctx.strokeText(f.txt, 0, 0); ctx.fillStyle = f.col; ctx.fillText(f.txt, 0, 0);
+    if (f.coin) { const w = ctx.measureText(f.txt).width; if (!drawItem('it_coin', w / 2 + 9, 0, 16, 0)) { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(w / 2 + 9, 0, 6, 0, 6.28); ctx.fill(); } }
+    ctx.restore();
   }
 }
 function expDraw() {
   if (!X) return;
+  // weak phone? if drawing takes too long, draw every second frame (the game logic still runs every frame)
+  X.fN = (X.fN || 0) + 1; if (X.slowDraw && X.fN % 2 && X.phase !== 'rally') return;
+  const drawT0 = performance.now();
+  try { expDrawInner(); } finally { const ms = performance.now() - drawT0; X.drawMs = (X.drawMs || ms) * 0.95 + ms * 0.05; X.slowDraw = X.slowDraw ? X.drawMs > 9 : X.drawMs > 13; }
+}
+function expDrawInner() {
   if (X.phase === 'rally') { MoltRally.draw(); return; }
   if (X.w !== W || X.h !== H) { X.w = W; X.h = H; xk = Math.min(W / 10.4, 46); for (const c of X.tiles.values()) recycleTile(c); X.tiles.clear(); X.iconType = null; }
   ctx.save();
@@ -1583,5 +1600,5 @@ function tutTick() {
   try { renderTdHud(); } catch (e) {}
 }
 window.expUpdate = expUpdate; window.expDraw = expDraw;
-window.__exp = { get X() { return X; }, start: startExpedition, build: doBuild, update: expUpdate, lose: () => endExpedition(false), use: useItemX, cost: () => buildCost() };
+window.__exp = { get X() { return X; }, drawCat: c => drawCatX(c), spawn: (k, x, y) => spawnCat(k, x, y), start: startExpedition, build: doBuild, update: expUpdate, lose: () => endExpedition(false), use: useItemX, cost: () => buildCost() };
 })();
