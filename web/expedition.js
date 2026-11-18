@@ -81,6 +81,13 @@ const XEN = {
   "ป้อมราชาแมว": "Cat King Fortress",
   "ป้อมแมว {0}/{1}": "Cat forts {0}/{1}",
   "แมวบุก!": "Cat raid!",
+  "แม่ทัพแมวมาแล้ว!": "Cat general incoming!",
+  "หม้อยักษ์กลิ้งมา!": "Giant pot rolling!",
+  "ตะลุมบอน!!": "BRAWL!!",
+  "เป็ดฮึด!": "Ducks rally!",
+  "ราชาแมวเรียกลูกน้อง!": "The cat king calls his guards!",
+  "ตูม!": "BOOM!",
+  "พุ่ง!": "CHARGE!",
   "แมวบุกใหญ่!!": "Big cat raid!!",
   "นกกระยาง": "Egrets",
   "บอลลูน": "Balloon",
@@ -115,6 +122,7 @@ const CATS = {
   // heavier cats that join the raids on later days
   knight:  { hp: 70,  dmg: 10, range: 0.9, cd: 1.0, speed: 1.35, coin: 6, art: 'k_knight' },
   steel:   { hp: 160, dmg: 12, range: 0.95, cd: 1.4, speed: 0.9, coin: 9, art: 'k_steel' },
+  general: { hp: 420, dmg: 18, range: 1.1, cd: 1.4, speed: 1.15, coin: 45, art: 'k_steel', big: 1.6, crown: true },
   shadow:  { hp: 40,  dmg: 13, range: 0.85, cd: 0.7, speed: 2.6, coin: 7, art: 'k_shadow', hunter: true },
 };
 const FORTS = {
@@ -191,9 +199,9 @@ function newExpedition() {
     spent: 0, builds: 0, cardsTaken: 0, cardDue: false, card: null,
     unlocked: ['chop'], lv: { chop: 0, fork: 0, chili: 0, spoon: 0, tower: 0, shrine: 0 }, fast: { chop: 0, fork: 0, chili: 0, spoon: 0 },
     camp: { x: 0, y: 0.6, hp: campMax(), max: campMax(), cd: 0, hit: 0 },
-    items: { egret: { cd: 6, max: 24 }, balloon: { cd: 14, max: 34 } }, egrets: [], balloons: [], bombs: [],
+    items: { egret: { cd: 0, max: 9 }, balloon: { cd: 0, max: 14 } }, egrets: [], balloons: [], bombs: [], pots: [], brawlT: 70, slams: [],
     killed: 0, smashed: 0, earned: 0, front: 0, revived: false, shake: 0, banner: 0, bannerTxt: '', bossOut: false,
-    hpMul: 1 + (n - 1) * 0.11, dmgMul: 1 + (n - 1) * 0.06, power: duckPower() * (1 + (n - 1) * 0.04), sndT: {}, nextType: 'chop', seed: T.wave,
+    hpMul: 1.35 + (n - 1) * 0.17, fortMul: 1.4 + (n - 1) * 0.2, dmgMul: 1.15 + (n - 1) * 0.08, power: duckPower() * (1 + (n - 1) * 0.04), sndT: {}, nextType: 'chop', seed: T.wave,
   };
   X.path = buildPath(R);
   // duck build-pad groups and cat zones, bottom to top
@@ -235,7 +243,7 @@ function newExpedition() {
   X.w = W; X.h = H;
 }
 function addFort(kind, x, y, zone) {
-  const F = FORTS[kind], hp = Math.round(F.hp * X.hpMul);
+  const F = FORTS[kind], hp = Math.round(F.hp * (X.fortMul || X.hpMul));
   X.forts.push({ kind, x, y, zone, hp, max: hp, cd: 1 + Math.random(), spawnT: 2 + Math.random() * 2, hit: 0, alive: true, shootT: 0 });
 }
 
@@ -671,7 +679,7 @@ function fortRad(f) { return f.kind === 'fortress' ? 2.2 : f.kind === 'barracks'
 function targetRad(t) { return t.kind ? fortRad(t) : t === X.camp ? 1.4 : t.slot ? 0.7 : 0.25; }
 
 function moveUnit(u, dt, dir) {
-  const P = X.path, sp = u.B.speed * (u.slowT > 0 ? 0.5 : 1);
+  const P = X.path, sp = u.B.speed * (u.slowT > 0 ? 0.5 : 1) * (u.rally > 0 ? 1.35 : 1);
   let tx, ty;
   if (u.target && alive(u.target)) {
     const r = targetRad(u.target) + u.B.range * 0.92, dd = dist(u, u.target);
@@ -753,6 +761,8 @@ function bestCluster(r) {
 function useItemX(k) {
   if (!X || X.phase !== 'fight' || X.paused || X.tutStep) return;
   const it = X.items[k]; if (it.cd > 0) { SFX.play('gateBad'); return; }
+  const price = itemCost(k);
+  if (save.coins < price) { SFX.play('gateBad'); toast(xt("เหรียญไม่พอ — ดูโฆษณารับเหรียญได้")); pulseAd(); return; }
   if (k === 'egret') {
     let tgt = bestCluster(2.5); if (!tgt) { const f = X.forts.filter(f => f.alive).sort((a, b) => a.y - b.y)[0]; if (f) tgt = { x: f.x, y: f.y }; }
     if (!tgt) { toast(xt("ยังไม่มีเป้าหมาย")); return; }
@@ -764,8 +774,10 @@ function useItemX(k) {
     X.balloons.push({ x: -6.5, y: tgt.y - 2.5, z: 5, tx: tgt.x, ty: tgt.y, t: 0, drops: 0, dropCd: 0, st: 'in' });
     X.banner = 1.2; X.bannerTxt = xt("บอลลูนทิ้งระเบิด!"); throttle('spin', 0.5);
   }
-  it.cd = it.max; SFX.play('upgrade'); renderItemsX();
+  save.coins -= price; X.spent += price; persist(); floatText(X.camp.x, X.camp.y + 3.2, '-' + price + '🪙', '#ffd84a');
+  it.cd = it.max; SFX.play('upgrade'); renderItemsX(); renderExpUi();
 }
+function itemCost(k) { const n = dayN(); return k === 'egret' ? 60 + n * 12 : 100 + n * 18; }
 function itemsUpdate(dt) {
   for (const k in X.items) X.items[k].cd = Math.max(0, X.items[k].cd - dt);
   // egrets: swoop in, peck the crowd (each peck stuns), then fly away
@@ -782,7 +794,7 @@ function itemsUpdate(dt) {
         const dx = e.target.x - e.x, dy = e.target.y - e.y, l = Math.hypot(dx, dy) || 1;
         if (l > 0.45 + (e.target.kind && FORTS[e.target.kind] ? fortRad(e.target) : 0)) { e.x += dx / l * 6 * dt; e.y += dy / l * 6 * dt; e.face = dx >= 0 ? 1 : -1; e.z += (1.0 - e.z) * Math.min(1, dt * 6); }
         e.peckCd -= dt;
-        if (l <= 0.6 + (e.target.kind && FORTS[e.target.kind] ? fortRad(e.target) : 0) && e.peckCd <= 0) { e.peckCd = 0.32; e.z = 0.5; e.pecks++; e.peckT = 0.15; hurt(e.target, 16 * itemPower(), e); e.target.stun = 0.5; e.target.slowT = 1.2; sparks(e.target.x, e.target.y, 4); floatText(e.target.x, e.target.y + 1.7, xt("จิก!"), '#bfe6ff'); throttle('bonk', 0.06); if (Math.random() < 0.35) feathers(e.x, e.y); }
+        if (l <= 0.6 + (e.target.kind && FORTS[e.target.kind] ? fortRad(e.target) : 0) && e.peckCd <= 0) { e.peckCd = 0.32; e.z = 0.5; e.pecks++; e.peckT = 0.15; hurt(e.target, 20 * itemPower(), e); e.target.stun = 0.5; e.target.slowT = 1.2; sparks(e.target.x, e.target.y, 4); floatText(e.target.x, e.target.y + 1.7, xt("จิก!"), '#bfe6ff'); throttle('bonk', 0.06); if (Math.random() < 0.35) feathers(e.x, e.y); }
       }
       if (e.peckT > 0) e.peckT -= dt;
       if (e.t > 4.2 || e.pecks >= 12) { e.st = 'out'; e.t = 0; feathers(e.x, e.y); }
@@ -792,20 +804,34 @@ function itemsUpdate(dt) {
   // balloons: drift over the target and drop a stick of bombs
   for (const b of X.balloons) {
     b.t += dt;
-    if (b.st === 'in') { const dx = b.tx - b.x, dy = b.ty - b.y, l = Math.hypot(dx, dy) || 1; b.x += dx / l * 3.4 * dt; b.y += dy / l * 3.4 * dt; if (l < 1) { b.st = 'drop'; b.t = 0; } }
-    else if (b.st === 'drop') {
-      const tgt = bestCluster(2.6); if (tgt) { const dx = tgt.x - b.x, dy = tgt.y - b.y, l = Math.hypot(dx, dy) || 1; if (l > 0.3) { b.x += dx / l * 1.6 * dt; b.y += dy / l * 1.6 * dt; } }
+    if (b.st === 'in') {
+      const live = bestCluster(2.6); if (live) { b.tx = live.x; b.ty = live.y; }
+      const dx = b.tx - b.x, dy = b.ty - b.y, l = Math.hypot(dx, dy) || 1; b.x += dx / l * 4.5 * dt; b.y += dy / l * 4.5 * dt; if (l < 1.2) { b.st = 'drop'; b.t = 0; }
+    } else if (b.st === 'drop') {
+      // hover over the crowd and drop each bomb on a real cat (leading its walk), not at random
+      const near = X.cats.filter(c => c.hp > 0 && !c.flee && Math.hypot(c.x - b.x, c.y - b.y) < 4.5);
+      const tgt = near.length ? bestCluster(2.6) : null;
+      if (tgt) { const dx = tgt.x - b.x, dy = tgt.y - b.y, l = Math.hypot(dx, dy) || 1; if (l > 0.3) { b.x += dx / l * 2.6 * dt; b.y += dy / l * 2.6 * dt; } }
       b.dropCd -= dt;
-      if (b.dropCd <= 0 && b.drops < 6) { b.dropCd = 0.42; b.drops++; X.bombs.push({ x: b.x + (Math.random() - 0.5) * 0.8, y: b.y + (Math.random() - 0.5) * 0.6, z: b.z - 0.6, vz: 0, spin: Math.random() * 6 }); throttle('shoot', 0.1); }
-      if (b.drops >= 6 && b.dropCd <= -0.4) { b.st = 'out'; b.t = 0; }
+      if (b.dropCd <= 0 && b.drops < 6) {
+        let aim = null;
+        if (near.length) { near.sort((a, c) => (a.bombed || 0) - (c.bombed || 0) || c.hp - a.hp); aim = near[0]; aim.bombed = (aim.bombed || 0) + 1; }
+        let ax, ay;
+        if (aim) { const lead = aim.moving ? 0.55 * aim.B.speed : 0; ax = aim.x + (aim.mx || 0) * lead; ay = aim.y - (aim.my || 0) * lead; }
+        else { const f = X.forts.filter(f => f.alive).sort((a, c) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(c.x - b.x, c.y - b.y))[0]; if (f) { ax = f.x + (Math.random() - 0.5) * 0.6; ay = f.y; } }
+        if (ax !== undefined) { b.dropCd = 0.35; b.drops++; X.bombs.push({ x0: b.x, y0: b.y, x: b.x, y: b.y, tx: ax, ty: ay, z0: b.z - 0.6, z: b.z - 0.6, t: 0, dur: 0.6, spin: Math.random() * 6 }); throttle('shoot', 0.1); }
+        else b.dropCd = 0.2;
+      }
+      if ((b.drops >= 6 && b.dropCd <= -0.3) || b.t > 9) { b.st = 'out'; b.t = 0; }
     } else { b.x += 2.5 * dt; b.y += 3 * dt; b.z += dt * 1.5; if (b.t > 3.5) b.gone = true; }
   }
   X.balloons = X.balloons.filter(b => !b.gone);
   for (const m of X.bombs) {
-    m.vz -= 14 * dt; m.z += m.vz * dt; m.spin += dt * 8;
-    if (m.z <= 0 && !m.done) {
+    m.t += dt; m.spin += dt * 8; const u = Math.min(1, m.t / m.dur);
+    m.x = m.x0 + (m.tx - m.x0) * u; m.y = m.y0 + (m.ty - m.y0) * u; m.z = m.z0 * (1 - u * u);
+    if (u >= 1 && !m.done) { m.z = 0;
       m.done = true; const P = itemPower();
-      for (const c of X.cats) if (c.hp > 0 && Math.hypot(c.x - m.x, c.y - m.y) < 1.5) { hurt(c, 26 * P, m); c.squash = 1; }
+      for (const c of X.cats) if (c.hp > 0 && Math.hypot(c.x - m.x, c.y - m.y) < 1.4) { hurt(c, 34 * P, m); c.squash = 1; c.stun = Math.max(c.stun || 0, 0.4); }
       for (const f of X.forts) if (f.alive && Math.hypot(f.x - m.x, f.y - m.y) < 1.4 + fortRad(f)) { hurt(f, 40 * P, m); f.hit = 0.25; }
       boom(m.x, m.y); X.shake = Math.max(X.shake, 0.18); throttle('break', 0.12);
     }
@@ -892,6 +918,7 @@ function renderItemsX() {
     const it = X.items[k], b = $(k === 'egret' ? 'xEgret' : 'xBalloon'), f = it.cd / it.max;
     b.style.setProperty('--cd', (f * 360) + 'deg'); b.classList.toggle('ready', it.cd <= 0);
     b.querySelector('em').textContent = it.cd > 0 ? Math.ceil(it.cd) : '';
+    b.querySelector('small').textContent = '🪙' + itemCost(k); b.classList.toggle('poor', save.coins < itemCost(k));
   }
 }
 function itemIcon(cv2, k) {
@@ -907,6 +934,108 @@ function itemIcon(cv2, k) {
     if (k === 'egret') drawEgret({ x: 0, y: 0, z: 0, face: 1, flap: 1.2 }); else drawBalloon({ x: 0, y: 0, z: 0, t: 0 });
     g.restore(); xk = sx;
   } catch (e) {} finally { ctx = keep; X = keepX; }
+}
+
+
+// ---------- cat special moves: the king's slam, the general's charge, rolling pots, all-out brawls ----------
+function catSpecial(c, dt) {
+  if (c.kind === 'chief') {
+    c.slamT = (c.slamT === undefined ? 4 : c.slamT) - dt;
+    if (c.slamT <= 0 && X.ducks.some(d => d.hp > 0 && dist(d, c) < 2.6)) {
+      c.slamT = 5.5; c.atkT = 0.45;
+      for (const d of X.ducks) if (d.hp > 0 && dist(d, c) < 2.6) { hurt(d, c.dmg * 0.6, c); d.stun = 1.2; }
+      for (const h of X.huts) if (h.hp > 0 && dist(h, c) < 2.4) hurt(h, c.dmg, c);
+      X.slams.push({ x: c.x, y: c.y, t: 0, r: 2.6 }); X.shake = 0.45; dust(c.x, c.y, 18); floatText(c.x, c.y + 2.6, xt("ตูม!"), '#ff8a5a'); throttle('slam', 0.3);
+    }
+    if (!c.called && c.hp < c.max * 0.5) {
+      c.called = true; X.banner = 1.8; X.bannerTxt = xt("ราชาแมวเรียกลูกน้อง!"); throttle('bossRoar', 1);
+      for (let i = 0; i < 3 + Math.floor(dayN() / 3); i++) { const k = spawnCat(i % 2 ? 'knight' : 'tank', c.x + (Math.random() - 0.5) * 2, c.y + 0.6 + Math.random()); k.home = c.home; }
+    }
+  } else if (c.kind === 'general') {
+    if (c.charge > 0) {
+      c.charge -= dt; c.idx = nearestIdx(c.x, c.y, c.idx);
+      const p = X.path[Math.max(0, c.idx - 8)], dx = p.x - c.x, dy = p.y - c.y, l = Math.hypot(dx, dy) || 1;
+      c.x += dx / l * 6 * dt; c.y += dy / l * 6 * dt; c.mx = dx / l; c.my = -dy / l; c.walk += dt * 10; c.moving = true;
+      for (const d of X.ducks) if (d.hp > 0 && !d.bashed && dist(d, c) < 0.9) { d.bashed = c; hurt(d, c.dmg * 0.8, c); d.stun = 0.8; d.y -= 0.6; sparks(d.x, d.y, 4); throttle('bonk', 0.05); }
+      if (c.charge <= 0) for (const d of X.ducks) if (d.bashed === c) d.bashed = null;
+      return;
+    }
+    c.chargeT = (c.chargeT === undefined ? 3 : c.chargeT) - dt;
+    if (c.chargeT <= 0 && X.ducks.some(d => d.hp > 0 && d.y < c.y && dist(d, c) < 5)) { c.chargeT = 7; c.charge = 0.7; floatText(c.x, c.y + 2.2, xt("พุ่ง!"), '#ff8a5a'); throttle('catHurt', 0.5); }
+  }
+}
+function catEvents(dt) {
+  const n = dayN();
+  // giant pots rolled down the road from the nearest cat fort (day 18+)
+  if (n >= 3) {
+    X.potT = (X.potT === undefined ? 30 : X.potT) - dt;
+    if (X.potT <= 0) {
+      X.potT = Math.max(16, 32 - n) * (0.8 + Math.random() * 0.4);
+      const f = X.forts.filter(f => f.alive).sort((a, b) => a.y - b.y)[0];
+      if (f && X.ducks.some(d => d.hp > 0 && f.y - d.y < 12)) { const i = nearestIdx(f.x, f.y); X.pots.push({ x: X.path[i].x, y: X.path[i].y, idx: i, rot: 0, go: 0, hp: 1 }); X.banner = 1.4; X.bannerTxt = xt("หม้อยักษ์กลิ้งมา!"); throttle('thud', 0.5); }
+    }
+  }
+  for (const q of X.pots) {
+    const P = X.path, j = Math.max(0, q.idx - 2), p = P[j], dx = p.x - q.x, dy = p.y - q.y, l = Math.hypot(dx, dy) || 1, v = 3.4;
+    q.x += dx / l * v * dt; q.y += dy / l * v * dt; q.go += v * dt; q.rot += v * dt * 2.2; q.idx = nearestIdx(q.x, q.y, q.idx);
+    if (Math.random() < dt * 8) dust(q.x, q.y, 1);
+    for (const d of X.ducks) if (d.hp > 0 && !d.potHit && dist(d, q) < 0.8) { d.potHit = q; hurt(d, 28 * X.dmgMul, q); d.stun = 0.9; d.x += (d.x > q.x ? 1 : -1) * 0.7; throttle('bonk', 0.05); }
+    const h = X.huts.find(h => h.hp > 0 && dist(h, q) < 1); if (h) { hurt(h, 70 * X.dmgMul, q); q.gone = true; }
+    if (q.go > 15 || q.idx <= 2 || dist(q, X.camp) < 1.6) { if (dist(q, X.camp) < 2) hurt(X.camp, 40 * X.dmgMul, q); q.gone = true; }
+    if (q.gone) { debris(q.x, q.y, 12); dust(q.x, q.y, 10); X.shake = Math.max(X.shake, 0.2); throttle('clang', 0.2); for (const d of X.ducks) if (d.potHit === q) d.potHit = null; }
+  }
+  X.pots = X.pots.filter(q => !q.gone);
+  // brawl: every so often the cats charge all-out and the ducks rally to meet them (day 17+)
+  if (n >= 2) {
+    X.brawlT -= dt;
+    if (X.brawlT <= 0) {
+      X.brawlT = Math.max(45, 80 - n * 2);
+      const from = X.forts.filter(f => f.alive).sort((a, b) => a.y - b.y)[0];
+      if (from && X.cats.length < 40 && X.ducks.filter(d => d.hp > 0).length >= 4) {
+        const size = Math.min(14, 6 + n);
+        for (let i = 0; i < size; i++) { const c = spawnCat(raidKind(n), from.x + (Math.random() - 0.5) * 2.4, from.y - fortRad(from) - 0.3 - (i % 4) * 0.4); c.raider = true; c.rally = 8; }
+        for (const d of X.ducks) if (d.hp > 0) d.rally = 10;
+        X.banner = 2; X.bannerTxt = xt("ตะลุมบอน!!"); X.shake = 0.3; throttle('horn', 1); setTimeout(() => throttle('quack', 0.2), 400);
+      }
+    }
+  }
+  for (const r of X.slams) r.t += dt; X.slams = X.slams.filter(r => r.t < 0.5);
+}
+function drawCrown(x, y, s) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = Math.max(1.5, s * 0.08);
+  ctx.beginPath(); ctx.moveTo(-s * 0.5, 0); ctx.lineTo(-s * 0.5, -s * 0.45); ctx.lineTo(-s * 0.25, -s * 0.2); ctx.lineTo(0, -s * 0.6); ctx.lineTo(s * 0.25, -s * 0.2); ctx.lineTo(s * 0.5, -s * 0.45); ctx.lineTo(s * 0.5, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ff3a5a'; ctx.beginPath(); ctx.arc(0, -s * 0.15, s * 0.09, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+function drawPot(q) {
+  const p = xp(q.x, q.y), s = xk * 1.35;
+  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, s * 0.45, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.save(); ctx.translate(p.x, p.y - s * 0.42); ctx.rotate(q.rot);
+  if (!drawItem('it_pot', 0, 0, s, Math.PI / 2)) { ctx.fillStyle = '#8a8f99'; ctx.beginPath(); ctx.arc(0, 0, s * 0.42, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+// cartoon fight clouds where many ducks and cats are brawling in one spot
+function drawCatFx() {
+  for (const r of X.slams) { const p = xp(r.x, r.y), u = r.t / 0.5; ctx.globalAlpha = 1 - u; ctx.strokeStyle = '#ffb36a'; ctx.lineWidth = 6 * (1 - u) + 2; ctx.beginPath(); ctx.ellipse(p.x, p.y, r.r * xk * u, r.r * xk * u * XYS * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+  const cells = new Map();
+  const add = (u, side) => { if (u.hp <= 0 || !u.target || u.moving || u.B.range > 2) return; const k = Math.floor(u.x / 2.2) + ',' + Math.floor(u.y / 2.2); let c = cells.get(k); if (!c) cells.set(k, c = { d: 0, c: 0, x: 0, y: 0, n: 0 }); c[side]++; c.x += u.x; c.y += u.y; c.n++; };
+  for (const d of X.ducks) add(d, 'd'); for (const c of X.cats) add(c, 'c');
+  const t = X.t;
+  for (const c of cells.values()) {
+    if (c.d < 2 || c.c < 2 || c.n < 5) continue;
+    const p = xp(c.x / c.n, c.y / c.n), R = xk * (0.55 + Math.min(1, c.n / 14) * 0.6), cy = p.y - xk * 0.55;
+    ctx.save();
+    for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + t * 3, rr = R * (0.55 + 0.15 * Math.sin(t * 9 + i)); ctx.fillStyle = i % 2 ? '#f3e2c0' : '#e6cfa2'; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.6, R * 0.45, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#fff3d8'; ctx.beginPath(); ctx.arc(p.x, cy, R * 0.55, 0, Math.PI * 2); ctx.fill();
+    // flailing weapons and stars
+    const icons = ['it_spatula', 'it_chopsticks', 'it_fork', 'it_pan', 'it_ladle'];
+    for (let i = 0; i < 4; i++) { const a = t * (4 + i) + i * 1.7; drawItem(icons[(i + Math.floor(t * 2)) % icons.length], p.x + Math.cos(a) * R * 0.95, cy + Math.sin(a) * R * 0.55, xk * 0.45, a * 2); }
+    ctx.font = `${Math.round(xk * 0.42)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(['💥', '⭐', '💢'][Math.floor(t * 6) % 3], p.x + Math.sin(t * 11) * R * 0.5, cy - R * 0.6);
+    ctx.fillText('⭐', p.x - Math.cos(t * 7) * R * 0.7, cy + R * 0.2);
+    ctx.restore();
+    if (Math.random() < 0.05) throttle('bonk', 0.15);
+  }
 }
 
 // ---------- update ----------
@@ -972,20 +1101,22 @@ function expUpdate(dt) {
         f.spawnT = F.spawn * (0.85 + Math.random() * 0.3);
       } else if (f.spawnT <= 0) f.spawnT = 0.8;
     }
-    if (f.kind === 'fortress' && !X.bossOut && f.hp < f.max * 0.6) {
+    if (f.kind === 'fortress' && !X.bossOut && (f.hp < f.max * 0.8 || X.ducks.some(d => d.hp > 0 && d.y > f.y - 9))) {
       X.bossOut = true; const b = spawnCat('chief', f.x, f.y - 2.6); b.home = f; X.banner = 2.2; X.bannerTxt = xt("ราชาแมวออกมาแล้ว!"); SFX.play('bossRoar'); X.shake = 0.4;
     }
   }
   // every so often the cats send a raiding party down the road
-  X.raidT = (X.raidT === undefined ? 36 : X.raidT) - dt;
+  X.raidT = (X.raidT === undefined ? 45 : X.raidT) - dt;
   if (X.raidT <= 0) {
     const n = dayN(), from = X.forts.filter(f => f.alive).sort((a, b) => a.y - b.y)[0];
     // later days: cats counter-attack sooner, in bigger groups, with knights, steel tanks and shadow hunters
-    X.raidT = Math.max(16, 31 - n * 0.9) * (0.85 + Math.random() * 0.3);
-    if (from && X.cats.length < 40) {
-      const size = Math.min(12, 2 + Math.floor(n * 0.5) + Math.floor(X.t / 90));
+    X.raidT = Math.max(14, 28 - n) * (0.85 + Math.random() * 0.3);
+    if (from && X.cats.length < 46) {
+      const size = Math.min(16, 3 + Math.floor(n * 0.7) + Math.floor(X.t / 70));
       for (let i = 0; i < size; i++) { const c = spawnCat(raidKind(n), from.x + (Math.random() - 0.5) * 1.6, from.y - fortRad(from) - 0.3 - i * 0.35); c.raider = true; }
       X.raids = (X.raids || 0) + 1;
+      // every 3rd raid is led by a cat general (from day 17)
+      if (n >= 2 && X.raids % 3 === 0) { const g = spawnCat('general', from.x, from.y - fortRad(from) - 0.2); g.raider = true; }
       X.banner = 1.6; X.bannerTxt = n >= 4 && X.raids % 3 === 0 ? xt("แมวบุกใหญ่!!") : xt("แมวบุก!"); throttle('horn', 1); if (n >= 4) X.shake = Math.max(X.shake, 0.15);
     }
   }
@@ -993,6 +1124,8 @@ function expUpdate(dt) {
   for (const d of X.ducks) {
     if (d.hp <= 0) { d.deadT += dt; continue; }
     d.born += dt; d.hitT = Math.max(0, d.hitT - dt); d.cd -= dt; d.atkT = Math.max(0, d.atkT - dt); d.scan -= dt;
+    if (d.stun > 0) { d.stun -= dt; d.moving = false; continue; }
+    if (d.rally > 0) d.rally -= dt;
     if (d.scan <= 0 || !alive(d.target) || (d.target.alive === false)) { d.target = findDuckTarget(d); d.scan = 0.25; }
     if (d.target && d.target.alive === false) d.target = null;
     moveUnit(d, dt, +1);
@@ -1008,6 +1141,8 @@ function expUpdate(dt) {
     if (c.hp <= 0) { c.deadT += dt; continue; }
     c.born += dt; c.hitT = Math.max(0, c.hitT - dt); c.slowT = Math.max(0, (c.slowT || 0) - dt);
     if (c.stun > 0) { c.stun -= dt; c.moving = false; continue; }
+    if (c.rally > 0) c.rally -= dt;
+    catSpecial(c, dt);
     c.cd -= dt; c.atkT = Math.max(0, c.atkT - dt); c.scan -= dt; c.squash = Math.max(0, (c.squash || 0) - dt * 3);
     if (c.scan <= 0 || !alive(c.target)) { c.target = findCatTarget(c); c.scan = 0.25; }
     moveUnit(c, dt, -1); c.st = c.moving ? 'walk' : 'atk';
@@ -1023,6 +1158,7 @@ function expUpdate(dt) {
   X.cats = X.cats.filter(c => c.hp > 0 || c.deadT < 0.9);
   X.huts = X.huts.filter(h => h.hp > 0);
   itemsUpdate(dt);
+  catEvents(dt);
   // shots
   for (const s of X.shots) { s.t += dt; if (s.t >= s.dur && !s.done) { s.done = true; landShot(s); } }
   X.shots = X.shots.filter(s => !s.done);
@@ -1076,6 +1212,7 @@ function duckSprite(type, x, y, h, walk, atk, moving, hitT) {
 function drawDuck(d) {
   const p = xp(d.x, d.y), h = xk * 0.95;
   if (p.y < -60 || p.y > H + 60) return;
+  if (d.stun > 0 && d.hp > 0) { ctx.font = `${Math.round(h * 0.3)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('💫', p.x + Math.cos(X.t * 8) * h * 0.2, p.y - h * 1.25); }
   ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, h * 0.24, h * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   ctx.save(); ctx.translate(p.x, p.y);
   if (d.hp <= 0) { const k = Math.min(1, d.deadT / 0.5); ctx.globalAlpha = 1 - Math.max(0, d.deadT - 0.5) / 0.4; ctx.rotate(-k * 1.3 * d.face); }
@@ -1098,10 +1235,12 @@ function drawCatX(c) {
   if (c.B.art && ready(IMG[c.B.art])) {
     // armoured cats from the old sheets: they face left, so mirror when walking right
     ctx.translate(p.x, p.y); if ((c.mx || 0) > 0.1) ctx.scale(-1, 1);
-    const hh = h * (c.kind === 'steel' ? 1.25 : 1.1), lunge = c.atkT > 0 ? Math.sin((0.45 - c.atkT) / 0.45 * Math.PI) : 0;
+    const hh = h * (c.B.big || (c.kind === 'steel' ? 1.25 : 1.1)), lunge = c.atkT > 0 ? Math.sin((0.45 - c.atkT) / 0.45 * Math.PI) : 0;
     ctx.rotate(-lunge * 0.18); ctx.scale(1 + lunge * 0.1, 1 - lunge * 0.08);
     if (c.hitT > 0) ctx.scale(1.12, 0.88);
     drawFrame(c.B.art, c.moving ? Math.floor(c.walk * 1.4) % 4 : 0, 0, 0, hh, false);
+    if (c.B.crown && c.hp > 0) drawCrown(0, -hh * 0.98, hh * 0.32);
+    if (c.charge > 0) { ctx.globalAlpha = 0.35; drawFrame(c.B.art, 1, -h * 0.4 * (c.mx > 0 ? -1 : 1), 0, hh, false); ctx.globalAlpha = 1; }
     if (c.kind === 'shadow' && c.hp > 0) { ctx.globalAlpha = 0.25; drawFrame(c.B.art, Math.floor(c.walk * 1.4 + 1) % 4, h * 0.25, 0, hh, false); }
   } else if (boss && ready(IMG.chief_walk)) {
     ctx.translate(p.x, p.y); if ((c.mx || 0) < 0) ctx.scale(-1, 1);
@@ -1225,10 +1364,12 @@ function expDraw() {
   for (const f of X.forts) if (f.alive) objs.push({ y: f.y, o: f, f: drawFort });
   for (const d of X.ducks) objs.push({ y: d.y, o: d, f: drawDuck });
   for (const c of X.cats) objs.push({ y: c.y, o: c, f: drawCatX });
+  for (const q of X.pots) objs.push({ y: q.y, o: q, f: drawPot });
   objs.sort((a, b) => b.y - a.y);
   for (const o of objs) o.f(o.o);
   for (const s of X.shots) drawShotX(s);
   drawItemsX();
+  drawCatFx();
   drawParts(); drawFloats();
   ctx.restore();
   if (X.tutStep) tutTick();
@@ -1277,6 +1418,8 @@ function buildExpUi() {
  background:conic-gradient(rgba(20,10,0,.55) var(--cd,0deg),transparent 0),radial-gradient(circle at 35% 30%,#bfeaff,#4a9be0);box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 4px 0 #2b6aa8,0 8px 14px rgba(0,0,0,.3);transition:transform .12s}
 #expUi .xitem:active{transform:scale(.9)}
 #expUi .xitem.ready{animation:xglow2 1.4s ease-in-out infinite}
+#expUi .xitem.poor{filter:grayscale(.6) brightness(.85)}
+#expUi .xitem.poor small{color:#ffb3b3}
 @keyframes xglow2{50%{box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 4px 0 #2b6aa8,0 0 18px 5px rgba(160,230,255,.9)}}
 #xEgret{left:10px}#xBalloon{right:10px;background:conic-gradient(rgba(20,10,0,.55) var(--cd,0deg),transparent 0),radial-gradient(circle at 35% 30%,#ffe0a0,#ff8a3a)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 4px 0 #b0501a,0 8px 14px rgba(0,0,0,.3)}
 #expUi .xitem canvas{position:absolute!important;inset:3px!important;width:56px!important;height:56px!important;pointer-events:none}
@@ -1327,7 +1470,7 @@ function renderExpUi() {
   $('xDay').textContent = T.wave; $('xCoins').textContent = Math.floor(save.coins).toLocaleString();
   const cost = buildCost(), b = $('xBuild'), can = save.coins >= cost && !!freeSlot();
   $('xCost').textContent = cost ? `🪙${cost}` : xt("ฟรี!"); $('xCost').className = save.coins >= cost ? '' : 'no';
-  { const ad = $('xAd'), need = save.coins < cost && !!freeSlot() && X.phase === 'fight'; ad.classList.toggle('hidden', !need); if (need) $('xAdAmt').textContent = '+🪙' + adCoins(); } $('xNext').textContent = xt(HUTS[X.nextType].name);
+  { const ad = $('xAd'), need = (save.coins < cost && !!freeSlot() || save.coins < itemCost('egret')) && X.phase === 'fight'; ad.classList.toggle('hidden', !need); if (need) $('xAdAmt').textContent = '+🪙' + adCoins(); } $('xNext').textContent = xt(HUTS[X.nextType].name);
   b.classList.toggle('ready', can);
   if (X.iconType !== X.nextType) { X.iconType = X.nextType; const c = b.querySelector('canvas'); cardIcon(c, X.nextType); }
   const total = X.forts.length, gone = X.forts.filter(f => !f.alive).length;
