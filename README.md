@@ -5,6 +5,7 @@ break barriers, beat red squads and storm the enemy castle. Coins buy permanent 
 
 ## Marching out (day 16+)
 From day 16 the ducks leave the city (`web/expedition.js`): a long jungle map scrolls upward with the duck war camp at the bottom. Tap 🔨 Build (costs 🌽 corn, which flows in during the battle) to raise duck huts on the glowing pads beside the path — Chopstick Hut, Fork Tower, Chili Mill, Ladle Lodge, Crossbow Fort, Golden Egg Shrine. Huts keep sending ducks up the winding path to smash the cats' pot towers, wok barracks and chili catapults; clearing a zone opens the next pads. Every few builds pick 1 of 3 upgrade cards. Destroy the cat king's fortress (the king himself comes out at 60%) to win. Weapon levels bought in the city make the marching ducks stronger.
+The first march opens with the Duck Chief's rally speech (`web/rally.js`, drawn live from the game art: "we won't take it any more — this time we attack, hands up!") and then a guided spotlight tutorial (camp, Build button, huts, corn, cat forts, cards, the fortress). Both can be replayed from the ❚❚ pause menu.
 
 - Game: `web/index.html` (plain HTML5 canvas, no build step — open it in any browser)
 - Android: `app/` wraps the game in a WebView. Every push to `main` builds an APK and publishes it under **Releases** (only the 3 newest are kept).

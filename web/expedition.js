@@ -50,6 +50,18 @@ const XEN = {
   "🎬 ดูโฆษณา สู้ต่อ!<small>ซ่อมค่ายใหญ่เต็ม แล้วสู้ต่อ</small>": "🎬 Watch an ad to keep fighting<small>The war camp is fully repaired</small>",
   "สู้ต่อ! ค่ายใหญ่ซ่อมเต็มแล้ว": "Fight on! The war camp is fully repaired",
   "พักรบ": "Paused",
+  "❓ วิธีเล่น": "❓ How to play",
+  "🎬 ดูคลิปหัวหน้าเป็ด": "🎬 Watch the chief's speech",
+  "นี่คือค่ายใหญ่ของเป็ด ⛺\nถ้าแมวพังค่ายนี้ได้ = แพ้": "This is the duck war camp ⛺\nIf the cats wreck it, you lose",
+  "แตะปุ่ม 🔨 สร้าง ตรงนี้เลย!\nใช้ข้าวโพด 🌽 ตั้งค่ายเป็ดบนจุด ➕ ข้างทาง": "Tap 🔨 Build right here!\nSpend corn 🌽 to put a duck hut on a ➕ pad",
+  "เยี่ยม! 🎉 ค่ายนี้จะส่งเป็ด\nเดินขึ้นไปสู้เองเรื่อยๆ": "Great! 🎉 This hut keeps sending\nducks up the path to fight",
+  "ข้าวโพด 🌽 ไหลเข้ามาเองตลอด\nล้มแมว หรือพังป้อม ได้เพิ่มอีก": "Corn 🌽 flows in by itself\nKnock out cats or forts for more",
+  "ข้างหน้าคือป้อมแมว 💥\nพังให้หมด เพื่อปลดล็อกจุดสร้าง 🔒 ถัดไป": "Cat forts ahead 💥\nSmash them all to unlock the next 🔒 pads",
+  "สร้างครบทุก ๆ 3 หลัง\nได้เลือกการ์ดอัปเกรด 1 ใน 3 ใบ 🃏": "Every few builds you pick\n1 of 3 upgrade cards 🃏",
+  "บนสุดคือป้อมราชาแมว 🏰\nพังได้ = ชนะ! ลากจอขึ้นลงเพื่อดูแผนที่": "At the very top: the Cat King's fortress 🏰\nSmash it to win! Drag to look around",
+  "ต่อไป ▶": "Next ▶",
+  "ลุยเลย! ✔": "Let's go! ✔",
+  "ข้าม": "Skip",
   "▶ สู้ต่อ": "▶ Resume",
   "🏳️ ถอยกลับเมือง": "🏳️ Retreat to the city",
   "ถอยกลับเมืองแล้ว เก็บเหรียญที่ได้ไว้": "Retreated — you keep the coins you earned",
@@ -414,14 +426,18 @@ function startExpedition() {
   hide('tdUi'); hide('result');
   buildExpUi(); renderExpUi();
   X.banner = 2.6; X.bannerTxt = xt("ออกศึก!");
+  if (!save.rallySeen && window.MoltRally) playRally();
 }
-function showExpHelp() {
-  if (!X || state !== 'exp') return;
-  X.paused = true;
-  const m = expModal(`<div class="xh">${xt("วิธีออกศึก")}</div>
-    <div class="xhelp"><p>🔨 ${xt("แตะ 🔨 สร้าง เพื่อตั้งค่ายเป็ดข้างทาง")}</p><p>🦆 ${xt("ค่ายจะส่งเป็ดเดินขึ้นไปสู้เองตลอด")}</p><p>💥 ${xt("ทำลายป้อมแมวให้หมด เพื่อเปิดที่สร้างข้างหน้า")}</p><p>🏰 ${xt("พังป้อมราชาแมวด้านบนสุดเพื่อชนะ")}</p></div>
-    <button class="btn" id="xHelpGo">${xt("ลุยเลย!")}</button>`);
-  m.querySelector('#xHelpGo').onclick = () => { SFX.play('click'); save.expTut = true; persist(); closeExpModal(); X.paused = false; };
+// the chief's rally speech (first march only; replay from the pause menu)
+function playRally(back) {
+  X.phase = 'rally'; X.rallyBack = back || 'intro'; hide('expUi');
+  MoltRally.start(() => {
+    save.rallySeen = true; persist();
+    if (!X) return;
+    X.phase = X.rallyBack; show('expUi');
+    if (X.phase === 'intro') { X.introT = 0; X.banner = 2.6; SFX.play('horn'); }
+    else X.paused = false;
+  });
 }
 function endExpedition(won) {
   if (X.phase === 'won' || X.phase === 'lost') return;
@@ -494,6 +510,7 @@ function freeSlot() {
 }
 function doBuild() {
   if (!X || X.phase !== 'fight' || X.paused) return;
+  if (X.tutStep && X.tutStep.wait !== 'build' && !X.tutStep.run) return;
   const cost = buildCost();
   if (X.corn < cost) { SFX.play('gateBad'); toast(xt("ข้าวโพดไม่พอ")); pulseBuild(); return; }
   const s = freeSlot(); if (!s) { SFX.play('gateBad'); toast(xt("ไม่มีที่ว่างให้สร้าง — ทำลายป้อมแมวข้างหน้าก่อน")); return; }
@@ -681,12 +698,14 @@ function landShot(s) {
 // ---------- update ----------
 function expUpdate(dt) {
   if (!X || state !== 'exp') return;
+  if (X.phase === 'rally') { MoltRally.update(dt); return; }
+  if (X.tutStep && !X.tutStep.run) { tutCamera(dt); updateFx(dt); X.t += dt * 0.0001; return; }
   if (X.paused) return;
-  if (X.cardDue && X.phase === 'fight') { openCards(); return; }
+  if (X.cardDue && X.phase === 'fight' && !X.tutStep) { openCards(); return; }
   X.t += dt;
   if (X.banner > 0) X.banner -= dt;
   if (X.shake > 0) X.shake = Math.max(0, X.shake - dt);
-  if (X.phase === 'intro') { X.introT += dt; X.camY = Math.max(0, (XL - viewSpan()) * Math.max(0, 1 - X.introT / 2.6) ** 2); if (X.introT > 2.8) { X.phase = 'fight'; X.camY = 0; if (!save.expTut) showExpHelp(); } updateFx(dt); return; }
+  if (X.phase === 'intro') { X.introT += dt; X.camY = Math.max(0, (XL - viewSpan()) * Math.max(0, 1 - X.introT / 2.6) ** 2); if (X.introT > 2.8) { X.phase = 'fight'; X.camY = 0; if (!save.tut || !save.tut.exp) startExpTut(); } updateFx(dt); return; }
   if (X.phase === 'won' || X.phase === 'lost') { X.endT += dt; updateFx(dt); for (const c of X.cats) if (c.flee && c.hp > 0) { c.y += dt * 3; c.walk += dt * 6; c.my = -1; } if (X.endT > (X.phase === 'won' ? 2.6 : 1.8)) showExpResult(); return; }
   X.corn += X.cornRate * dt;
   // huts: train ducks / shoot / heal
@@ -787,7 +806,8 @@ function expUpdate(dt) {
   updateFx(dt);
   // camera: follow the front unless the player is looking around
   X.camHold = Math.max(0, X.camHold - dt);
-  if (!X.drag && X.camHold <= 0) {
+  if (X.tutStep && X.tutStep.camY !== undefined) tutCamera(dt);
+  else if (!X.drag && X.camHold <= 0) {
     const want = Math.max(0, Math.min(XL + 1 - viewSpan(), X.front - viewSpan() * 0.42));
     X.camY += (want - X.camY) * Math.min(1, dt * 1.6);
   }
@@ -949,6 +969,7 @@ function drawFloats() {
 }
 function expDraw() {
   if (!X) return;
+  if (X.phase === 'rally') { MoltRally.draw(); return; }
   if (X.w !== W || X.h !== H) { X.w = W; X.h = H; xk = Math.min(W / 10.4, 46); X.tiles.clear(); X.iconType = null; }
   ctx.save();
   if (X.shake > 0) ctx.translate((Math.random() - 0.5) * X.shake * 22, (Math.random() - 0.5) * X.shake * 16);
@@ -972,6 +993,7 @@ function expDraw() {
   for (const s of X.shots) drawShotX(s);
   drawParts(); drawFloats();
   ctx.restore();
+  if (X.tutStep) tutTick();
   // banners
   if (X.banner > 0 && X.bannerTxt) {
     const u = X.banner, a = Math.min(1, u * 2), sc = 1 + Math.max(0, 0.4 - (2.6 - u)) * 0.6;
@@ -1061,9 +1083,85 @@ function closeExpModal() { const m = $('xModal'); if (m) m.remove(); }
 function openPause() {
   if (!X || X.phase === 'won' || X.phase === 'lost') return;
   X.paused = true;
-  const m = expModal(`<div class="xh">${xt("พักรบ")}</div><button class="btn" id="xResume">${xt("▶ สู้ต่อ")}</button><br><button class="btn" id="xQuit" style="background:linear-gradient(#9aa3b0,#5e6672);box-shadow:0 4px 0 #3a404a">${xt("🏳️ ถอยกลับเมือง")}</button>`);
+  const m = expModal(`<div class="xh">${xt("พักรบ")}</div><button class="btn" id="xResume">${xt("▶ สู้ต่อ")}</button><br><button class="btn" id="xHow" style="background:linear-gradient(#8fd0ff,#4a9be0);box-shadow:0 4px 0 #2b6aa8">${xt("❓ วิธีเล่น")}</button><br><button class="btn" id="xClip" style="background:linear-gradient(#ffb36a,#e0782a);box-shadow:0 4px 0 #a04a10">${xt("🎬 ดูคลิปหัวหน้าเป็ด")}</button><br><button class="btn" id="xQuit" style="background:linear-gradient(#9aa3b0,#5e6672);box-shadow:0 4px 0 #3a404a">${xt("🏳️ ถอยกลับเมือง")}</button>`);
+  m.querySelector('#xHow').onclick = () => { SFX.play('click'); closeExpModal(); X.paused = false; startExpTut(true); };
+  m.querySelector('#xClip').onclick = () => { SFX.play('click'); closeExpModal(); if (window.MoltRally) playRally('fight'); else X.paused = false; };
   m.querySelector('#xResume').onclick = () => { SFX.play('click'); closeExpModal(); X.paused = false; };
   m.querySelector('#xQuit').onclick = () => { SFX.play('click'); persist(); toast(xt("ถอยกลับเมืองแล้ว เก็บเหรียญที่ได้ไว้")); leaveExpedition(); };
+}
+
+
+// ---------- guided tutorial (spotlight + pointing hand) ----------
+function rectOfEl(id) { const el = $(id); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: Math.max(r.width, r.height) / 2 + 8 }; }
+function rectOfWorld(x, y, rM, up) { const p = xp(x, y); return { x: p.x, y: p.y - (up || 0) * xk, r: rM * xk }; }
+function firstFort() { return X.forts.filter(f => f.alive && f.kind !== 'fortress').sort((a, b) => a.y - b.y)[0]; }
+const EXP_TUT = [
+  { text: "นี่คือค่ายใหญ่ของเป็ด ⛺\nถ้าแมวพังค่ายนี้ได้ = แพ้", at: () => rectOfWorld(X.camp.x, X.camp.y, 1.6, 1.2), camY: () => 0 },
+  { text: "แตะปุ่ม 🔨 สร้าง ตรงนี้เลย!\nใช้ข้าวโพด 🌽 ตั้งค่ายเป็ดบนจุด ➕ ข้างทาง", at: () => rectOfEl('xBuild'), wait: 'build', camY: () => 0 },
+  { text: "เยี่ยม! 🎉 ค่ายนี้จะส่งเป็ด\nเดินขึ้นไปสู้เองเรื่อยๆ", at: () => { const h = X.huts[X.huts.length - 1]; return h ? rectOfWorld(h.x, h.y, 1.3, 1) : null; }, run: true, camY: () => 0 },
+  { text: "ข้าวโพด 🌽 ไหลเข้ามาเองตลอด\nล้มแมว หรือพังป้อม ได้เพิ่มอีก", at: () => rectOfEl('xCorn'), run: true },
+  { text: "ข้างหน้าคือป้อมแมว 💥\nพังให้หมด เพื่อปลดล็อกจุดสร้าง 🔒 ถัดไป", at: () => { const f = firstFort(); return f ? rectOfWorld(f.x, f.y, 1.5, 1.2) : null; }, camY: () => { const f = firstFort(); return f ? f.y - viewSpan() * 0.45 : 0; } },
+  { text: "สร้างครบทุก ๆ 3 หลัง\nได้เลือกการ์ดอัปเกรด 1 ใน 3 ใบ 🃏", at: null, camY: () => 0 },
+  { text: "บนสุดคือป้อมราชาแมว 🏰\nพังได้ = ชนะ! ลากจอขึ้นลงเพื่อดูแผนที่", at: () => rectOfWorld(0, XL - 2.2, 3, 2), camY: () => XL + 1 - viewSpan() },
+];
+function tutCamera(dt) {
+  const st = X.tutStep; if (!st || !st.camY) return;
+  const want = Math.max(0, Math.min(XL + 1 - viewSpan(), st.camY()));
+  X.camY += (want - X.camY) * Math.min(1, dt * 3);
+}
+function startExpTut(replay) {
+  X.tutI = 0; X.tutReplay = !!replay;
+  let el = $('xTut');
+  if (!el) {
+    const st = document.createElement('style'); st.textContent = `
+#xTut{position:fixed;inset:0;z-index:15;pointer-events:none;font-family:Mitr,system-ui,sans-serif}
+#xTut .spot{position:fixed;border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,.55),0 0 0 4px #ffe27a,0 0 24px 8px rgba(255,226,122,.8);transition:all .35s cubic-bezier(.34,1.3,.64,1)}
+#xTut .hand{position:fixed;font-size:42px;transition:left .35s,top .35s;animation:xtap .9s ease-in-out infinite;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4))}
+@keyframes xtap{50%{transform:translate(4px,10px) scale(.92)}}
+#xTut .box{position:fixed;left:12px;right:12px;background:#fff8e6;border-radius:18px;padding:14px 16px 12px;box-shadow:0 6px 0 #c9a46a,0 12px 24px rgba(0,0,0,.4);pointer-events:auto;animation:xin .35s cubic-bezier(.34,1.56,.64,1)}
+#xTut .box p{margin:0 0 10px;white-space:pre-line;font:800 16px/1.45 Mitr,system-ui;color:#4a2a10;text-align:center}
+#xTut .row{display:flex;justify-content:space-between;align-items:center}
+#xTut .dots{color:#c9a46a;font-size:12px;letter-spacing:2px}
+#xTut button{border:0;border-radius:14px;padding:8px 16px;font:800 15px Mitr,system-ui;color:#fff;background:linear-gradient(#5fd35a,#2f9a30);box-shadow:0 4px 0 #1f6a20}
+#xTut button.skip{background:none;box-shadow:none;color:#a07a4a;font-size:13px}`;
+    document.head.appendChild(st);
+    el = document.createElement('div'); el.id = 'xTut';
+    el.innerHTML = '<div class="spot"></div><div class="hand">👆</div><div class="box"><p></p><div class="row"><button class="skip"></button><span class="dots"></span><button class="next"></button></div></div>';
+    document.body.appendChild(el);
+    el.querySelector('.next').onclick = e => { e.stopPropagation(); SFX.play('click'); tutNext(); };
+    el.querySelector('.skip').onclick = e => { e.stopPropagation(); SFX.play('click'); endExpTut(); };
+  }
+  el.style.display = ''; showTutStep();
+}
+function showTutStep() {
+  const el = $('xTut'), st = EXP_TUT[X.tutI]; X.tutStep = st;
+  // a replayed build step only waits if a build is actually possible right now
+  if (st.wait === 'build') { X.tutBuilds = X.builds; if (X.corn < buildCost()) X.corn = buildCost(); if (!freeSlot()) { tutNext(); return; } }
+  el.querySelector('p').textContent = xt(st.text);
+  el.querySelector('.dots').textContent = EXP_TUT.map((_, i) => i === X.tutI ? '●' : '○').join('');
+  const nb = el.querySelector('.next'); nb.textContent = X.tutI === EXP_TUT.length - 1 ? xt("ลุยเลย! ✔") : xt("ต่อไป ▶"); nb.style.visibility = st.wait ? 'hidden' : '';
+  el.querySelector('.skip').textContent = xt("ข้าม");
+  placeTut();
+}
+function placeTut() {
+  const el = $('xTut'); if (!el || !X || !X.tutStep) return;
+  const st = X.tutStep, a = st.at ? st.at() : null, spot = el.querySelector('.spot'), hand = el.querySelector('.hand'), box = el.querySelector('.box');
+  if (a) { spot.style.left = (a.x - a.r) + 'px'; spot.style.top = (a.y - a.r) + 'px'; spot.style.width = spot.style.height = (a.r * 2) + 'px'; hand.style.display = ''; hand.style.left = (a.x - 6) + 'px'; hand.style.top = (a.y + a.r * 0.35) + 'px'; }
+  else { spot.style.left = (W / 2) + 'px'; spot.style.top = (H / 2) + 'px'; spot.style.width = spot.style.height = '0px'; hand.style.display = 'none'; }
+  const low = a && a.y > H * 0.5; box.style.top = low ? '96px' : ''; box.style.bottom = low ? '' : '110px';
+  // while waiting for the Build tap, the button itself must be clickable above the dim layer
+  const ui = $('expUi'); if (ui) ui.style.zIndex = st.wait === 'build' ? '16' : '';
+}
+function tutNext() { if (++X.tutI >= EXP_TUT.length) endExpTut(); else showTutStep(); }
+function endExpTut() {
+  const el = $('xTut'); if (el) el.style.display = 'none';
+  if (X) X.tutStep = null; { const ui = $('expUi'); if (ui) ui.style.zIndex = ''; }
+  if (!save.tut) save.tut = {}; save.tut.exp = true; persist();
+}
+function tutTick() {
+  if (!X || !X.tutStep) return;
+  if (X.tutStep.wait === 'build' && X.builds > X.tutBuilds) { setTimeout(tutNext, 450); X.tutStep = Object.assign({}, X.tutStep, { wait: 'done' }); }
+  placeTut();
 }
 
 // ---------- hook into the duck city ----------
