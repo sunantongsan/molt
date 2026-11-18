@@ -472,7 +472,7 @@ function cartoonRecoil(progress, amount = 1) {
 
 // ---------- Canvas / projection ----------
 const cv = document.getElementById('c');
-const ctx = cv.getContext('2d');
+let ctx = cv.getContext('2d');   // let: expedition.js paints cached art through the same helpers
 let W = 0, H = 0, DPR = 1;
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -1366,7 +1366,9 @@ function frame(now) {
   try {
     const intro = state === 'intro';
     const defense = state === 'td' || state === 'tdresult';
+    const march = state === 'exp' || state === 'expresult';
     if (intro) introUpdate(dt);
+    else if (march) expUpdate(dt);
     else if (defense) {
       if (!window.tutPause) tdUpdate(dt);
     } else if (state === 'play' || state === 'ending') update(dt);
@@ -1378,6 +1380,7 @@ function frame(now) {
     }
     drawing = true;
     if (intro) introDraw();
+    else if (march) expDraw();
     else if (defense) tdDraw();
     else draw();
   } catch (e) {
@@ -1398,6 +1401,7 @@ window.__molt = { get state() { return state; }, get army() { return army; }, ge
 <script src="welcome.js"></script>
 <script src="molt-art.js"></script>
 <script src="td.js"></script>
+<script src="expedition.js"></script>
 <script src="intro.js"></script>
 <script src="tutorial.js"></script>
 </body>

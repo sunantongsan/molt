@@ -3,6 +3,9 @@
 Duck house defense with a kitchen theme: a little duck house in the middle, a fence around it and platforms for duck throwers (chopsticks, forks, chili sauce...). Drag anywhere to walk the leader duck: it bonks cats with a ladle, picks up the coins they drop, and stands on buy pads to build and upgrade (platforms grow crates → table & chairs → cupboard tower → golden stove fort). Cats march down the lane from the top in waves (zombie-defense style); spend coins to build platforms, swap weapons and upgrade. Bonus mode: raid the cat castle in the army-runner battles.
 break barriers, beat red squads and storm the enemy castle. Coins buy permanent upgrades between levels.
 
+## Marching out (day 16+)
+From day 16 the ducks leave the city (`web/expedition.js`): a long jungle map scrolls upward with the duck war camp at the bottom. Tap 🔨 Build (costs 🌽 corn, which flows in during the battle) to raise duck huts on the glowing pads beside the path — Chopstick Hut, Fork Tower, Chili Mill, Ladle Lodge, Crossbow Fort, Golden Egg Shrine. Huts keep sending ducks up the winding path to smash the cats' pot towers, wok barracks and chili catapults; clearing a zone opens the next pads. Every few builds pick 1 of 3 upgrade cards. Destroy the cat king's fortress (the king himself comes out at 60%) to win. Weapon levels bought in the city make the marching ducks stronger.
+
 - Game: `web/index.html` (plain HTML5 canvas, no build step — open it in any browser)
 - Android: `app/` wraps the game in a WebView. Every push to `main` builds an APK and publishes it under **Releases** (only the 3 newest are kept).
 
