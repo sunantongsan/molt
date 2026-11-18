@@ -5,7 +5,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
+import android.content.Intent;
+import android.net.Uri;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
+import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
@@ -26,13 +31,32 @@ public class MainActivity extends Activity {
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setBackgroundColor(0xFF1D5FA8);
         setContentView(web);
+        // if the game page ever runs out of memory, Android kills its renderer; without this the whole app
+        // closed ("kicked out of the game"). Now the game simply reopens; coins and progress are in local storage.
+        web.setWebViewClient(new WebViewClient() {
+            @Override public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                ViewGroup parent = (ViewGroup) view.getParent();
+                if (parent != null) parent.removeView(view);
+                view.destroy();
+                if (view == web) { web = null; recreate(); }
+                return true;
+            }
+            @SuppressWarnings("deprecation")
+            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) {}
+                    return true;
+                }
+                return false;
+            }
+        });
         web.addJavascriptInterface(new MoltAds(this, web), "AndroidAds");
         hideBars();
         web.addJavascriptInterface(new PatchBridge(), "AndroidPatch");
         web.loadUrl(Patcher.startUrl(this));
         // look for a newer game patch in the background; tell the game when one is ready
         new Thread(() -> Patcher.check(getApplicationContext(), v -> runOnUiThread(() -> {
-            if (!isFinishing()) web.evaluateJavascript("window.onMoltPatch && window.onMoltPatch(" + v + ")", null);
+            if (!isFinishing() && web != null) web.evaluateJavascript("window.onMoltPatch && window.onMoltPatch(" + v + ")", null);
         })), "molt-patch").start();
     }
 
@@ -40,10 +64,11 @@ public class MainActivity extends Activity {
     private class PatchBridge {
         @JavascriptInterface public int version() { return Math.max(Patcher.bundledVersion(MainActivity.this), Patcher.liveVersion(MainActivity.this)); }
         @JavascriptInterface public String state() { return Patcher.stateJson(); }
-        @JavascriptInterface public void reload() { runOnUiThread(() -> web.loadUrl(Patcher.startUrl(MainActivity.this))); }
+        @JavascriptInterface public void reload() { runOnUiThread(() -> { if (web != null) web.loadUrl(Patcher.startUrl(MainActivity.this)); }); }
     }
 
     private void hideBars() {
+        if (web == null) return;
         web.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -58,6 +83,6 @@ public class MainActivity extends Activity {
         if (hasFocus) hideBars();
     }
 
-    @Override protected void onPause() { super.onPause(); web.onPause(); }
-    @Override protected void onResume() { super.onResume(); web.onResume(); }
+    @Override protected void onPause() { super.onPause(); if (web != null) web.onPause(); }
+    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
 }

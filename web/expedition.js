@@ -177,6 +177,7 @@ function duckPower() { let lv = 0; for (const p of (T.plats || [])) lv += (p.lvl
 function campMax() { return 420 + ((T.fence || 1) - 1) * 25 + ((T.house || 1) - 1) * 20 + (dayN() - 1) * 30; }
 
 function newExpedition() {
+  if (X && X.tiles) { for (const c of X.tiles.values()) recycleTile(c); }
   const n = dayN(), R = rng(T.wave * 7919 + 13);
   xk = Math.min(W / 10.4, 46);
   X = {
@@ -227,9 +228,7 @@ function newExpedition() {
   }
   X.decor.sort((a, b) => b.y - a.y);
   pickNextType();
-  // paint the whole map once now, so scrolling never stalls on a fresh strip
   X.w = W; X.h = H;
-  for (let ti = -1; ti <= Math.ceil((XL + 2) / TILE_M); ti++) bgTile(ti);
 }
 function addFort(kind, x, y, zone) {
   const F = FORTS[kind], hp = Math.round(F.hp * X.hpMul);
@@ -238,11 +237,17 @@ function addFort(kind, x, y, zone) {
 
 // ---------- painted background (cached in strips) ----------
 const TILE_M = 7;
+// Background strips are recycled: only the strips around the screen are kept (about 6), and the same
+// canvases are reused from battle to battle. Allocating a fresh full map every day piled up graphics memory
+// on phones until Android closed the game.
+const TILE_POOL = [];
+function recycleTile(c) { if (TILE_POOL.length < 8) TILE_POOL.push(c); else { c.width = c.height = 0; } }
+function releaseTiles() { if (X && X.tiles) { for (const c of X.tiles.values()) { c.width = c.height = 0; } X.tiles.clear(); } for (const c of TILE_POOL) { c.width = c.height = 0; } TILE_POOL.length = 0; }
 function bgTile(ti) {
   let c = X.tiles.get(ti); if (c) return c;
   const th = TILE_M * xk * XYS, dpr = Math.min(2, window.devicePixelRatio || 1);
-  c = document.createElement('canvas'); c.width = Math.ceil(W * dpr); c.height = Math.ceil(th * dpr) + 2;
-  const g = c.getContext('2d'); g.scale(dpr, dpr);
+  c = TILE_POOL.pop() || document.createElement('canvas'); c.width = Math.ceil(W * dpr); c.height = Math.ceil(th * dpr) + 2;
+  const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.scale(dpr, dpr);
   const y0 = ti * TILE_M, y1 = y0 + TILE_M;            // world rows covered
   const P = (x, y) => ({ x: W / 2 + x * xk, y: th - (y - y0) * xk * XYS });
   const R = rng(X.seed * 131 + ti * 977 + 5);
@@ -503,7 +508,7 @@ function reviveExpedition() {
   toast(xt("สู้ต่อ! ค่ายใหญ่ซ่อมเต็มแล้ว"));
 }
 function leaveExpedition() {
-  closeExpModal(); hide('expUi'); X = null;
+  closeExpModal(); hide('expUi'); releaseTiles(); X = null;
   persist(); enterTD(); renderTdHud();
 }
 
@@ -1182,13 +1187,15 @@ function drawFloats() {
 function expDraw() {
   if (!X) return;
   if (X.phase === 'rally') { MoltRally.draw(); return; }
-  if (X.w !== W || X.h !== H) { X.w = W; X.h = H; xk = Math.min(W / 10.4, 46); X.tiles.clear(); X.iconType = null; }
+  if (X.w !== W || X.h !== H) { X.w = W; X.h = H; xk = Math.min(W / 10.4, 46); for (const c of X.tiles.values()) recycleTile(c); X.tiles.clear(); X.iconType = null; }
   ctx.save();
   if (X.shake > 0) ctx.translate((Math.random() - 0.5) * X.shake * 22, (Math.random() - 0.5) * X.shake * 16);
   // background strips
   ctx.fillStyle = '#6dbf43'; ctx.fillRect(-20, -20, W + 40, H + 40);
   const th = TILE_M * xk * XYS, yTop = xinv(0, -20).y, yBot = xinv(0, H + 20).y;
-  for (let ti = Math.floor(yBot / TILE_M); ti <= Math.floor(yTop / TILE_M); ti++) { const c = bgTile(ti), sy = xp(0, ti * TILE_M).y - th; ctx.drawImage(c, 0, sy, W, th + 2 / Math.min(2, window.devicePixelRatio || 1)); }
+  const tLo = Math.floor(yBot / TILE_M), tHi = Math.floor(yTop / TILE_M);
+  for (let ti = tLo; ti <= tHi; ti++) { const c = bgTile(ti), sy = xp(0, ti * TILE_M).y - th; ctx.drawImage(c, 0, sy, W, th + 2 / Math.min(2, window.devicePixelRatio || 1)); }
+  for (const [ti, c] of X.tiles) if (ti < tLo - 1 || ti > tHi + 1) { X.tiles.delete(ti); recycleTile(c); }
   // top: the cat country fades into a dark-green forest edge
   { const p = xp(0, XL + 1.5); if (p.y > -40) { const gr = ctx.createLinearGradient(0, p.y - 60, 0, p.y + 30); gr.addColorStop(0, '#2f6a2a'); gr.addColorStop(1, 'rgba(47,106,42,0)'); ctx.fillStyle = gr; ctx.fillRect(0, -20, W, p.y + 50); } }
   for (const r of X.rubble) drawRubble(r);
