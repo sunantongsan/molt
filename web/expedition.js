@@ -36,7 +36,11 @@ const XEN = {
   "ฟื้นพลังค่ายใหญ่ 50%": "Restore 50% camp HP",
   "ข้าวโพดไหลเร็วขึ้น": "Faster corn",
   "🌽 +2 ต่อวินาที": "🌽 +2 per second",
-  "ข้าวโพดไม่พอ": "Not enough corn",
+  "เหรียญไม่พอ — ดูโฆษณารับเหรียญได้": "Not enough coins — watch an ad for more",
+  "ถุงเหรียญ": "Coin bag",
+  "รับ 🪙{0} ทันที": "Get 🪙{0} now",
+  "ฟรี!": "FREE!",
+  "ได้เหรียญ +🪙{0}": "Got +🪙{0}",
   "ไม่มีที่ว่างให้สร้าง — ทำลายป้อมแมวข้างหน้าก่อน": "No free pad — destroy the cat forts ahead first",
   "เปิดพื้นที่สร้างใหม่แล้ว!": "New build pads unlocked!",
   "ยึดป้อมแมวได้แล้ว!": "Cat fortress captured!",
@@ -53,9 +57,9 @@ const XEN = {
   "❓ วิธีเล่น": "❓ How to play",
   "🎬 ดูคลิปหัวหน้าเป็ด": "🎬 Watch the chief's speech",
   "นี่คือค่ายใหญ่ของเป็ด ⛺\nถ้าแมวพังค่ายนี้ได้ = แพ้": "This is the duck war camp ⛺\nIf the cats wreck it, you lose",
-  "แตะปุ่ม 🔨 สร้าง ตรงนี้เลย!\nใช้ข้าวโพด 🌽 ตั้งค่ายเป็ดบนจุด ➕ ข้างทาง": "Tap 🔨 Build right here!\nSpend corn 🌽 to put a duck hut on a ➕ pad",
+  "แตะปุ่ม 🔨 สร้าง ตรงนี้เลย! (หลังแรกฟรี)\nใช้เหรียญ 🪙 ตั้งค่ายเป็ดบนจุด ➕ ข้างทาง": "Tap 🔨 Build right here! (first hut is free)\nSpend coins 🪙 to put a duck hut on a ➕ pad",
   "เยี่ยม! 🎉 ค่ายนี้จะส่งเป็ด\nเดินขึ้นไปสู้เองเรื่อยๆ": "Great! 🎉 This hut keeps sending\nducks up the path to fight",
-  "ข้าวโพด 🌽 ไหลเข้ามาเองตลอด\nล้มแมว หรือพังป้อม ได้เพิ่มอีก": "Corn 🌽 flows in by itself\nKnock out cats or forts for more",
+  "ใช้เหรียญ 🪙 ที่สะสมไว้สร้างได้เลย\nล้มแมว พังป้อม ได้เหรียญเพิ่ม • ไม่พอกด 🎬 ดูโฆษณารับเหรียญ": "Your saved coins 🪙 pay for huts\nCats and forts drop more • short? tap 🎬 for coins",
   "ข้างหน้าคือป้อมแมว 💥\nพังให้หมด เพื่อปลดล็อกจุดสร้าง 🔒 ถัดไป": "Cat forts ahead 💥\nSmash them all to unlock the next 🔒 pads",
   "สร้างครบทุก ๆ 3 หลัง\nได้เลือกการ์ดอัปเกรด 1 ใน 3 ใบ 🃏": "Every few builds you pick\n1 of 3 upgrade cards 🃏",
   "บนสุดคือป้อมราชาแมว 🏰\nพังได้ = ชนะ! ลากจอขึ้นลงเพื่อดูแผนที่": "At the very top: the Cat King's fortress 🏰\nSmash it to win! Drag to look around",
@@ -184,7 +188,7 @@ function newExpedition() {
     t: 0, phase: 'intro', introT: 0, paused: false, camY: 0, camHold: 0, drag: null,
     path: null, rivers: [XL * 0.31, XL * 0.7], decor: [], tiles: new Map(),
     groups: [], slots: [], huts: [], forts: [], ducks: [], cats: [], shots: [], parts: [], floats: [], rubble: [],
-    corn: 100, cornRate: 5, builds: 0, cardsTaken: 0, cardDue: false, card: null,
+    spent: 0, builds: 0, cardsTaken: 0, cardDue: false, card: null,
     unlocked: ['chop'], lv: { chop: 0, fork: 0, chili: 0, spoon: 0, tower: 0, shrine: 0 }, fast: { chop: 0, fork: 0, chili: 0, spoon: 0 },
     camp: { x: 0, y: 0.6, hp: campMax(), max: campMax(), cd: 0, hit: 0 },
     items: { egret: { cd: 6, max: 24 }, balloon: { cd: 14, max: 34 } }, egrets: [], balloons: [], bombs: [],
@@ -515,7 +519,8 @@ function leaveExpedition() {
 }
 
 // ---------- building ----------
-function buildCost() { return Math.min(360, 45 + X.builds * 18); }
+// building costs the same 🪙 coins the city uses, so saved-up coins (and ads) really matter; the first hut is free
+function buildCost() { if (!X.builds) return 0; return Math.min(900, Math.round((25 + (X.builds - 1) * 10) * (1 + (dayN() - 1) * 0.06))); }
 function pickNextType() {
   const pool = X.unlocked.filter(t => t !== 'tower' && t !== 'shrine' || X.huts.filter(h => h.type === t).length < 2);
   const counts = t => X.huts.filter(h => h.type === t && h.hp > 0).length;
@@ -531,9 +536,10 @@ function doBuild() {
   if (!X || X.phase !== 'fight' || X.paused) return;
   if (X.tutStep && X.tutStep.wait !== 'build' && !X.tutStep.run) return;
   const cost = buildCost();
-  if (X.corn < cost) { SFX.play('gateBad'); toast(xt("ข้าวโพดไม่พอ")); pulseBuild(); return; }
+  if (save.coins < cost) { SFX.play('gateBad'); toast(xt("เหรียญไม่พอ — ดูโฆษณารับเหรียญได้")); pulseBuild(); pulseAd(); return; }
   const s = freeSlot(); if (!s) { SFX.play('gateBad'); toast(xt("ไม่มีที่ว่างให้สร้าง — ทำลายป้อมแมวข้างหน้าก่อน")); return; }
-  X.corn -= cost; X.builds++;
+  save.coins -= cost; X.spent += cost; X.builds++; persist();
+  if (cost > 0) floatText(s.x, s.y + 3.1, '-' + cost + '🪙', '#ffd84a');
   const type = X.nextType, H0 = HUTS[type], hp = Math.round(H0.hp * (1 + X.lv[type] * 0.3));
   const hut = { type, x: s.x, y: s.y, slot: s, hp, max: hp, spawnT: 0.6, cd: 0.5, pop: 0, hit: 0, aim: 0, shootT: 0 };
   s.hut = hut; X.huts.push(hut);
@@ -542,6 +548,15 @@ function doBuild() {
   floatText(s.x, s.y + 2.4, xt(HUTS[type].name), '#fff6b0');
   if (X.builds === 2 || (X.builds > 2 && (X.builds - 2) % 3 === 0)) X.cardDue = true;
   pickNextType(); renderExpUi();
+}
+
+function cardCoins() { return Math.round(150 * (1 + (dayN() - 1) * 0.1)); }
+function adCoins() { return Math.max(150, buildCost() * 3); }
+function pulseAd() { const b = $('xAd'); if (!b || b.classList.contains('hidden')) return; b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+function watchAdForCoins() {
+  if (!X || X.phase !== 'fight') return;
+  const amt = adCoins(); SFX.play('click');
+  Ads.show(ok => { if (!ok || !X) return; save.coins += amt; persist(); SFX.play('reward'); toast(xt("ได้เหรียญ +🪙{0}", amt)); for (let i = 0; i < 8; i++) coinPop(X.camp.x, X.camp.y); renderExpUi(); });
 }
 function pulseBuild() { const b = $('xBuild'); if (!b) return; b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
 
@@ -555,7 +570,7 @@ function cardChoices() {
   const pool = [];
   for (const t of X.unlocked) { pool.push({ kind: 'power', type: t }); if (HUTS[t].unit) pool.push({ kind: 'fast', type: t }); }
   if (X.camp.hp < X.camp.max * 0.8) pool.push({ kind: 'repair' });
-  pool.push({ kind: 'corn' });
+  pool.push({ kind: 'coins' });
   while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(R() * pool.length), 1)[0]);
   return out;
 }
@@ -564,7 +579,7 @@ function cardText(c) {
   if (c.kind === 'power') return { title: xt(HUTS[c.type].name), sub: xt("พลัง +30%") + ` (Lv${X.lv[c.type] + 2})`, type: c.type };
   if (c.kind === 'fast') return { title: xt(HUTS[c.type].name), sub: xt("ผลิตไวขึ้น 25%"), type: c.type };
   if (c.kind === 'repair') return { title: xt("ซ่อมค่ายใหญ่"), sub: xt("ฟื้นพลังค่ายใหญ่ 50%"), type: 'camp' };
-  return { title: xt("ข้าวโพดไหลเร็วขึ้น"), sub: xt("🌽 +2 ต่อวินาที"), type: 'corn' };
+  return { title: xt("ถุงเหรียญ"), sub: xt("รับ 🪙{0} ทันที", cardCoins()), type: 'coins' };
 }
 function openCards() {
   X.cardDue = false; X.paused = true; SFX.play('chestOpen');
@@ -585,14 +600,14 @@ function takeCard(c) {
   else if (c.kind === 'power') { X.lv[c.type]++; for (const h of X.huts) if (h.type === c.type) { const k = 1.3; h.max = Math.round(h.max * k); h.hp = Math.round(h.hp * k); } for (const d of X.ducks) if (d.type === c.type) { d.max *= 1.3; d.hp *= 1.3; } X.lastCardType = c.type; }
   else if (c.kind === 'fast') { X.fast[c.type]++; X.lastCardType = c.type; }
   else if (c.kind === 'repair') { X.camp.hp = Math.min(X.camp.max, X.camp.hp + X.camp.max * 0.5); sparkle(X.camp.x, X.camp.y, 20); }
-  else X.cornRate += 2;
+  else { const c = cardCoins(); save.coins += c; X.earned += c; persist(); floatText(X.camp.x, X.camp.y + 3, '+' + c + '🪙', '#ffd84a'); for (let i = 0; i < 6; i++) coinPop(X.camp.x, X.camp.y); }
 }
 function cardIcon(cv2, type) {
   const g = cv2.getContext('2d'), keep = ctx;
   g.clearRect(0, 0, 120, 120);
   try {
     ctx = g;
-    if (type === 'corn') { g.font = '64px system-ui'; g.textAlign = 'center'; g.fillText('🌽', 60, 84); }
+    if (type === 'coins') { g.font = '64px system-ui'; g.textAlign = 'center'; g.fillText('💰', 60, 84); }
     else if (type === 'camp') { const c = campArt(); g.drawImage(c, 60 - 50, 112 - 50 * c.ch / c.cw * 2, 100, 100 * c.ch / c.cw); }
     else {
       const c = hutArt(type), sc = Math.min(100 / c.cw, 104 / c.ch);
@@ -691,12 +706,12 @@ function hurt(t, dmg, from) {
   if (t.hp > 0) return;
   // something died
   if (t.side === 'cat') {
-    X.killed++; const coin = Math.max(1, Math.round(t.B.coin * (1 + (dayN() - 1) * 0.08) * coinMul())); X.earned += coin; save.coins += coin; X.corn += 5 + (t.kind === 'chief' ? 80 : 0);
+    X.killed++; const coin = Math.max(1, Math.round(t.B.coin * (1 + (dayN() - 1) * 0.08) * coinMul())); X.earned += coin; save.coins += coin;
     floatText(t.x, t.y + 1.8, '+' + coin + '🪙', '#ffd84a'); coinPop(t.x, t.y); throttle('meow', 0.35);
     t.deadT = 0; if (t.kind === 'chief') { X.shake = 0.5; SFX.play('bossRoar'); }
   } else if (t.side === 'duck') { t.deadT = 0; throttle('quack', 0.3); }
   else if (t.kind && FORTS[t.kind]) {
-    t.alive = false; X.smashed++; const coin = Math.round((t.kind === 'fortress' ? 60 : 18) * (1 + (dayN() - 1) * 0.1)); X.earned += coin; save.coins += coin; X.corn += 40;
+    t.alive = false; X.smashed++; const coin = Math.round((t.kind === 'fortress' ? 60 : 18) * (1 + (dayN() - 1) * 0.1)); X.earned += coin; save.coins += coin;
     floatText(t.x, t.y + 2.6, '+' + coin + '🪙', '#ffd84a'); for (let i = 0; i < 6; i++) coinPop(t.x, t.y);
     X.rubble.push({ x: t.x, y: t.y, t: 0, big: t.kind === 'fortress' }); dust(t.x, t.y, 26); debris(t.x, t.y, 18);
     X.shake = Math.max(X.shake, t.kind === 'fortress' ? 0.6 : 0.3); SFX.play('break'); setTimeout(() => SFX.play('thud'), 90);
@@ -906,7 +921,6 @@ function expUpdate(dt) {
   if (X.shake > 0) X.shake = Math.max(0, X.shake - dt);
   if (X.phase === 'intro') { X.introT += dt; X.camY = Math.max(0, (XL - viewSpan()) * Math.max(0, 1 - X.introT / 2.6) ** 2); if (X.introT > 2.8) { X.phase = 'fight'; X.camY = 0; if (!save.tut || !save.tut.exp) startExpTut(); } updateFx(dt); return; }
   if (X.phase === 'won' || X.phase === 'lost') { X.endT += dt; updateFx(dt); for (const c of X.cats) if (c.flee && c.hp > 0) { c.y += dt * 3; c.walk += dt * 6; c.my = -1; } if (X.endT > (X.phase === 'won' ? 2.6 : 1.8)) showExpResult(); return; }
-  X.corn += X.cornRate * dt;
   // huts: train ducks / shoot / heal
   for (const h of X.huts) {
     if (h.hp <= 0) continue; h.pop = Math.max(0, h.pop - dt); h.hit = Math.max(0, h.hit - dt);
@@ -1269,6 +1283,10 @@ function buildExpUi() {
 #expUi .xitem em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 22px Mitr,system-ui;font-style:normal;color:#fff;text-shadow:0 2px 3px #000}
 #expUi .xitem small{position:absolute;left:-10px;right:-10px;bottom:-15px;text-align:center;font:800 11px Mitr,system-ui;color:#fff;text-shadow:0 1px 2px #000,0 0 4px #000}
 #xBuild{min-width:170px!important}
+#xAd{pointer-events:auto;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(max(18px,env(safe-area-inset-bottom)) + 78px);border:0;border-radius:16px;padding:6px 14px;font:900 15px Mitr,system-ui;color:#fff;background:linear-gradient(#ff8a5a,#e0482a);box-shadow:0 4px 0 #8f2a17,0 6px 12px rgba(0,0,0,.3);animation:xglow3 1.3s ease-in-out infinite}
+#xAd b{color:#fff6b0}
+#xAd.shake{animation:xshake .35s}
+@keyframes xglow3{50%{transform:translateX(-50%) scale(1.06)}}
 #xModal{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,30,50,.55);font-family:Mitr,system-ui,sans-serif;animation:xfade .2s}
 @keyframes xfade{from{opacity:0}}
 #xModal .xribbon{background:linear-gradient(#ff5a8a,#d8204a);color:#fff;font:900 24px Mitr,system-ui;padding:6px 40px;margin-bottom:12px;clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%);text-shadow:0 2px 0 #8a1030;letter-spacing:1px}
@@ -1288,13 +1306,15 @@ function buildExpUi() {
 #xModal .btn{margin-top:10px}`;
     document.head.appendChild(st);
     ui = document.createElement('div'); ui.id = 'expUi'; ui.className = 'hidden';
-    ui.innerHTML = `<div class="xtop"><span class="xpill">📅 <b id="xDay"></b></span><span class="xpill">🌽 <b id="xCorn"></b></span><span class="xpill">🪙 <b id="xCoins"></b></span><button class="xpause" id="xPause">❚❚</button></div>
+    ui.innerHTML = `<div class="xtop"><span class="xpill">📅 <b id="xDay"></b></span><span class="xpill">🪙 <b id="xCoins"></b></span><button class="xpause" id="xPause">❚❚</button></div>
       <div class="xprog"><i id="xProg"></i><span id="xProgT"></span></div>
       <button class="xitem" id="xEgret"><canvas width="120" height="120"></canvas><em></em><small>${xt("นกกระยาง")}</small></button>
       <button class="xitem" id="xBalloon"><canvas width="120" height="120"></canvas><em></em><small>${xt("บอลลูน")}</small></button>
+      <button id="xAd" class="hidden">🎬 <b id="xAdAmt"></b></button>
       <button id="xBuild"><canvas width="112" height="112"></canvas><b>🔨 ${xt("สร้าง")} <span id="xCost"></span></b><small id="xNext"></small></button>`;
     document.body.appendChild(ui);
     $('xBuild').onclick = e => { e.stopPropagation(); doBuild(); };
+    $('xAd').onclick = e => { e.stopPropagation(); watchAdForCoins(); };
     $('xPause').onclick = e => { e.stopPropagation(); SFX.play('click'); openPause(); };
     $('xEgret').onclick = e => { e.stopPropagation(); useItemX('egret'); };
     $('xBalloon').onclick = e => { e.stopPropagation(); useItemX('balloon'); };
@@ -1304,9 +1324,10 @@ function buildExpUi() {
 }
 function renderExpUi() {
   if (!X || !$('expUi')) return;
-  $('xDay').textContent = T.wave; $('xCorn').textContent = Math.floor(X.corn); $('xCoins').textContent = Math.floor(save.coins).toLocaleString();
-  const cost = buildCost(), b = $('xBuild'), can = X.corn >= cost && !!freeSlot();
-  $('xCost').textContent = `🌽${cost}`; $('xCost').className = X.corn >= cost ? '' : 'no'; $('xNext').textContent = xt(HUTS[X.nextType].name);
+  $('xDay').textContent = T.wave; $('xCoins').textContent = Math.floor(save.coins).toLocaleString();
+  const cost = buildCost(), b = $('xBuild'), can = save.coins >= cost && !!freeSlot();
+  $('xCost').textContent = cost ? `🪙${cost}` : xt("ฟรี!"); $('xCost').className = save.coins >= cost ? '' : 'no';
+  { const ad = $('xAd'), need = save.coins < cost && !!freeSlot() && X.phase === 'fight'; ad.classList.toggle('hidden', !need); if (need) $('xAdAmt').textContent = '+🪙' + adCoins(); } $('xNext').textContent = xt(HUTS[X.nextType].name);
   b.classList.toggle('ready', can);
   if (X.iconType !== X.nextType) { X.iconType = X.nextType; const c = b.querySelector('canvas'); cardIcon(c, X.nextType); }
   const total = X.forts.length, gone = X.forts.filter(f => !f.alive).length;
@@ -1337,9 +1358,9 @@ function rectOfWorld(x, y, rM, up) { const p = xp(x, y); return { x: p.x, y: p.y
 function firstFort() { return X.forts.filter(f => f.alive && f.kind !== 'fortress').sort((a, b) => a.y - b.y)[0]; }
 const EXP_TUT = [
   { text: "นี่คือค่ายใหญ่ของเป็ด ⛺\nถ้าแมวพังค่ายนี้ได้ = แพ้", at: () => rectOfWorld(X.camp.x, X.camp.y, 1.6, 1.2), camY: () => 0 },
-  { text: "แตะปุ่ม 🔨 สร้าง ตรงนี้เลย!\nใช้ข้าวโพด 🌽 ตั้งค่ายเป็ดบนจุด ➕ ข้างทาง", at: () => rectOfEl('xBuild'), wait: 'build', camY: () => 0 },
+  { text: "แตะปุ่ม 🔨 สร้าง ตรงนี้เลย! (หลังแรกฟรี)\nใช้เหรียญ 🪙 ตั้งค่ายเป็ดบนจุด ➕ ข้างทาง", at: () => rectOfEl('xBuild'), wait: 'build', camY: () => 0 },
   { text: "เยี่ยม! 🎉 ค่ายนี้จะส่งเป็ด\nเดินขึ้นไปสู้เองเรื่อยๆ", at: () => { const h = X.huts[X.huts.length - 1]; return h ? rectOfWorld(h.x, h.y, 1.3, 1) : null; }, run: true, camY: () => 0 },
-  { text: "ข้าวโพด 🌽 ไหลเข้ามาเองตลอด\nล้มแมว หรือพังป้อม ได้เพิ่มอีก", at: () => rectOfEl('xCorn'), run: true },
+  { text: "ใช้เหรียญ 🪙 ที่สะสมไว้สร้างได้เลย\nล้มแมว พังป้อม ได้เหรียญเพิ่ม • ไม่พอกด 🎬 ดูโฆษณารับเหรียญ", at: () => rectOfEl('xCoins'), run: true },
   { text: "ข้างหน้าคือป้อมแมว 💥\nพังให้หมด เพื่อปลดล็อกจุดสร้าง 🔒 ถัดไป", at: () => { const f = firstFort(); return f ? rectOfWorld(f.x, f.y, 1.5, 1.2) : null; }, camY: () => { const f = firstFort(); return f ? f.y - viewSpan() * 0.45 : 0; } },
   { text: "สร้างครบทุก ๆ 3 หลัง\nได้เลือกการ์ดอัปเกรด 1 ใน 3 ใบ 🃏", at: null, camY: () => 0 },
   { text: "บนสุดคือป้อมราชาแมว 🏰\nพังได้ = ชนะ! ลากจอขึ้นลงเพื่อดูแผนที่", at: () => rectOfWorld(0, XL - 2.2, 3, 2), camY: () => XL + 1 - viewSpan() },
@@ -1376,7 +1397,7 @@ function startExpTut(replay) {
 function showTutStep() {
   const el = $('xTut'), st = EXP_TUT[X.tutI]; X.tutStep = st;
   // a replayed build step only waits if a build is actually possible right now
-  if (st.wait === 'build') { X.tutBuilds = X.builds; if (X.corn < buildCost()) X.corn = buildCost(); if (!freeSlot()) { tutNext(); return; } }
+  if (st.wait === 'build') { X.tutBuilds = X.builds; if (save.coins < buildCost() || !freeSlot()) { tutNext(); return; } }
   el.querySelector('p').textContent = xt(st.text);
   el.querySelector('.dots').textContent = EXP_TUT.map((_, i) => i === X.tutI ? '●' : '○').join('');
   const nb = el.querySelector('.next'); nb.textContent = X.tutI === EXP_TUT.length - 1 ? xt("ลุยเลย! ✔") : xt("ต่อไป ▶"); nb.style.visibility = st.wait ? 'hidden' : '';
@@ -1419,5 +1440,5 @@ function tutTick() {
   try { renderTdHud(); } catch (e) {}
 }
 window.expUpdate = expUpdate; window.expDraw = expDraw;
-window.__exp = { get X() { return X; }, start: startExpedition, build: doBuild, update: expUpdate, lose: () => endExpedition(false), use: useItemX };
+window.__exp = { get X() { return X; }, start: startExpedition, build: doBuild, update: expUpdate, lose: () => endExpedition(false), use: useItemX, cost: () => buildCost() };
 })();
