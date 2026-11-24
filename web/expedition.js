@@ -448,6 +448,9 @@ function campArt() {
 
 // ---------- start / end ----------
 function startExpedition() {
+  // a march draws far more than the city: render it at 1.5x instead of 2x+ (44% fewer pixels for the phone's
+  // graphics chip each frame); weak phones drop to 1.15x below if frames stay slow
+  if (!window.__dprCap || window.__dprCap > 1.5) { window.__dprCap = 1.5; resize(); }
   window.__daysPlayed = (window.__daysPlayed || 0) + 1;
   SFX.init(); SFX.play('horn');
   closeSheet && closeSheet();
@@ -1044,8 +1047,9 @@ function drawCatFx() {
   const add = (u, side) => { if (u.hp <= 0 || !u.target || u.moving || u.B.range > 2) return; const k = Math.floor(u.x / 2.2) + ',' + Math.floor(u.y / 2.2); let c = cells.get(k); if (!c) cells.set(k, c = { d: 0, c: 0, x: 0, y: 0, n: 0 }); c[side]++; c.x += u.x; c.y += u.y; c.n++; };
   for (const d of X.ducks) add(d, 'd'); for (const c of X.cats) add(c, 'c');
   const t = X.t;
+  let clouds = 0;
   for (const c of cells.values()) {
-    if (c.d < 2 || c.c < 2 || c.n < 5) continue;
+    if (c.d < 2 || c.c < 2 || c.n < 5 || ++clouds > 3) continue;
     const p = xp(c.x / c.n, c.y / c.n), R = xk * (0.55 + Math.min(1, c.n / 14) * 0.6), cy = p.y - xk * 0.55;
     ctx.save();
     for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + t * 3, rr = R * (0.55 + 0.15 * Math.sin(t * 9 + i)); ctx.fillStyle = i % 2 ? '#f3e2c0' : '#e6cfa2'; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.6, R * 0.45, 0, Math.PI * 2); ctx.fill(); }
@@ -1195,7 +1199,7 @@ function expUpdate(dt) {
   X.uiT = (X.uiT || 0) - dt; if (X.uiT <= 0) { X.uiT = 0.2; renderExpUi(); }
   // crash breadcrumb: if the app dies mid-battle, the welcome screen shows where it happened next time
   X.traceT = (X.traceT || 0) - dt;
-  if (X.traceT <= 0) { X.traceT = 2; try { localStorage.setItem('molt_trace', JSON.stringify({ day: T.wave, t: Math.round(X.t), forts: X.forts.filter(f => !f.alive).length + '/' + X.forts.length, cats: X.cats.length, ducks: X.ducks.length, huts: X.huts.length, fx: X.parts.length, mem: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : -1, ads: window.__adsSeen || 0, days: window.__daysPlayed || 0, ms: Math.round(X.drawMs || 0), ram: navigator.deviceMemory || 0, at: Date.now() })); } catch (e) {} }
+  if (X.traceT <= 0) { X.traceT = 2; try { localStorage.setItem('molt_trace', JSON.stringify({ day: T.wave, t: Math.round(X.t), forts: X.forts.filter(f => !f.alive).length + '/' + X.forts.length, cats: X.cats.length, ducks: X.ducks.length, huts: X.huts.length, fx: X.parts.length, mem: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : -1, ads: window.__adsSeen || 0, days: window.__daysPlayed || 0, ms: Math.round(X.drawMs || 0), ram: navigator.deviceMemory || 0, dpr: window.__dprCap || 0, at: Date.now() })); } catch (e) {} }
 }
 
 // ---------- effects ----------
@@ -1376,7 +1380,7 @@ function expDraw() {
   // weak phone? if drawing takes too long, draw every second frame (the game logic still runs every frame)
   X.fN = (X.fN || 0) + 1; if (X.slowDraw && X.fN % 2 && X.phase !== 'rally') return;
   const drawT0 = performance.now();
-  try { expDrawInner(); } finally { const ms = performance.now() - drawT0; X.drawMs = (X.drawMs || ms) * 0.95 + ms * 0.05; X.slowDraw = X.slowDraw ? X.drawMs > 9 : X.drawMs > 13; }
+  try { expDrawInner(); } finally { const ms = performance.now() - drawT0; X.drawMs = (X.drawMs || ms) * 0.95 + ms * 0.05; X.slowDraw = X.slowDraw ? X.drawMs > 9 : X.drawMs > 13; if (X.slowDraw && X.drawMs > 16 && X.t > 5 && window.__dprCap > 1.15) { window.__dprCap = 1.15; resize(); } }
 }
 function expDrawInner() {
   if (X.phase === 'rally') { MoltRally.draw(); return; }
