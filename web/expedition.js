@@ -448,6 +448,7 @@ function campArt() {
 
 // ---------- start / end ----------
 function startExpedition() {
+  window.__daysPlayed = (window.__daysPlayed || 0) + 1;
   SFX.init(); SFX.play('horn');
   closeSheet && closeSheet();
   newExpedition();
@@ -729,7 +730,7 @@ function hurt(t, dmg, from) {
     X.shake = Math.max(X.shake, t.kind === 'fortress' ? 0.6 : 0.3); SFX.play('break'); setTimeout(() => SFX.play('thud'), 90);
     if (t.kind === 'fortress') endExpedition(true); else checkUnlocks();
   } else if (t.slot) {
-    t.slot.hut = null; dust(t.x, t.y, 16); debris(t.x, t.y, 10); SFX.play('crack'); X.rubble.push({ x: t.x, y: t.y, t: 0, small: true });
+    t.slot.hut = null; dust(t.x, t.y, 16); debris(t.x, t.y, 10); SFX.play('crack'); X.rubble.push({ x: t.x, y: t.y, t: 0, small: true }); if (X.rubble.length > 24) X.rubble.splice(X.rubble.findIndex(r => r.small), 1);
   }
 }
 function checkUnlocks() {
@@ -999,7 +1000,7 @@ function catEvents(dt) {
         const size = Math.min(14, 6 + n);
         for (let i = 0; i < size; i++) { const c = spawnCat(raidKind(n), from.x + (Math.random() - 0.5) * 2.4, from.y - fortRad(from) - 0.3 - (i % 4) * 0.4); c.raider = true; c.rally = 8; }
         for (const d of X.ducks) if (d.hp > 0) d.rally = 10;
-        X.banner = 2; X.bannerTxt = xt("ตะลุมบอน!!"); X.shake = 0.3; throttle('horn', 1); setTimeout(() => throttle('quack', 0.2), 400);
+        X.banner = 2; X.bannerTxt = xt("ตะลุมบอน!!"); X.shake = 0.3; throttle('horn', 1); setTimeout(() => { if (X) throttle('quack', 0.2); }, 400);
       }
     }
   }
@@ -1176,7 +1177,7 @@ function expUpdate(dt) {
   X.uiT = (X.uiT || 0) - dt; if (X.uiT <= 0) { X.uiT = 0.2; renderExpUi(); }
   // crash breadcrumb: if the app dies mid-battle, the welcome screen shows where it happened next time
   X.traceT = (X.traceT || 0) - dt;
-  if (X.traceT <= 0) { X.traceT = 2; try { localStorage.setItem('molt_trace', JSON.stringify({ day: T.wave, t: Math.round(X.t), forts: X.forts.filter(f => !f.alive).length + '/' + X.forts.length, cats: X.cats.length, ducks: X.ducks.length, huts: X.huts.length, fx: X.parts.length, mem: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : -1, at: Date.now() })); } catch (e) {} }
+  if (X.traceT <= 0) { X.traceT = 2; try { localStorage.setItem('molt_trace', JSON.stringify({ day: T.wave, t: Math.round(X.t), forts: X.forts.filter(f => !f.alive).length + '/' + X.forts.length, cats: X.cats.length, ducks: X.ducks.length, huts: X.huts.length, fx: X.parts.length, mem: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : -1, ads: window.__adsSeen || 0, days: window.__daysPlayed || 0, ms: Math.round(X.drawMs || 0), ram: navigator.deviceMemory || 0, at: Date.now() })); } catch (e) {} }
 }
 
 // ---------- effects ----------
@@ -1203,7 +1204,7 @@ function drawStar(x, y, r, rot, col) {
 }
 function floatText(x, y, txt, col) {
   const coin = txt.indexOf('🪙') >= 0; if (coin) txt = txt.replace('🪙', ''); if (X.floats.length > 14) X.floats.shift(); X.floats.push({ x, y, txt, col, t: 0, coin }); }
-function throttle(name, gap) { const now = performance.now() / 1000; if ((X.sndT[name] || 0) > now) return; X.sndT[name] = now + gap; try { SFX.play(name); } catch (e) {} }
+function throttle(name, gap) { if (!X) return; const now = performance.now() / 1000; if ((X.sndT[name] || 0) > now) return; X.sndT[name] = now + gap; try { SFX.play(name); } catch (e) {} }
 
 // ---------- drawing ----------
 function duckSprite(type, x, y, h, walk, atk, moving, hitT) {

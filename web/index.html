@@ -342,10 +342,15 @@ const SFX = (() => {
   };
   Object.assign(gap, { purr: 2.2, catScared: 0.2, clang: 0.06, tray: 0.08, thud: 0.06, squish: 0.08, bonk: 0.1, metal: 0.06, crack: 0.1, bossRoar: 0.5 });
   gap.upgrade = 0.42;
+  // global voice budget: big later-day battles fire dozens of sounds a second; phones' audio thread
+  // (and memory for all those audio nodes) chokes on that, so extra sounds in a busy moment are skipped
+  let burstT = 0, burstN = 0;
   function play(n) {
     if (muted || !ac) return;
     const now = ac.currentTime;
     if (gap[n] && last[n] !== undefined && now - last[n] < gap[n]) return;
+    if (now - burstT > 0.25) { burstT = now; burstN = 0; }
+    if (++burstN > 8 && !/^(fanfare|win|lose|reward|upgrade|chestOpen|horn|bossRoar|click)$/.test(n)) return;
     last[n] = now;
     try { if (real[n] && real[n]()) return; if (n === 'upgrade') defs.reward(); else if (defs[n]) defs[n](); } catch (e) {}
   }
@@ -375,7 +380,7 @@ const Ads = {
     }, 1000);
     close.onclick = () => { box.classList.add('hidden'); close.textContent = tr("ปิด"); Ads.finish(true); };
   },
-  finish(ok) { const cb = Ads.cb; Ads.cb = null; if (cb) cb(!!ok); },
+  finish(ok) { const cb = Ads.cb; Ads.cb = null; window.__adsSeen = (window.__adsSeen || 0) + 1; if (cb) cb(!!ok); },
 };
 window.__adDone = ok => Ads.finish(ok);
 
@@ -1375,8 +1380,12 @@ function frame(now) {
     } else if (state === 'play' || state === 'ending') update(dt);
 
     // Resizing clears any saved transforms and clips left by an interrupted draw.
+    // a draw that threw half-way can leave transforms/clips/alpha behind: undo them cheaply.
+    // (This used to call resize(), which re-allocates the whole screen canvas — if an error repeated
+    // every frame that churned graphics memory until Android closed the game.)
     if (resetCanvasBeforeDraw) {
-      resize();
+      for (let i = 0; i < 40; i++) ctx.restore();
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       resetCanvasBeforeDraw = false;
     }
     drawing = true;
@@ -1386,7 +1395,7 @@ function frame(now) {
     else draw();
   } catch (e) {
     if (drawing) resetCanvasBeforeDraw = true;
-    if (!window.__errLogged) { window.__errLogged = true; console.error('MOLT frame error', e); }
+    if (!window.__errLogged) { window.__errLogged = true; console.error('MOLT frame error', e); try { localStorage.setItem('molt_err', ('frame: ' + (e && e.message || e)).slice(0, 120) + ' @' + String(e && e.stack || '').split('\n')[1]?.trim().split('/').pop().slice(0, 40)); } catch (x) {} }
   }
 }
 renderMenu(); preview();

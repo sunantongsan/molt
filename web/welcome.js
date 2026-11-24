@@ -51,7 +51,7 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
       localStorage.removeItem('molt_trace'); localStorage.removeItem('molt_err');
       const q = tr0 ? JSON.parse(tr0) : {}, box = document.createElement('div');
       box.style.cssText = 'position:absolute;left:10px;right:10px;top:10px;z-index:5;background:rgba(0,0,0,.72);color:#fff;border-radius:12px;padding:8px 10px;font:700 12px/1.4 system-ui';
-      box.textContent = (tr0 ? `⚠️ ครั้งก่อนเกมปิดกลางศึก: วันที่ ${q.day} • วินาที ${q.t} • ป้อม ${q.forts} • แมว ${q.cats} • เป็ด ${q.ducks} • ค่าย ${q.huts} • fx ${q.fx} • mem ${q.mem}MB` : '') + (er ? ' • error: ' + er : '') + ' (แคปจอส่งให้ Claude ได้)';
+      box.textContent = (tr0 ? `⚠️ ครั้งก่อนเกมปิดกลางศึก: วันที่ ${q.day} • วินาที ${q.t} • ป้อม ${q.forts} • แมว ${q.cats} • เป็ด ${q.ducks} • ค่าย ${q.huts} • fx ${q.fx} • mem ${q.mem}MB • โฆษณา ${q.ads || 0} • เล่นมา ${q.days || 0} วัน • วาด ${q.ms || 0}ms • RAM ${q.ram || '?'}GB` : '') + (er ? ' • error: ' + er : '') + ' (แคปจอส่งให้ Claude ได้)';
       el.appendChild(box); setTimeout(() => box.remove(), 15000);
     }
   } catch (e) {}
