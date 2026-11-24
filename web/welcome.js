@@ -4,6 +4,9 @@
 "use strict";
 
 const WEL = { open: true, after: [], ready: false, auto: false, t0: performance.now() };
+// coming back from a march: the page reopened itself to start clean (see freshPage in expedition.js),
+// so skip the welcome screen and drop the player straight back where they were
+WEL.resume = (() => { try { const r = sessionStorage.getItem('molt_resume'); sessionStorage.removeItem('molt_resume'); return r; } catch (e) { return null; } })();
 // the version of the game files this page was loaded from (read before any background download can finish;
 // after a patch reload the app reports the new number, and the sessionStorage guard below stops loops)
 window.MOLT_RUNNING_V = (() => { try { const v = window.AndroidPatch ? +AndroidPatch.version() : 0; const st = window.AndroidPatch && AndroidPatch.state ? JSON.parse(AndroidPatch.state()) : {}; return st.s === 'ready' && st.v === v && !sessionStorage.getItem('molt_reload_' + v) ? v - 1 : v; } catch (e) { return 0; } })();
@@ -37,9 +40,10 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
   const el = document.createElement('div'); el.id = 'welcome';
   el.innerHTML = tr("<div class=\"wbg\"></div><img class=\"wart\" src=\"img/shrine.webp\" alt=\"\">\n    <div class=\"wtitle\"><b>MOLT</b><span>🦆 เป็ดพิทักษ์ไข่ทองคำ 🥚</span></div>\n    <div class=\"wbox\"><div class=\"wmsg\">กำลังโหลด…</div><div class=\"wbar\"><div class=\"wfill\"></div></div>\n    <button class=\"wgo\" style=\"display:none\">แตะเพื่อเริ่มเล่น ▶</button><button class=\"wskip\" style=\"display:none\">เล่นเลย (อัปเดตต่อเบื้องหลัง)</button></div>\n    <div class=\"wver\"></div>");
   document.body.appendChild(el);
+  if (WEL.resume) { el.style.background = '#1D5FA8'; for (const q of ['.wbg', '.wart', '.wtitle']) { const n = el.querySelector(q); if (n) n.style.visibility = 'hidden'; } }
   // a painted welcome picture (img/welcome.jpg) replaces the drawn title screen once it exists
   const pic = new Image();
-  pic.onload = () => { el.querySelector('.wbg').style.backgroundImage = 'url(img/welcome.jpg)'; el.querySelector('.wart').style.display = 'none'; el.querySelector('.wtitle').style.display = 'none'; };
+  pic.onload = () => { if (WEL.resume) return; el.querySelector('.wbg').style.backgroundImage = 'url(img/welcome.jpg)'; el.querySelector('.wart').style.display = 'none'; el.querySelector('.wtitle').style.display = 'none'; };
   pic.src = 'img/welcome.jpg';
   const msg = el.querySelector('.wmsg'), fill = el.querySelector('.wfill'), go = el.querySelector('.wgo'), skip = el.querySelector('.wskip');
   try { el.querySelector('.wver').textContent = window.AndroidPatch ? tr("รุ่น ") + window.MOLT_RUNNING_V : ''; } catch (e) {}
@@ -66,6 +70,7 @@ function onWelcomeDone(fn) { if (WEL.open) WEL.after.push(fn); else fn(); }
     if (WEL.ready) return; WEL.ready = true;
     fill.classList.remove('busy'); fill.style.width = '100%';
     msg.textContent = text || tr("พร้อมแล้ว!"); go.style.display = ''; skip.style.display = 'none';
+    if (WEL.resume) { const r = WEL.resume; WEL.resume = null; close(); if (r === 'exp') setTimeout(() => { try { if (state === 'td' && D && D.phase === 'build') startWave(); } catch (e) {} }, 250); }
   }
   function curVersion() { try { return window.AndroidPatch ? AndroidPatch.version() : 0; } catch (e) { return 0; } }
   function restartInto(v) {

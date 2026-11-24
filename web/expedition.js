@@ -509,7 +509,7 @@ function showExpResult() {
     ab.innerHTML = xt("🎬 ดูโฆษณา สู้ต่อ!<small>ซ่อมค่ายใหญ่เต็ม แล้วสู้ต่อ</small>");
     ab.onclick = () => Ads.show(ok => { if (ok) reviveExpedition(); });
     nx.textContent = xt("🔁 ออกศึกใหม่");
-    nx.onclick = () => { hide('result'); startExpedition(); };
+    nx.onclick = () => { hide('result'); closeExpModal(); hide('expUi'); releaseTiles(); X = null; if (!freshPage('exp')) startExpedition(); };
   }
   persist();
   hide('expUi'); show('result'); state = 'expresult';
@@ -524,7 +524,25 @@ function reviveExpedition() {
 function leaveExpedition() {
   try { localStorage.removeItem('molt_trace'); } catch (e) {}
   closeExpModal(); hide('expUi'); releaseTiles(); X = null;
-  persist(); enterTD(); renderTdHud();
+  persist();
+  if (freshPage('td')) return;
+  enterTD(); renderTdHud();
+}
+// A march leaves a lot behind in the phone's WebView (sound nodes, graphics memory) that the page itself
+// can't see or free. On some phones the NEXT march then dies a couple of minutes in, while a freshly opened
+// game plays the same day fine. So between battles the game quietly reopens its own page (progress is saved),
+// skipping the welcome screen, and the next march always starts as fresh as a new launch.
+function freshPage(then) {
+  try {
+    persist();
+    sessionStorage.setItem('molt_resume', then);
+    const veil = document.createElement('div');
+    veil.style.cssText = 'position:fixed;inset:0;z-index:2000;background:#1D5FA8;display:flex;align-items:center;justify-content:center;color:#fff;font:800 18px Mitr,system-ui,sans-serif';
+    veil.textContent = then === 'exp' ? xt("🦆 เตรียมทัพใหม่…") : xt("🦆 เดินทัพกลับเมือง…");
+    document.body.appendChild(veil);
+    setTimeout(() => { try { location.reload(); } catch (e) { sessionStorage.removeItem('molt_resume'); veil.remove(); enterTD(); renderTdHud(); } }, 60);
+    return true;
+  } catch (e) { return false; }
 }
 
 // ---------- building ----------
@@ -1586,6 +1604,55 @@ function tutTick() {
   placeTut();
 }
 
+// ---------- the day card before a march: who's waiting at the cat fort ----------
+const FOE_NAMES = { cat: "แมวทหาร", ninja: "แมวนินจา", tank: "แมวถึก", pitcher: "แมวขว้างไม้", knight: "อัศวินแมว", shadow: "แมวเงา", steel: "แมวเกราะเหล็ก", general: "แม่ทัพแมว", chief: "ราชาแมว" };
+function foesOf(n) {
+  const strong = [];
+  if (n >= 7) strong.push('steel'); if (n >= 5) strong.push('shadow'); if (n >= 3) strong.push('knight');
+  const list = ['cat', 'ninja', 'tank', 'pitcher'].slice(0, Math.max(1, 5 - strong.length - (n >= 2 ? 1 : 0))).concat(strong.reverse());
+  if (n >= 2) list.push('general');
+  list.push('chief');
+  return list;
+}
+function foeIcon(cv2, kind) {
+  const g = cv2.getContext('2d'), keep = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv2.width, cv2.height);
+  const B = CATS[kind], S = cv2.width / 120;
+  try {
+    ctx = g; g.scale(S, S);
+    if (B.art) { if (!ready(IMG[B.art])) return false; g.translate(60, 112); g.scale(-1, 1); drawFrame(B.art, 0, 0, 0, B.big ? 104 : 94, false); if (B.crown) drawCrown(0, -100, 30); }
+    else if (kind === 'chief') { if (!ready(IMG.chief_walk)) return false; drawFrame('chief_walk', 0, 60, 116, 112, false); }
+    else {
+      if (!ready(IMG.k_cat_walk)) return false;
+      const c = { kind, B, gear: catGearX(kind), st: 'walk', walkDistance: 0.2, mx: 1, my: 0, hp: 1, max: 1, ph: 0 };
+      try { drawKitchenCatBody(c, 56, 110, 92, false, 0, 0); } catch (e) { drawFrame('k_cat_front', 0, 60, 110, 92, false); }
+    }
+    return true;
+  } catch (e) { return false; } finally { ctx = keep; }
+}
+let cardDay = 0, cardTry = 0;
+window.MoltDayCard = function (card) {
+  if (T.wave < EXP_FROM) { $('waveBtn').classList.add('city'); return false; }
+  $('waveBtn').classList.remove('city');
+  const n = dayN(), foes = foesOf(n), fresh = { 2: 'general', 3: 'knight', 5: 'shadow', 7: 'steel' }[n];
+  $('dcMode').innerHTML = xt("⚔️ ออกศึก บุกป้อมราชาแมว") + '<small>' + xt("สร้างค่ายเป็ด ส่งทัพไปพังป้อมแมวให้ราบ!") + '</small>';
+  $('dcFoesT').textContent = xt("— แมวที่รออยู่ —");
+  const box = $('dcFoes');
+  if (cardDay !== T.wave || box.dataset.ok !== '1') {
+    cardDay = T.wave; box.innerHTML = ''; let ok = true;
+    foes.forEach((k, i) => {
+      const el = document.createElement('div'); el.className = 'foe' + (k === 'chief' ? ' boss' : '') + (k === fresh ? ' new' : '');
+      el.dataset.new = xt("ใหม่"); el.title = xt(FOE_NAMES[k]); el.style.animationDelay = (0.15 + i * 0.07) + 's';
+      const c = document.createElement('canvas'); c.width = c.height = 120; el.appendChild(c); box.appendChild(el);
+      if (!foeIcon(c, k)) ok = false;
+    });
+    box.dataset.ok = ok ? '1' : '0';
+    if (!ok && cardTry++ < 20) setTimeout(() => { try { if (state === 'td') window.MoltDayCard(card); } catch (e) {} }, 500);
+  }
+  const reward = Math.round((120 + T.wave * 22) * 1.2), wx = WEATHERS[weatherOf(T.wave)];
+  $('dcInfo').innerHTML = `<span class="cn">${xt("ชนะ 3 ดาว ได้ถึง")} 🪙${reward.toLocaleString()}</span><span>${wx.icon} ${wx.name}</span>`;
+  return true;
+};
+
 // ---------- hook into the duck city ----------
 {
   const startCity = startWave;
@@ -1596,7 +1663,7 @@ function tutTick() {
   const hudCity = renderTdHud;
   renderTdHud = function () {
     hudCity.apply(this, arguments);
-    if (D && T.wave >= EXP_FROM && $('waveBtn')) $('waveBtn').textContent = xt("⚔️ ออกศึก วันที่ {0}", T.wave);
+    if (D && T.wave >= EXP_FROM && $('waveBtn')) $('waveBtn').textContent = xt("⚔️ ออกศึก!");
   };
   try { renderTdHud(); } catch (e) {}
 }

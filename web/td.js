@@ -1733,9 +1733,21 @@ function renderTdHud() {
     for (let i = 0; i < 3; i++) { const on = i < n, el = sp[i]; if (el.classList.contains('off') === on) { el.classList.toggle('off', !on); el.classList.add('pop'); setTimeout(() => el.classList.remove('pop'), 260); } } }
   $('tdCoins').textContent = Math.floor(save.coins).toLocaleString();
   $('tdWave').textContent = T.wave;
-  $('waveBtn').classList.toggle('hidden', D.phase !== 'build');
+  $('dayCard').classList.toggle('hidden', D.phase !== 'build');
   for (const id of ['raidBtn', 'houseBtn', 'helpBtn']) { const el = $(id); if (el) el.style.visibility = D.phase === 'intro' ? 'hidden' : ''; }
-  $('waveBtn').textContent = tr("▶ เริ่มวันที่ {0} {1}{2}", T.wave, WEATHERS[weatherOf(T.wave)].icon, T.wave % 5 === 0 ? ' 👑' : '');
+  $('waveBtn').textContent = tr("▶ เริ่มเลย!");
+  renderDayCard();
+}
+// the card above the city before each day: which day, what kind of day, who is coming, the weather
+function renderDayCard() {
+  const card = $('dayCard'); if (!card || card.classList.contains('hidden')) return;
+  const wx = WEATHERS[weatherOf(T.wave)], boss = T.wave % 5 === 0;
+  $('dcDay').innerHTML = tr("วันที่ <b>{0}</b>", T.wave);
+  if (window.MoltDayCard && window.MoltDayCard(card)) return;   // march days (16+) fill it in themselves
+  $('waveBtn').classList.add('city');
+  $('dcMode').innerHTML = (boss ? tr("👑 วันบอส! ราชาแมวมาเอง") : tr("🛡️ ปกป้องไข่ทองคำ")) + '<small>' + tr("ยิงแมวให้หมดก่อนมันถึงประตูเมือง") + '</small>';
+  $('dcFoesT').textContent = ''; $('dcFoes').innerHTML = '';
+  $('dcInfo').innerHTML = `<span>${wx.icon} ${wx.name}</span>` + (T.lastStars ? `<span class="st">${tr("เมื่อวาน")} ${'★'.repeat(T.lastStars)}<i>${'★'.repeat(3 - T.lastStars)}</i></span>` : '');
 }
 
 // ---------- drawing ----------
